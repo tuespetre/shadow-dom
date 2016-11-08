@@ -1,0 +1,29 @@
+{
+  "name": "@tuespetre/shadow-dom",
+  "version": "0.1.0",
+  "private": true,
+  "description": "shadow-dom.js",
+  "main": "shadow-dom.min.js",
+  "author": "Derek Gray",
+  "license": "MIT",
+  "devDependencies": {
+    "babel-cli": "latest",
+    "babel-preset-es2015": "latest",
+    "babelify": "latest",
+    "browserify": "latest",
+    "concurrently": "latest",
+    "exorcist": "latest",
+    "html-minifier": "latest",
+    "js-string-escape": "latest",
+    "mocha": "^3.1.2",
+    "through2": "latest",
+    "uglifyify": "latest",
+    "watch": "latest"
+  },
+  "scripts": {
+    "build": "node ./build.js",
+    "watch": "watch \"npm run build\" ./src",
+    "serve": "http-server -s",
+    "start": "concurrently --kill-others \"npm run watch\" \"npm run serve\""
+  }
+}

@@ -1,0 +1,28 @@
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>Mocha Tests</title>
+  <link href="https://cdn.rawgit.com/mochajs/mocha/2.2.5/mocha.css" rel="stylesheet" />
+</head>
+
+<body>
+  <div id="mocha"></div>
+  <script src="https://cdn.rawgit.com/mochajs/mocha/2.2.5/mocha.js"></script>
+  <script src="http://chaijs.com/chai.js"></script>
+  <script>
+    window.forceShadowDomPolyfill = true;
+  </script>
+  <script src="../dist/shadow-dom.js"></script>
+  <script>
+    mocha.setup('tdd');
+  </script>
+  <script src="./interfaces/Element.js"></script>
+  <script src="./interfaces/Node.js"></script>
+  <script>
+    mocha.checkLeaks();
+    mocha.run();
+  </script>
+</body>
+
+</html>
