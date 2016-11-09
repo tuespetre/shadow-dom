@@ -10,29 +10,29 @@ interface ShadowRoot : DocumentFragment
 
 import * as $ from '../utils.js';
 
-export default class extends DocumentFragment {
+export default class {
 
-    // TODO: tests
     get nodeName() {
         return '#shadow-root';
     }
 
-    // TODO: tests
     get mode() {
         return $.shadow(this).mode;
     }
 
-    // TODO: tests
     get host() {
         return $.shadow(this).host;
     }
 
-    // TODO: impl, tests
+    // TODO: tests
     get innerHTML() {
+        return $.serializeHTMLFragment(this);
     }
 
-    // TODO: impl, tests
+    // TODO: tests
     set innerHTML(value) {
+        const fragment = $.parseHTMLFragment(value, this);
+        $.replaceAll(fragment, this);
     }
 
 }

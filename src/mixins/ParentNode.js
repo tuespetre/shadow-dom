@@ -16,79 +16,96 @@ import * as $ from '../utils.js';
 export default function (base) {
 
     const native = {
-        children: Object.getOwnPropertyDescriptor(base.prototype, 'children'),
-        firstElementChild: Object.getOwnPropertyDescriptor(base.prototype, 'firstElementChild'),
-        lastElementChild: Object.getOwnPropertyDescriptor(base.prototype, 'lastElementChild'),
-        childElementCount: Object.getOwnPropertyDescriptor(base.prototype, 'childElementCount'),
+        children: $.prop(base, 'children'),
+        firstElementChild: $.prop(base, 'firstElementChild'),
+        lastElementChild: $.prop(base, 'lastElementChild'),
+        childElementCount: $.prop(base, 'childElementCount'),
     };
 
-    return class extends base {
+    return class {
 
-        // TODO: tests
         get children() {
-            const childNodes = $.shadow(this).childNodes;
-            if (childNodes) {
-                let elements = [];
-                for (let i = 0; i < childNodes.length; i++) {
-                    const node = childNodes[i];
-                    if (node.nodeType == Node.ELEMENT_NODE) {
-                        elements.push(node);
-                    }
-                }
+            let childNodes = $.shadow(this).childNodes;
 
-                return elements;
+            if (!childNodes) {
+                if (native.children) {
+                    return native.children.get.call(this);
+                }
+                childNodes = this.childNodes;
             }
 
-            return native.children.get.call(this);
+            const elements = [];
+
+            for (let i = 0; i < childNodes.length; i++) {
+                const node = childNodes[i];
+                if (node.nodeType == Node.ELEMENT_NODE) {
+                    elements.push(node);
+                }
+            }
+
+            return elements;
         }
 
-        // TODO: tests
         get firstElementChild() {
-            const childNodes = $.shadow(this).childNodes;
-            if (childNodes) {
-                for (let i = 0; i < childNodes.length; i++) {
-                    const node = childNodes[i];
-                    if (node.nodeType == Node.ELEMENT_NODE) {
-                        return node;
-                    }
+            let childNodes = $.shadow(this).childNodes;
+
+            if (!childNodes) {
+                if (native.firstElementChild) {
+                    return native.firstElementChild.get.call(this);
                 }
-                return null;
+                childNodes = this.childNodes;
             }
 
-            return native.firstElementChild.get.call(this);
+            for (let i = 0; i < childNodes.length; i++) {
+                const node = childNodes[i];
+                if (node.nodeType == Node.ELEMENT_NODE) {
+                    return node;
+                }
+            }
+
+            return null;
         }
 
-        // TODO: tests
         get lastElementChild() {
-            const childNodes = $.shadow(this).childNodes;
-            if (childNodes) {
-                for (let i = childNodes.length - 1; i >= 0; i--) {
-                    const node = childNodes[i];
-                    if (node.nodeType == Node.ELEMENT_NODE) {
-                        return node;
-                    }
+            let childNodes = $.shadow(this).childNodes;
+
+            if (!childNodes) {
+                if (native.lastElementChild) {
+                    return native.lastElementChild.get.call(this);
                 }
-                return null;
+                childNodes = this.childNodes;
             }
 
-            return native.lastElementChild.get.call(this);
+            for (let i = childNodes.length - 1; i >= 0; i--) {
+                const node = childNodes[i];
+                if (node.nodeType == Node.ELEMENT_NODE) {
+                    return node;
+                }
+            }
+
+            return null;
         }
 
-        // TODO: tests
         get childElementCount() {
-            const childNodes = $.shadow(this).childNodes;
-            if (childNodes) {
-                let count = 0;
-                for (let i = 0; i < childNodes.length; i++) {
-                    const node = childNodes[i];
-                    if (node.nodeType == Node.ELEMENT_NODE) {
-                        count++;
-                    }
+            let childNodes = $.shadow(this).childNodes;
+
+            if (!childNodes) {
+                if (native.childElementCount) {
+                    return native.childElementCount.get.call(this);
                 }
-                return count;
+                childNodes = this.childNodes;
             }
 
-            return native.childElementCount.get.call(this);
+            let count = 0;
+
+            for (let i = 0; i < childNodes.length; i++) {
+                const node = childNodes[i];
+                if (node.nodeType == Node.ELEMENT_NODE) {
+                    count++;
+                }
+            }
+
+            return count;
         }
 
         // TODO: tests
@@ -98,7 +115,7 @@ export default function (base) {
 
             // 1. Let node be the result of converting nodes into a node given 
             // nodes and context object’s node document. Rethrow any exceptions.
-            const node = $.convertNodesIntoANode(nodes, this.ownerDocument);
+            const node = $.convertNodesIntoANode(nodes, this.ownerDocument || this);
 
             // 2. Pre-insert node into context object before the context object’s 
             // first child. Rethrow any exceptions.
@@ -112,7 +129,7 @@ export default function (base) {
 
             // 1. Let node be the result of converting nodes into a node given 
             // nodes and context object’s node document. Rethrow any exceptions.
-            const node = $.convertNodesIntoANode(nodes, this.ownerDocument);
+            const node = $.convertNodesIntoANode(nodes, this.ownerDocument || this);
 
             // 2. Append node to context object. Rethrow any exceptions.
             $.append(node, this);

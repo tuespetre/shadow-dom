@@ -5,18 +5,6 @@ https://dom.spec.whatwg.org/#interface-eventtarget
 [Exposed=(Window,Worker)]
 interface EventTarget
 
-*/
-
-export default class extends EventTarget {
-
-    // void addEventListener(DOMString type, EventListener? callback, optional (AddEventListenerOptions or boolean) options);
-    // void removeEventListener(DOMString type, EventListener? callback, optional (EventListenerOptions or boolean) options);
-    // boolean dispatchEvent(Event event);
-
-}
-
-/*
-
 callback interface EventListener {
   void handleEvent(Event event);
 };
@@ -31,3 +19,24 @@ dictionary AddEventListenerOptions : EventListenerOptions {
 };
 
 */
+
+import * as $ from '../utils.js';
+
+export default function (base) {
+
+  const native = {
+    addEventListener: base.prototype.addEventListener,
+    removeEventListener: base.prototype.removeEventListener
+  };
+
+  return class {
+
+    // TODO: impl, tests
+    // void addEventListener(DOMString type, EventListener? callback, optional (AddEventListenerOptions or boolean) options);
+
+    // TODO: impl, tests
+    // void removeEventListener(DOMString type, EventListener? callback, optional (EventListenerOptions or boolean) options);
+
+  };
+
+}

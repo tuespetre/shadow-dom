@@ -16,30 +16,46 @@ import * as $ from '../utils.js';
 
 import $ShadowRoot from '../interfaces/ShadowRoot.js';
 
-const native = {
-    getElementsByTagName: Element.prototype.getElementsByTagName,
-    getElementsByTagNameNS: Element.prototype.getElementsByTagNameNS,
-    getElementsByClassName: Element.prototype.getElementsByClassName,
-    innerHTML: Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML'),
-    outerHTML: Object.getOwnPropertyDescriptor(Element.prototype, 'outerHTML'),
-    insertAdjacentElement: Element.prototype.insertAdjacentElement,
-    insertAdjacentHTML: Element.prototype.insertAdjacentHTML,
-    insertAdjacentText: Element.prototype.insertAdjacentText
-};
+function updateSlotableName(element, localName, oldValue, value, namespace) {
+    // https://dom.spec.whatwg.org/#slotable-name
+    if (localName === 'slot' && namespace === null) {
+        if (value === oldValue) {
+            return;
+        }
+        if (value === null && oldValue === '') {
+            return;
+        }
+        if (value === '' && oldValue === null) {
+            return;
+        }
+        if (value === null || value === '') {
+            $.native.Element.setAttribute.call(element, 'slot', '');
+        }
+        else {
+            $.native.Element.setAttribute.call(element, 'slot', value);
+        }
+        const assignedSlot = $.shadow(element).assignedSlot;
+        if (assignedSlot) {
+            $.assignSlotables(assignedSlot);
+        }
+        $.assignASlot(element);
+    }
+}
 
-export default class extends Element {
+export default class {
+
+    // TODO: Override setAttribute, setAttributeNS, removeAttribute,
+    // removeAttributeNS, setAttributeNode, setAttributeNodeNS, 
+    // and removeAttributeNode to detect slot changes
 
     get slot() {
         // The slot attribute must reflect the "slot" content attribute.
         return this.getAttribute('slot');
     }
 
-    // TODO: impl, tests
-    // Track slot name changes
-    // Possibly need to intercept setAttribute?
+    // TODO: tests
     set slot(value) {
-        // The slot attribute must reflect the "slot" content attribute.
-        this.setAttribute('slot', value);
+        updateSlotableName(this, 'slot', this.slot, value, null);
     }
 
     attachShadow(init) {
@@ -81,7 +97,7 @@ export default class extends Element {
 
         $.shadow(this, {
             shadowRoot: shadow,
-            childNodes: Array.prototype.slice.call(this.childNodes)
+            childNodes: $.slice(this.childNodes)
         });
 
         const childNodes = $.shadow(this).childNodes;
@@ -91,7 +107,7 @@ export default class extends Element {
             });
         }
 
-        native.innerHTML.set.call(this, null);
+        $.native.Element.innerHTML.set.call(this, null);
 
         return shadow;
     }
@@ -123,7 +139,7 @@ export default class extends Element {
     // TODO: tests
     getElementsByTagName(qualifiedName) {
         const contextRoot = this.getRootNode({ composed: false });
-        const collection = native.getElementsByTagName.call(this, qualifiedName);
+        const collection = $.native.Element.getElementsByTagName.call(this, qualifiedName);
         const filtered = [];
 
         for (let i = 0; i < collection.length; i++) {
@@ -139,7 +155,7 @@ export default class extends Element {
     // TODO: tests
     getElementsByTagNameNS(ns, localName) {
         const contextRoot = this.getRootNode({ composed: false });
-        const collection = native.getElementsByTagNameNS.call(this, ns, localName);
+        const collection = $.native.Element.getElementsByTagNameNS.call(this, ns, localName);
         const filtered = [];
 
         for (let i = 0; i < collection.length; i++) {
@@ -155,7 +171,7 @@ export default class extends Element {
     // TODO: tests
     getElementsByClassName(names) {
         const contextRoot = this.getRootNode({ composed: false });
-        const collection = native.getElementsByClassName.call(this, name);
+        const collection = $.native.Element.getElementsByClassName.call(this, name);
         const filtered = [];
 
         for (let i = 0; i < collection.length; i++) {
@@ -168,41 +184,64 @@ export default class extends Element {
         return filtered;
     }
 
-    // TODO: impl, tests
+    // TODO: tests
     insertAdjacentElement(where, element) {
-        return native.insertAdjacentElement.call(this, where, text);
+        // https://dom.spec.whatwg.org/#dom-element-insertadjacentelement
+        return $.insertAdjacent(this, where, element);
     }
 
-    // TODO: impl, tests
+    // TODO: tests
     insertAdjacentText(where, data) {
-        return native.insertAdjacentText.call(this, where, data);
+        // https://dom.spec.whatwg.org/#dom-element-insertadjacenttext
+        const text = this.ownerDocument.createTextNode(data);
+        $.insertAdjacent(this, where, text);
+        return;
     }
 
     // https://w3c.github.io/DOM-Parsing/#extensions-to-the-element-interface
 
-    // TODO: impl, tests
+    // TODO: tests
     get innerHTML() {
-        return native.innerHTML.get.call(this);
+        // https://w3c.github.io/DOM-Parsing/#dom-element-innerhtml
+        return $.serializeHTMLFragment(this);
     }
 
-    // TODO: impl, tests
+    // TODO: tests
     set innerHTML(value) {
-        return native.innerHTML.set.call(this, value);
+        // https://w3c.github.io/DOM-Parsing/#dom-element-innerhtml
+        const fragment = $.parseHTMLFragment(value, this);
+        $.replaceAll(fragment, this);
     }
 
-    // TODO: impl, tests
+    // TODO: tests
     get outerHTML() {
-        return native.outerHTML.get.call(this);
+        // https://w3c.github.io/DOM-Parsing/#dom-element-outerhtml
+        return $.serializeHTMLFragment({ childNodes: [ this ] });
     }
 
-    // TODO: impl, tests
+    // TODO: tests
     set outerHTML(value) {
-        return native.outerHTML.set.call(this, value);
+        // https://w3c.github.io/DOM-Parsing/#dom-element-outerhtml
+        let parent = this.parentNode;
+        if (parent === null) {
+            return;
+        }
+        if (parent.nodeType === Node.DOCUMENT_NODE) {
+            throw $.makeError('NoModificationAllowedError');
+        }
+        if (parent.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+            parent = this.ownerDocument.createElement('body');
+        }
+        const fragment = $.parseHTMLFragment(value, parent);
+        $.replace(this, fragment, this.parentNode);
     }
 
-    // TODO: impl, tests
+    // TODO: tests
     insertAdjacentHTML(position, text) {
-        return native.insertAdjacentHTML.call(this, position, text);
+        // https://w3c.github.io/DOM-Parsing/#dom-element-insertadjacenthtml
+        // We aren't going to go exactly by the books for this one.
+        const fragment = $.parseHTMLFragment(text, this);
+        $.insertAdjacent(this, position, fragment);
     }
 
 }

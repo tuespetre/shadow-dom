@@ -1,17 +1,40 @@
-const native = {
-    insertBefore: Node.prototype.insertBefore,
-    removeChild: Node.prototype.removeChild,
-    cloneNode: Node.prototype.cloneNode,
-    appendChild: Node.prototype.appendChild,
-    parentNode: Object.getOwnPropertyDescriptor(Node.prototype, 'parentNode'),
-    firstChild: Object.getOwnPropertyDescriptor(Node.prototype, 'firstChild'),
-    childNodes: Object.getOwnPropertyDescriptor(Node.prototype, 'childNodes')
+export const prop = (type, name) =>
+    Object.getOwnPropertyDescriptor(type.prototype, name);
+
+export const native = {
+    Document: {
+        getElementsByTagName: Document.prototype.getElementsByTagName,
+        getElementsByTagNameNS: Document.prototype.getElementsByTagNameNS,
+        getElementsByClassName: Document.prototype.getElementsByClassName
+    },
+    Element: {
+        getElementsByTagName: Element.prototype.getElementsByTagName,
+        getElementsByTagNameNS: Element.prototype.getElementsByTagNameNS,
+        getElementsByClassName: Element.prototype.getElementsByClassName,
+        innerHTML: prop(Element, 'innerHTML') || prop(HTMLElement, 'innerHTML'),
+        setAttribute: Element.prototype.setAttribute
+    },
+    Node: {
+        parentNode: prop(Node, 'parentNode'),
+        hasChildNodes: Node.prototype.hasChildNodes,
+        childNodes: prop(Node, 'childNodes'),
+        firstChild: prop(Node, 'firstChild'),
+        lastChild: prop(Node, 'lastChild'),
+        previousSibling: prop(Node, 'previousSibling'),
+        nextSibling: prop(Node, 'nextSibling'),
+        textContent: prop(Node, 'textContent'),
+        normalize: Node.prototype.normalize,
+        cloneNode: Node.prototype.cloneNode,
+        insertBefore: Node.prototype.insertBefore,
+        removeChild: Node.prototype.removeChild,
+        appendChild: Node.prototype.appendChild
+    }
 };
 
-const slice = array => Array.prototype.slice.call(array);
+export const slice = array => Array.prototype.slice.call(array);
 
 export function makeError(name, message) {
-    var error = new Error(message || name);
+    const error = new Error(message || name);
     error.name = name;
     return error;
 }
@@ -89,6 +112,234 @@ export function isValidCustomElementName(localName) {
     return regex.test(localName);
 }
 
+export function shadowIncludingDescendant(nodeA, nodeB) {
+    do {
+        if (nodeA.nodeName === '#shadow-root') {
+            nodeA = nodeA.host;
+        }
+        else {
+            nodeA = nodeA.parentNode;
+        }
+        if (nodeA === nodeB) {
+            return true;
+        }
+    }
+    while (nodeA !== null);
+    return false;
+}
+
+export function shadowIncludingInclusiveDescendant(nodeA, nodeB) {
+    return nodeA === nodeB || shadowIncludingDescendant(nodeA, nodeB);
+}
+
+export function shadowIncludingAncestor(nodeA, nodeB) {
+    return shadowIncludingDescendant(nodeB, nodeA);
+}
+
+export function shadowIncludingInclusiveAncestor(nodeA, nodeB) {
+    return nodeA === nodeB || shadowIncludingAncestor(nodeA, nodeB);
+}
+
+export function closedShadowHidden(nodeA, nodeB) {
+    // https://dom.spec.whatwg.org/#concept-closed-shadow-hidden
+    const root = nodeA.getRootNode({ composed: false });
+
+    if (root.localName !== '#shadow-root') {
+        return false;
+    }
+
+    if (shadowIncludingInclusiveAncestor(root, nodeB)) {
+        return false;
+    }
+
+    if (root.mode === 'closed' || closedShadowHidden(root.host, nodeB)) {
+        return true;
+    }
+
+    return false;
+}
+
+export function retarget(nodeA, nodeB) {
+    // https://dom.spec.whatwg.org/#retarget
+    // To retarget an object A against an object B, repeat these steps 
+    // until they return an object:
+
+    let root;
+    while (root = nodeA.getRootNode()) {
+        // 1. If A’s root is not a shadow root, or A’s root is a shadow-including 
+        // inclusive ancestor of B, then return A.
+        if (root.localName !== '#shadow-root' || shadowIncludingInclusiveAncestor(root, nodeB)) {
+            return nodeA;
+        }
+        // 2. Set A to A’s root’s host.
+        nodeA = root.host;
+    }
+}
+
+export function insertAdjacent(element, where, node) {
+    if (!(node instanceof Node)) {
+        throw makeError('TypeError');
+    }
+    let parent;
+    // https://dom.spec.whatwg.org/#insert-adjacent
+    switch ((where || '').toLowerCase()) {
+        case "beforebegin":
+            if (parent = element.parentNode) {
+                return preInsert(node, parent, element);
+            }
+            return null;
+        case "afterbegin":
+            return preInsert(node, element, element.firstChild);
+        case "beforeend":
+            return preInsert(node, element, null);
+        case "afterend":
+            if (parent = element.parentNode) {
+                return preInsert(node, parent, element.nextSibling);
+            }
+            return null;
+        default:
+            throw makeError('SyntaxError');
+    }
+}
+
+export function parseHTMLFragment(markup, context) {
+    let temp = context.ownerDocument.createElement('body');
+    native.Element.innerHTML.set.call(temp, markup);
+    const childNodes = native.Node.childNodes.get.call(temp);
+    const fragment = context.ownerDocument.createDocumentFragment();
+    for (let i = 0; i < childNodes.length; i++) {
+        native.Node.appendChild.call(fragment, childNodes[i]);
+    }
+    return fragment;
+}
+
+export function serializeHTMLFragment(node) {
+    // https://www.w3.org/TR/html5/single-page.html#html-fragment-serialization-algorithm
+
+    // 1. Let s be a string, and initialize it to the empty string.
+    let s = '';
+
+    // 2. If the node is a template element, then let the node instead be the 
+    // template element's template contents (a DocumentFragment node).
+    if (node.localName === 'template') {
+        const content = node.content;
+        if (content) {
+            node = content;
+        }
+    }
+
+    // 3. For each child node of the node, in tree order, run the following steps:
+    const childNodes = node.childNodes;
+    for (let i = 0; i < childNodes.length; i++) {
+        // 1. Let current node be the child node being processed.
+        const currentNode = childNodes[i];
+        // 2. Append the appropriate string from the following list to s:
+        switch (currentNode.nodeType) {
+            case Node.ELEMENT_NODE:
+                let tagName;
+                switch (currentNode.namespaceURI) {
+                    case 'http://www.w3.org/1999/xhtml':
+                    case 'http://www.w3.org/1998/Math/MathML':
+                    case 'http://www.w3.org/2000/svg':
+                        tagName = currentNode.localName;
+                        break;
+                    default:
+                        tagName = currentNode.qualifiedName;
+                        break;
+                }
+                s += '<' + tagName;
+                const attributes = currentNode.attributes;
+                for (let j = 0; j < attributes.length; j++) {
+                    const attribute = attributes[j];
+                    s += ' ' + serializeAttributeName(attribute);
+                    s += '="' + escapeString(attribute.value) + '"';
+                }
+                s += '>';
+                switch (currentNode.localName) {
+                    case 'area': case 'base': case 'basefont': case 'bgsound':
+                    case 'br': case 'col': case 'embed': case 'frame': case 'hr':
+                    case 'img': case 'input': case 'keygen': case 'link': case 'meta':
+                    case 'param': case 'source': case 'track': case 'wbr':
+                        continue;
+                    case 'pre': case 'textarea': case 'listing':
+                        const firstChild = currentNode.firstChild;
+                        if (firstChild &&
+                            firstChild.nodeType === Node.TEXT_NODE &&
+                            firstChild.data[0] === '\n') {
+                            s += '\n';
+                        }
+                        break;
+                }
+                s += serializeHTMLFragment(currentNode);
+                s += '</' + tagName + '>';
+                break;
+            case Node.TEXT_NODE:
+                switch (currentNode.parentNode.localName) {
+                    case 'style': case 'script': case 'xmp': case 'iframe':
+                    case 'noembed': case 'noframes': case 'plaintext': case 'noscript':
+                        s += currentNode.data;
+                        break;
+                    default:
+                        s += escapeString(currentNode.data);
+                        break;
+                }
+                break;
+            case Node.COMMENT_NODE:
+                s += '<!--' + currentNode.data + '-->';
+                break;
+            case Node.PROCESSING_INSTRUCTION_NODE:
+                s += '<?' + currentNode.target + ' ' + currentNode.data + '>';
+                break;
+            case Node.DOCUMENT_TYPE_NODE:
+                s += '<!DOCTYPE ' + currentNode.name + '>';
+                break;
+        }
+    }
+
+    // 4. The result of the algorithm is the string s.
+    return s;
+
+    function escapeString(string, attributeMode) {
+        if (!string || !string.length) {
+            return '';
+        }
+
+        string = string.replace('&', '&amp;');
+        string = string.replace('\xA0', '&nbsp;');
+
+        if (attributeMode) {
+            string = string.replace('"', '&quot;');
+        }
+        else {
+            string = string.replace('<', '&lt;');
+            string = string.replace('>', '&gt;');
+        }
+
+        return string;
+    }
+
+    function serializeAttributeName(attribute) {
+        const namespaceURI = attribute.namespaceURI;
+        const localName = attribute.localName;
+        if (!namespaceURI) {
+            return localName;
+        }
+        switch (namespaceURI) {
+            case 'http://www.w3.org/XML/1998/namespace':
+                return 'xml:' + localName;
+            case 'http://www.w3.org/2000/xmlns/':
+                if (localName === 'xmlns') {
+                    return localName;
+                }
+                return 'xmlns:' + localName;
+            case 'http://www.w3.org/1999/xlink':
+                return 'xlink:' + localName;
+            default:
+                return attribute.name;
+        }
+    }
+}
+
 // https://dom.spec.whatwg.org/#finding-slots-and-slotables
 
 export function findASlot(slotable, open) {
@@ -103,25 +354,25 @@ export function findASlot(slotable, open) {
     }
 
     // 2. Let shadow be slotable’s parent’s shadow root.
-    const shadow = parent.shadowRoot;
+    const shadowRoot = shadow(parent).shadowRoot;
 
     // 3. If shadow is null, then return null.
-    if (!shadow) {
+    if (!shadowRoot) {
         return null;
     }
 
     // 4. If the open flag is set and shadow’s mode is not "open", then return null.
-    if (open && shadow.mode !== 'open') {
+    if (open === true && shadowRoot.mode !== 'open') {
         return null;
     }
 
     // 5. Return the first slot in shadow’s tree whose name is slotable’s name, if any, and null otherwise.
-    if (!shadow.firstChild) {
+    if (!shadowRoot.firstChild) {
         return null;
     }
 
-    const name = slotable instanceof Element ? slotable.getAttribute('slot') : null;
-    const stack = [{ node: shadow.firstChild, recursed: false }];
+    const name = slotable instanceof Element ? slotable.slot : null;
+    const stack = [{ node: shadowRoot.firstChild, recursed: false }];
 
     while (stack.length) {
         const frame = stack.pop();
@@ -168,7 +419,7 @@ export function findSlotables(slot) {
     const slotableChildren = slice(host.childNodes);
     for (let i = 0; i < slotableChildren.length; i++) {
         const slotable = slotableChildren[i];
-        if (slotable.nodeType === Node.ELEMENT_NODE 
+        if (slotable.nodeType === Node.ELEMENT_NODE
             || slotable.nodeType === Node.TEXT_NODE) {
             // 1. Let foundSlot be the result of finding a slot given slotable.
             const foundSlot = findASlot(slotable);
@@ -198,7 +449,7 @@ export function findFlattenedSlotables(slot) {
         const slotableChildren = slice(slot.childNodes);
         for (let i = 0; i < slotableChildren.length; i++) {
             const slotableChild = slotableChildren[i];
-            if (slotableChild.nodeType === Node.ELEMENT_NODE 
+            if (slotableChild.nodeType === Node.ELEMENT_NODE
                 || slotableChild.nodeType === Node.TEXT_NODE) {
                 slotables.push(slotableChild);
             }
@@ -257,28 +508,28 @@ export function assignSlotables(slot, suppressSignaling) {
     // 4a. If we haven't tracked them yet, track the slot's logical children
     if (!shadow(slot).childNodes) {
         shadow(slot, {
-            childNodes: slice(native.childNodes.get.call(slot))
+            childNodes: slice(native.Node.childNodes.get.call(slot))
         });
     }
 
     // 4b. We need to clean out the slot
     let firstChild;
-    while (firstChild = native.firstChild.get.call(slot)) {
-        native.removeChild.call(slot, firstChild);
+    while (firstChild = native.Node.firstChild.get.call(slot)) {
+        native.Node.removeChild.call(slot, firstChild);
     }
 
     // 4c. do what the spec said
     for (let i = 0; i < slotables.length; i++) {
         const slotable = slotables[i];
         shadow(slotable, { assignedSlot: slot });
-        native.appendChild.call(slot, slotable);
+        native.Node.appendChild.call(slot, slotable);
     }
 
     // 4d. if there were no slotables we need to insert its fallback content
     if (!slotables.length) {
         const childNodes = shadow(slot).childNodes;
         for (let i = 0; i < childNodes.length; i++) {
-            native.appendChild.call(slot, childNodes[i]);
+            native.Node.appendChild.call(slot, childNodes[i]);
         }
     }
 }
@@ -301,7 +552,7 @@ export function assignSlotablesForATree(tree, noSignalSlots) {
         const slot = slots[i];
 
         // 1. Let suppress signaling flag be set, if slot is in noSignalSlots, and unset otherwise.
-        const suppressSignaling = noSignalSlots.indexOf(slot) !== -1;
+        const suppressSignaling = noSignalSlots && noSignalSlots.indexOf(slot) !== -1;
 
         // 2. Run assign slotables for slot with suppress signaling flag.
         assignSlotables(slot, suppressSignaling);
@@ -396,7 +647,7 @@ export function insert(node, parent, child, suppressObservers) {
 
     // 3. Let nodes be node’s children if node is a DocumentFragment node, 
     // and a list containing solely node otherwise.
-    let nodes = (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) 
+    let nodes = (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE)
         ? slice(node.childNodes) : [node];
 
     // 4. If node is a DocumentFragment node, remove its children with the suppress observers flag set.
@@ -426,11 +677,11 @@ export function insert(node, parent, child, suppressObservers) {
             // If it's a shadow root, perform physical insert on the host.
             const shadowHost = shadow(parent).host;
             if (shadowHost) {
-                native.insertBefore.call(shadowHost, node, child);
+                native.Node.insertBefore.call(shadowHost, node, child);
             }
         }
         else {
-            native.insertBefore.call(parent, node, child);
+            native.Node.insertBefore.call(parent, node, child);
         }
 
         // 2. If parent is a shadow host and node is a slotable, then assign a slot for node.
@@ -441,7 +692,7 @@ export function insert(node, parent, child, suppressObservers) {
         // 3. If parent is a slot whose assigned nodes is the empty list, then run signal a slot change for parent.
         if (parent.localName === 'slot' && parent.assignedNodes().length === 0) {
             // 3a. Physically append the child into the slot.
-            native.appendChild.call(parent, node);
+            native.Node.appendChild.call(parent, node);
             // 3b. Do what the spec said
             signalASlotChange(parent);
         }
@@ -552,9 +803,9 @@ export function replaceAll(node, parent) {
     const removedNodes = slice(parent.childNodes);
 
     // 3. Let addedNodes be the empty list if node is null, node’s children if node is a DocumentFragment node, and a list containing node otherwise.
-    const addedNodes = (node === null) ? [] 
+    const addedNodes = (node === null) ? []
         : (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) ? slice(node.childNodes)
-        : [node];
+            : [node];
 
     // 4. Remove all parent’s children, in tree order, with the suppress observers flag set.
     for (let i = 0; i < removedNodes.length; i++) {
@@ -612,7 +863,7 @@ export function remove(node, parent, suppessObservers) {
         childNodes.splice(nodeIndex, 1);
     }
     delete shadow(node).parentNode;
-    native.removeChild.call(native.parentNode.get.call(node), node);
+    native.Node.removeChild.call(native.Node.parentNode.get.call(node), node);
 
     // 10. If node is assigned, then run assign slotables for node’s assigned slot.
     const assignedSlot = shadow(node).assignedSlot;
@@ -677,7 +928,7 @@ export function clone(node, document, cloneChildren) {
     // 5. Run any cloning steps defined for node in other applicable 
     // specifications and pass copy, node, document and the clone children 
     // flag if set, as parameters.
-    const copy = native.cloneNode.call(node, false);
+    const copy = native.Node.cloneNode.call(node, false);
 
     // 6. If the clone children flag is set, clone all the children of node 
     // and append them to copy, with document as specified and the clone 

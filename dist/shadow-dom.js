@@ -1,55 +1,25 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
-"use strict";
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-/*
-
-https://dom.spec.whatwg.org/#interface-customevent
-
-[Constructor(DOMString type, optional CustomEventInit eventInitDict), Exposed=(Window,Worker)]
-interface CustomEvent : Event
-
-dictionary CustomEventInit : EventInit {
-  any detail = null;
-};
-
-*/
-
-var _class = function (_CustomEvent) {
-    _inherits(_class, _CustomEvent);
-
-    function _class(type, eventInitDict) {
-        _classCallCheck(this, _class);
-
-        return _possibleConstructorReturn(this, (_class.__proto__ || Object.getPrototypeOf(_class)).call(this, type, eventInitDict));
-    }
-
-    // readonly attribute any detail;
-
-    // void initCustomEvent(DOMString type, boolean bubbles, boolean cancelable, any detail);
-
-    return _class;
-}(CustomEvent);
-
-exports.default = _class;
-
-},{}],2:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     https://dom.spec.whatwg.org/#interface-document
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     [Constructor, Exposed=Window]
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     interface Document : Node
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     [Exposed=Window]
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     interface XMLDocument : Document {};
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     dictionary ElementCreationOptions {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       DOMString is;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     };
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     */
 
 var _utils = require('../utils.js');
 
@@ -59,37 +29,9 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /*
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               https://dom.spec.whatwg.org/#interface-document
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               [Constructor, Exposed=Window]
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               interface Document : Node
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               [Exposed=Window]
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               interface XMLDocument : Document {};
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               dictionary ElementCreationOptions {
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 DOMString is;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               };
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               */
-
-var native = {
-    getElementsByTagName: Document.prototype.getElementsByTagName,
-    getElementsByTagNameNS: Document.prototype.getElementsByTagNameNS,
-    getElementsByClassName: Document.prototype.getElementsByClassName
-};
-
-var _class = function (_Document) {
-    _inherits(_class, _Document);
-
+var _class = function () {
     function _class() {
         _classCallCheck(this, _class);
-
-        return _possibleConstructorReturn(this, (_class.__proto__ || Object.getPrototypeOf(_class)).apply(this, arguments));
     }
 
     _createClass(_class, [{
@@ -98,7 +40,7 @@ var _class = function (_Document) {
 
         // TODO: tests
         value: function getElementsByTagName(qualifiedName) {
-            var collection = native.getElementsByTagName.call(this, qualifiedName);
+            var collection = $.native.Document.getElementsByTagName.call(this, qualifiedName);
             var filtered = [];
 
             for (var i = 0; i < collection.length; i++) {
@@ -116,7 +58,7 @@ var _class = function (_Document) {
     }, {
         key: 'getElementsByTagNameNS',
         value: function getElementsByTagNameNS(ns, localName) {
-            var collection = native.getElementsByTagNameNS.call(this, ns, localName);
+            var collection = $.native.Document.getElementsByTagNameNS.call(this, ns, localName);
             var filtered = [];
 
             for (var i = 0; i < collection.length; i++) {
@@ -134,7 +76,7 @@ var _class = function (_Document) {
     }, {
         key: 'getElementsByClassName',
         value: function getElementsByClassName(names) {
-            var collection = native.getElementsByClassName.call(this, name);
+            var collection = $.native.Document.getElementsByClassName.call(this, name);
             var filtered = [];
 
             for (var i = 0; i < collection.length; i++) {
@@ -184,18 +126,30 @@ var _class = function (_Document) {
     }]);
 
     return _class;
-}(Document);
+}();
 
 exports.default = _class;
 
-},{"../utils.js":20}],3:[function(require,module,exports){
+},{"../utils.js":19}],2:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     https://dom.spec.whatwg.org/#interface-element
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     https://www.w3.org/TR/DOM-Parsing/#extensions-to-the-element-interface
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     [Exposed=Window]
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     interface Element : Node
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     dictionary ShadowRootInit {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       required ShadowRootMode mode;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     };
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     */
 
 var _utils = require('../utils.js');
 
@@ -211,40 +165,34 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+function updateSlotableName(element, localName, oldValue, value, namespace) {
+    // https://dom.spec.whatwg.org/#slotable-name
+    if (localName === 'slot' && namespace === null) {
+        if (value === oldValue) {
+            return;
+        }
+        if (value === null && oldValue === '') {
+            return;
+        }
+        if (value === '' && oldValue === null) {
+            return;
+        }
+        if (value === null || value === '') {
+            $.native.Element.setAttribute.call(element, 'slot', '');
+        } else {
+            $.native.Element.setAttribute.call(element, 'slot', value);
+        }
+        var assignedSlot = $.shadow(element).assignedSlot;
+        if (assignedSlot) {
+            $.assignSlotables(assignedSlot);
+        }
+        $.assignASlot(element);
+    }
+}
 
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /*
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               https://dom.spec.whatwg.org/#interface-element
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               https://www.w3.org/TR/DOM-Parsing/#extensions-to-the-element-interface
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               [Exposed=Window]
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               interface Element : Node
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               dictionary ShadowRootInit {
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 required ShadowRootMode mode;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               };
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               */
-
-var native = {
-    getElementsByTagName: Element.prototype.getElementsByTagName,
-    getElementsByTagNameNS: Element.prototype.getElementsByTagNameNS,
-    getElementsByClassName: Element.prototype.getElementsByClassName,
-    innerHTML: Object.getOwnPropertyDescriptor(Element.prototype, 'innerHTML'),
-    outerHTML: Object.getOwnPropertyDescriptor(Element.prototype, 'outerHTML'),
-    insertAdjacentElement: Element.prototype.insertAdjacentElement,
-    insertAdjacentHTML: Element.prototype.insertAdjacentHTML,
-    insertAdjacentText: Element.prototype.insertAdjacentText
-};
-
-var _class = function (_Element) {
-    _inherits(_class, _Element);
-
+var _class = function () {
     function _class() {
         _classCallCheck(this, _class);
-
-        return _possibleConstructorReturn(this, (_class.__proto__ || Object.getPrototypeOf(_class)).apply(this, arguments));
     }
 
     _createClass(_class, [{
@@ -288,7 +236,7 @@ var _class = function (_Element) {
 
             $.shadow(this, {
                 shadowRoot: shadow,
-                childNodes: Array.prototype.slice.call(this.childNodes)
+                childNodes: $.slice(this.childNodes)
             });
 
             var childNodes = $.shadow(this).childNodes;
@@ -298,7 +246,7 @@ var _class = function (_Element) {
                 });
             }
 
-            native.innerHTML.set.call(this, null);
+            $.native.Element.innerHTML.set.call(this, null);
 
             return shadow;
         }
@@ -323,7 +271,7 @@ var _class = function (_Element) {
         key: 'getElementsByTagName',
         value: function getElementsByTagName(qualifiedName) {
             var contextRoot = this.getRootNode({ composed: false });
-            var collection = native.getElementsByTagName.call(this, qualifiedName);
+            var collection = $.native.Element.getElementsByTagName.call(this, qualifiedName);
             var filtered = [];
 
             for (var i = 0; i < collection.length; i++) {
@@ -342,7 +290,7 @@ var _class = function (_Element) {
         key: 'getElementsByTagNameNS',
         value: function getElementsByTagNameNS(ns, localName) {
             var contextRoot = this.getRootNode({ composed: false });
-            var collection = native.getElementsByTagNameNS.call(this, ns, localName);
+            var collection = $.native.Element.getElementsByTagNameNS.call(this, ns, localName);
             var filtered = [];
 
             for (var i = 0; i < collection.length; i++) {
@@ -361,7 +309,7 @@ var _class = function (_Element) {
         key: 'getElementsByClassName',
         value: function getElementsByClassName(names) {
             var contextRoot = this.getRootNode({ composed: false });
-            var collection = native.getElementsByClassName.call(this, name);
+            var collection = $.native.Element.getElementsByClassName.call(this, name);
             var filtered = [];
 
             for (var i = 0; i < collection.length; i++) {
@@ -374,48 +322,58 @@ var _class = function (_Element) {
             return filtered;
         }
 
-        // TODO: impl, tests
+        // TODO: tests
 
     }, {
         key: 'insertAdjacentElement',
         value: function insertAdjacentElement(where, element) {
-            return native.insertAdjacentElement.call(this, where, text);
+            // https://dom.spec.whatwg.org/#dom-element-insertadjacentelement
+            return $.insertAdjacent(this, where, element);
         }
 
-        // TODO: impl, tests
+        // TODO: tests
 
     }, {
         key: 'insertAdjacentText',
         value: function insertAdjacentText(where, data) {
-            return native.insertAdjacentText.call(this, where, data);
+            // https://dom.spec.whatwg.org/#dom-element-insertadjacenttext
+            var text = this.ownerDocument.createTextNode(data);
+            $.insertAdjacent(this, where, text);
+            return;
         }
 
         // https://w3c.github.io/DOM-Parsing/#extensions-to-the-element-interface
 
-        // TODO: impl, tests
+        // TODO: tests
 
     }, {
         key: 'insertAdjacentHTML',
 
 
-        // TODO: impl, tests
+        // TODO: tests
         value: function insertAdjacentHTML(position, text) {
-            return native.insertAdjacentHTML.call(this, position, text);
+            // https://w3c.github.io/DOM-Parsing/#dom-element-insertadjacenthtml
+            // We aren't going to go exactly by the books for this one.
+            var fragment = $.parseHTMLFragment(text, this);
+            $.insertAdjacent(this, position, fragment);
         }
     }, {
         key: 'slot',
+
+
+        // TODO: Override setAttribute, setAttributeNS, removeAttribute,
+        // removeAttributeNS, setAttributeNode, setAttributeNodeNS, 
+        // and removeAttributeNode to detect slot changes
+
         get: function get() {
             // The slot attribute must reflect the "slot" content attribute.
             return this.getAttribute('slot');
         }
 
-        // TODO: impl, tests
-        // Track slot name changes
-        // Possibly need to intercept setAttribute?
+        // TODO: tests
         ,
         set: function set(value) {
-            // The slot attribute must reflect the "slot" content attribute.
-            this.setAttribute('slot', value);
+            updateSlotableName(this, 'slot', this.slot, value, null);
         }
     }, {
         key: 'shadowRoot',
@@ -433,92 +391,118 @@ var _class = function (_Element) {
     }, {
         key: 'innerHTML',
         get: function get() {
-            return native.innerHTML.get.call(this);
+            // https://w3c.github.io/DOM-Parsing/#dom-element-innerhtml
+            return $.serializeHTMLFragment(this);
         }
 
-        // TODO: impl, tests
+        // TODO: tests
         ,
         set: function set(value) {
-            return native.innerHTML.set.call(this, value);
+            // https://w3c.github.io/DOM-Parsing/#dom-element-innerhtml
+            var fragment = $.parseHTMLFragment(value, this);
+            $.replaceAll(fragment, this);
         }
 
-        // TODO: impl, tests
+        // TODO: tests
 
     }, {
         key: 'outerHTML',
         get: function get() {
-            return native.outerHTML.get.call(this);
+            // https://w3c.github.io/DOM-Parsing/#dom-element-outerhtml
+            return $.serializeHTMLFragment({ childNodes: [this] });
         }
 
-        // TODO: impl, tests
+        // TODO: tests
         ,
         set: function set(value) {
-            return native.outerHTML.set.call(this, value);
+            // https://w3c.github.io/DOM-Parsing/#dom-element-outerhtml
+            var parent = this.parentNode;
+            if (parent === null) {
+                return;
+            }
+            if (parent.nodeType === Node.DOCUMENT_NODE) {
+                throw $.makeError('NoModificationAllowedError');
+            }
+            if (parent.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+                parent = this.ownerDocument.createElement('body');
+            }
+            var fragment = $.parseHTMLFragment(value, parent);
+            $.replace(this, fragment, this.parentNode);
         }
     }]);
 
     return _class;
-}(Element);
+}();
 
 exports.default = _class;
 
-},{"../interfaces/ShadowRoot.js":11,"../utils.js":20}],4:[function(require,module,exports){
-"use strict";
+},{"../interfaces/ShadowRoot.js":10,"../utils.js":19}],3:[function(require,module,exports){
+'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     https://dom.spec.whatwg.org/#interface-event
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     [Constructor(DOMString type, optional EventInit eventInitDict), Exposed=(Window,Worker)]
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     interface Event
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     dictionary EventInit {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       boolean bubbles = false;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       boolean cancelable = false;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       boolean composed = false;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     };
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     */
+
+var _utils = require('../utils.js');
+
+var $ = _interopRequireWildcard(_utils);
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+var _class = function () {
 
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
-
-/*
-
-https://dom.spec.whatwg.org/#interface-event
-
-[Constructor(DOMString type, optional EventInit eventInitDict), Exposed=(Window,Worker)]
-interface Event
-
-*/
-
-var $composed = new WeakMap();
-
-var _class = function (_Event) {
-    _inherits(_class, _Event);
-
-    function _class(type, eventInitDict) {
+    // TODO: impl, tests
+    function _class(type, init) {
         _classCallCheck(this, _class);
 
-        var _this = _possibleConstructorReturn(this, (_class.__proto__ || Object.getPrototypeOf(_class)).call(this, type, eventInitDict));
-
-        $composed.set(_this, eventInitDict && eventInitDict.composed === true);
-        return _this;
+        $.shadow(this).composed = init && init.composed === true;
     }
-
-    // readonly attribute DOMString type;
-    // readonly attribute EventTarget? target;
-    // readonly attribute EventTarget? currentTarget;
-    // sequence<EventTarget> composedPath();
 
     // TODO: impl, tests
 
 
     _createClass(_class, [{
-        key: "composedPath",
+        key: 'composedPath',
+
+
+        // TODO: impl, tests
         value: function composedPath() {
+            var composedPath = $.shadow(this).composedPath;
+
+            if (composedPath) {
+                return composedPath.slice();
+            }
+
             // https://dom.spec.whatwg.org/#dom-event-composedpath
 
-            var composedPath = [];
+            // 1. Let composedPath be a new empty list.
+            composedPath = $.shadow(this).composedPath = [];
+
+            // 2. Let currentTarget be context object’s currentTarget attribute value.
             var currentTarget = this.currentTarget;
 
-            // TODO: implement event path and retargeting
+            // 3. For each tuple in context object’s path:
             var path = calculatePath(this);
 
             if (currentTarget instanceof Window) {
@@ -528,11 +512,11 @@ var _class = function (_Event) {
 
                 try {
                     for (var _iterator = path[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-                        var tuple = _step.value;
+                        var _step$value = _slicedToArray(_step.value, 1),
+                            item = _step$value[0];
 
-                        var item = tuple.item;
                         if (item instanceof Node) {
-                            if (!item.closedShadowHidden) {
+                            if (!$.closedShadowHidden(item, item.getRootNode({ composed: true }))) {
                                 composedPath.push(item);
                             }
                         } else {
@@ -560,11 +544,11 @@ var _class = function (_Event) {
 
                 try {
                     for (var _iterator2 = path[Symbol.iterator](), _step2; !(_iteratorNormalCompletion2 = (_step2 = _iterator2.next()).done); _iteratorNormalCompletion2 = true) {
-                        var _tuple = _step2.value;
+                        var _step2$value = _slicedToArray(_step2.value, 1),
+                            item = _step2$value[0];
 
-                        var _item = _tuple.item;
-                        if (!_item.closedShadowHidden) {
-                            composedPath.push(_item);
+                        if (!$.closedShadowHidden(item, item.getRootNode({ composed: true }))) {
+                            composedPath.push(item);
                         }
                     }
                 } catch (err) {
@@ -582,100 +566,201 @@ var _class = function (_Event) {
                     }
                 }
             } else {
-                composedPath.push.apply(composedPath, _toConsumableArray(path));
+                var _composedPath;
+
+                (_composedPath = composedPath).push.apply(_composedPath, _toConsumableArray(path));
             }
 
-            return composedPath;
+            // 4. return composedPath.
+            return composedPath.slice();
+        }
+    }, {
+        key: 'target',
+        get: function get() {
+            return null;
         }
 
-        // const unsigned short NONE = 0;
-        // const unsigned short CAPTURING_PHASE = 1;
-        // const unsigned short AT_TARGET = 2;
-        // const unsigned short BUBBLING_PHASE = 3;
-        // readonly attribute unsigned short eventPhase;
-
-        // void stopPropagation();
-        // void stopImmediatePropagation();
-
-        // readonly attribute boolean bubbles;
-        // readonly attribute boolean cancelable;
-        // void preventDefault();
-        // readonly attribute boolean defaultPrevented;
-        // readonly attribute boolean composed;
+        // TODO: impl, tests
 
     }, {
-        key: "composed",
+        key: 'currentTarget',
         get: function get() {
-            return $composed.get(this);
+            return null;
         }
-
-        // [Unforgeable] readonly attribute boolean isTrusted;
-        // readonly attribute DOMTimeStamp timeStamp;
-
-        // void initEvent(DOMString type, boolean bubbles, boolean cancelable); // historical
-
+    }, {
+        key: 'composed',
+        get: function get() {
+            return $.shadow(this).composed;
+        }
     }]);
 
     return _class;
-}(Event);
-
-/*
-
-dictionary EventInit {
-  boolean bubbles = false;
-  boolean cancelable = false;
-  boolean composed = false;
-};
-
-*/
-
+}();
 
 exports.default = _class;
 
-},{}],5:[function(require,module,exports){
-"use strict";
+
+function calculatePath(event) {
+    var path = $.shadow(event).path;
+
+    if (path) {
+        return path;
+    }
+
+    // Starting at step 8:
+    // https://dom.spec.whatwg.org/#concept-event-dispatch
+
+    path = $.shadow(event).path = [];
+
+    // 8. Let parent be the result of invoking target’s get the parent with event.
+    var target = event.target;
+    var parent = getTheParent(target, event);
+
+    // 9. While parent is non-null:
+    while (parent !== null) {
+        // 1. Let relatedTarget be the result of retargeting event’s relatedTarget
+        // against parent if event’s relatedTarget is non-null, and null otherwise.
+        var relatedTarget = event.relatedTarget;
+        if (relatedTarget !== null) {
+            relatedTarget = $.retarget(relatedTarget, parent);
+        }
+        // 2. If target’s root is a shadow-including inclusive ancestor of parent, then... 
+        // append (parent, null, relatedTarget) to event’s path.
+        var root = target.getRootNode({ composed: false });
+        if ($.shadowIncludingInclusiveAncestor(root, parent)) {
+            path.push([parent, null, relatedTarget]);
+        }
+        // 3. Otherwise, if parent and relatedTarget are identical, then set parent to null.
+        else if (parent === relatedTarget) {
+                parent = null;
+            }
+            // 4. Otherwise, set target to parent and then... 
+            // append (parent, target, relatedTarget) to event’s path.
+            else {
+                    target = parent;
+                    path.push([parent, target, relatedTarget]);
+                }
+        // 5. If parent is non-null, then set parent to the result of 
+        // invoking parent’s get the parent with event.
+        if (parent !== null) {
+            parent = getTheParent(parent, event);
+        }
+    }
+
+    return path;
+}
+
+function getTheParent(target, event) {
+    // https://dom.spec.whatwg.org/#get-the-parent
+    // Each EventTarget object also has an associated get the parent 
+    // algorithm, which takes an event event, and returns an EventTarget 
+    // object. Unless specified otherwise it returns null.
+
+    // A node’s get the parent algorithm, given an event, 
+    // returns the node’s assigned slot, if node is assigned, 
+    // and node’s parent otherwise.
+
+    // A document’s get the parent algorithm, given an event, returns null if event’s 
+    // type attribute value is "load" or document does not have a browsing context, 
+    // and the document’s associated Window object otherwise.
+
+    // A shadow root’s get the parent algorithm, given an event, returns null if 
+    // event’s composed flag is unset and shadow root is the root of event’s 
+    // path’s first tuple’s item, and shadow root’s host otherwise.
+
+    if (node instanceof Node) {
+        if (node.nodeType === Node.DOCUMENT_NODE) {
+            if (event.type === 'load') {
+                // or browsing context?
+                return null;
+            }
+            return document.defaultView;
+        } else if (node.localName === '#shadow-root') {
+            if (!event.composed) {
+                var _$$shadow$path$ = _slicedToArray($.shadow(event).path[0], 1),
+                    item = _$$shadow$path$[0];
+
+                if (item.getRootNode() === node) {
+                    return null;
+                }
+            }
+            return node.host;
+        }
+        return node.assignedSlot || node.parentNode;
+    }
+
+    return null;
+}
+
+},{"../utils.js":19}],4:[function(require,module,exports){
+'use strict';
 
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+exports.default = function (base) {
 
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+  var native = {
+    addEventListener: base.prototype.addEventListener,
+    removeEventListener: base.prototype.removeEventListener
+  };
 
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+  return function () {
+    function _class() {
+      _classCallCheck(this, _class);
+    }
 
-/*
+    return _class;
+  }();
+};
 
-https://dom.spec.whatwg.org/#interface-eventtarget
+var _utils = require('../utils.js');
 
-[Exposed=(Window,Worker)]
-interface EventTarget
+var $ = _interopRequireWildcard(_utils);
 
-*/
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-var _class = function (_EventTarget) {
-  _inherits(_class, _EventTarget);
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } } /*
+                                                                                                                                                          
+                                                                                                                                                          https://dom.spec.whatwg.org/#interface-eventtarget
+                                                                                                                                                          
+                                                                                                                                                          [Exposed=(Window,Worker)]
+                                                                                                                                                          interface EventTarget
+                                                                                                                                                          
+                                                                                                                                                          callback interface EventListener {
+                                                                                                                                                            void handleEvent(Event event);
+                                                                                                                                                          };
+                                                                                                                                                          
+                                                                                                                                                          dictionary EventListenerOptions {
+                                                                                                                                                            boolean capture = false;
+                                                                                                                                                          };
+                                                                                                                                                          
+                                                                                                                                                          dictionary AddEventListenerOptions : EventListenerOptions {
+                                                                                                                                                            boolean passive = false;
+                                                                                                                                                            boolean once = false;
+                                                                                                                                                          };
+                                                                                                                                                          
+                                                                                                                                                          */
 
-  function _class() {
-    _classCallCheck(this, _class);
-
-    return _possibleConstructorReturn(this, (_class.__proto__ || Object.getPrototypeOf(_class)).apply(this, arguments));
-  }
-
-  return _class;
-}(EventTarget);
-
-exports.default = _class;
-
-},{}],6:[function(require,module,exports){
+},{"../utils.js":19}],5:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     https://html.spec.whatwg.org/multipage/scripting.html#the-slot-element
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     interface HTMLSlotElement : HTMLElement
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     dictionary AssignedNodesOptions {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         boolean flatten = false;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     };
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     */
 
 var _utils = require('../utils.js');
 
@@ -685,27 +770,9 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /*
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               https://html.spec.whatwg.org/multipage/scripting.html#the-slot-element
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               interface HTMLSlotElement : HTMLElement
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               dictionary AssignedNodesOptions {
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   boolean flatten = false;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               };
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               */
-
-var _class = function (_HTMLUnknownElement) {
-    _inherits(_class, _HTMLUnknownElement);
-
+var _class = function () {
     function _class() {
         _classCallCheck(this, _class);
-
-        return _possibleConstructorReturn(this, (_class.__proto__ || Object.getPrototypeOf(_class)).apply(this, arguments));
     }
 
     _createClass(_class, [{
@@ -746,18 +813,22 @@ var _class = function (_HTMLUnknownElement) {
     }]);
 
     return _class;
-}(HTMLUnknownElement);
+}();
 
 exports.default = _class;
 
-},{"../utils.js":20}],7:[function(require,module,exports){
+},{"../utils.js":19}],6:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     https://www.w3.org/TR/html5/single-page.html#the-table-element
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     */
 
 var _utils = require('../utils.js');
 
@@ -767,21 +838,9 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /*
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               https://www.w3.org/TR/html5/single-page.html#the-table-element
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               */
-
-var _class = function (_HTMLTableElement) {
-    _inherits(_class, _HTMLTableElement);
-
+var _class = function () {
     function _class() {
         _classCallCheck(this, _class);
-
-        return _possibleConstructorReturn(this, (_class.__proto__ || Object.getPrototypeOf(_class)).apply(this, arguments));
     }
 
     _createClass(_class, [{
@@ -823,18 +882,22 @@ var _class = function (_HTMLTableElement) {
     }]);
 
     return _class;
-}(HTMLTableElement);
+}();
 
 exports.default = _class;
 
-},{"../utils.js":20}],8:[function(require,module,exports){
+},{"../utils.js":19}],7:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     https://www.w3.org/TR/html5/single-page.html#the-tr-element
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     */
 
 var _utils = require('../utils.js');
 
@@ -844,21 +907,9 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /*
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               https://www.w3.org/TR/html5/single-page.html#the-tr-element
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               */
-
-var _class = function (_HTMLTableRowElement) {
-    _inherits(_class, _HTMLTableRowElement);
-
+var _class = function () {
     function _class() {
         _classCallCheck(this, _class);
-
-        return _possibleConstructorReturn(this, (_class.__proto__ || Object.getPrototypeOf(_class)).apply(this, arguments));
     }
 
     _createClass(_class, [{
@@ -876,18 +927,22 @@ var _class = function (_HTMLTableRowElement) {
     }]);
 
     return _class;
-}(HTMLTableRowElement);
+}();
 
 exports.default = _class;
 
-},{"../utils.js":20}],9:[function(require,module,exports){
+},{"../utils.js":19}],8:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     https://www.w3.org/TR/html5/single-page.html#the-tbody-element
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     */
 
 var _utils = require('../utils.js');
 
@@ -897,21 +952,9 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /*
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               https://www.w3.org/TR/html5/single-page.html#the-tbody-element
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               */
-
-var _class = function (_HTMLTableSectionElem) {
-    _inherits(_class, _HTMLTableSectionElem);
-
+var _class = function () {
     function _class() {
         _classCallCheck(this, _class);
-
-        return _possibleConstructorReturn(this, (_class.__proto__ || Object.getPrototypeOf(_class)).apply(this, arguments));
     }
 
     _createClass(_class, [{
@@ -926,18 +969,25 @@ var _class = function (_HTMLTableSectionElem) {
     }]);
 
     return _class;
-}(HTMLTableSectionElement);
+}();
 
 exports.default = _class;
 
-},{"../utils.js":20}],10:[function(require,module,exports){
+},{"../utils.js":19}],9:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     https://dom.spec.whatwg.org/#interface-node
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     [Exposed=Window]
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     interface Node : EventTarget
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     */
 
 var _utils = require('../utils.js');
 
@@ -947,37 +997,9 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /*
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               https://dom.spec.whatwg.org/#interface-node
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               [Exposed=Window]
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               interface Node : EventTarget
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               */
-
-var native = {
-    parentNode: Object.getOwnPropertyDescriptor(Node.prototype, 'parentNode'),
-    parentElement: Object.getOwnPropertyDescriptor(Node.prototype, 'parentElement'),
-    hasChildNodes: Node.prototype.hasChildNodes,
-    childNodes: Object.getOwnPropertyDescriptor(Node.prototype, 'childNodes'),
-    firstChild: Object.getOwnPropertyDescriptor(Node.prototype, 'firstChild'),
-    lastChild: Object.getOwnPropertyDescriptor(Node.prototype, 'lastChild'),
-    previousSibling: Object.getOwnPropertyDescriptor(Node.prototype, 'previousSibling'),
-    nextSibling: Object.getOwnPropertyDescriptor(Node.prototype, 'nextSibling'),
-    textContent: Object.getOwnPropertyDescriptor(Node.prototype, 'textContent'),
-    normalize: Node.prototype.normalize
-};
-
-var _class = function (_Node) {
-    _inherits(_class, _Node);
-
+var _class = function () {
     function _class() {
         _classCallCheck(this, _class);
-
-        return _possibleConstructorReturn(this, (_class.__proto__ || Object.getPrototypeOf(_class)).apply(this, arguments));
     }
 
     _createClass(_class, [{
@@ -1021,7 +1043,7 @@ var _class = function (_Node) {
                 return childNodes.length > 0;
             }
 
-            return native.hasChildNodes.call(this);
+            return $.native.Node.hasChildNodes.call(this);
         }
 
         // TODO: tests
@@ -1030,12 +1052,34 @@ var _class = function (_Node) {
         key: 'normalize',
 
 
-        // TODO: impl, tests
+        // TODO: tests
         value: function normalize() {
             // https://dom.spec.whatwg.org/#dom-node-normalize
             // The normalize() method, when invoked, must run these steps 
             // for each descendant exclusive Text node node of context object:
-            return native.normalize.call(this);
+            var childNodes = this.childNodes;
+            for (var i = 0; i < childNodes.length; i++) {
+                var childNode = childNodes[i];
+                if (childNode.hasChildNodes()) {
+                    childNode.normalize();
+                } else if (childNode.nodeType === Node.TEXT_NODE) {
+                    var length = childNode.data.length;
+                    if (length === 0) {
+                        $.remove(childNode, this);
+                        continue;
+                    }
+                    var j = void 0;
+                    for (j = i + 1; j < childNodes.length; j++) {
+                        var nextSibling = childNodes[j];
+                        if (nextSibling.nodeType !== Node.TEXT_NODE) {
+                            break;
+                        }
+                        childNode.data += nextSibling.data;
+                        i++;
+                        continue;
+                    }
+                }
+            }
         }
 
         // TODO: tests
@@ -1249,20 +1293,17 @@ var _class = function (_Node) {
                 return parentNode;
             }
 
-            return native.parentNode.get.call(this);
+            return $.native.Node.parentNode.get.call(this);
         }
     }, {
         key: 'parentElement',
         get: function get() {
-            var parentNode = $.shadow(this).parentNode;
-            if (parentNode) {
-                if (parentNode.nodeType === Node.ELEMENT_NODE) {
-                    return parentNode;
-                }
-                return null;
+            var parentNode = this.parentNode;
+            if (parentNode && parentNode.nodeType === Node.ELEMENT_NODE) {
+                return parentNode;
             }
 
-            return native.parentElement.get.call(this);
+            return null;
         }
     }, {
         key: 'childNodes',
@@ -1272,7 +1313,7 @@ var _class = function (_Node) {
                 return childNodes.slice();
             }
 
-            return native.childNodes.get.call(this);
+            return $.native.Node.childNodes.get.call(this);
         }
 
         // TODO: tests
@@ -1288,7 +1329,7 @@ var _class = function (_Node) {
                 return null;
             }
 
-            return native.firstChild.get.call(this);
+            return $.native.Node.firstChild.get.call(this);
         }
 
         // TODO: tests
@@ -1304,7 +1345,7 @@ var _class = function (_Node) {
                 return null;
             }
 
-            return native.lastChild.get.call(this);
+            return $.native.Node.lastChild.get.call(this);
         }
 
         // TODO: tests
@@ -1319,7 +1360,7 @@ var _class = function (_Node) {
                 return siblingIndex < 0 ? null : childNodes[siblingIndex];
             }
 
-            return native.previousSibling.get.call(this);
+            return $.native.Node.previousSibling.get.call(this);
         }
 
         // TODO: tests
@@ -1334,26 +1375,54 @@ var _class = function (_Node) {
                 return siblingIndex === childNodes.length ? null : childNodes[siblingIndex];
             }
 
-            return native.nextSibling.get.call(this);
+            return $.native.Node.nextSibling.get.call(this);
         }
 
-        // TODO: impl, tests
+        // TODO: tests
 
     }, {
         key: 'textContent',
         get: function get() {
-            return native.textContent.get.call(this);
+            switch (this.nodeType) {
+                case Node.DOCUMENT_FRAGMENT_NODE:
+                case Node.ELEMENT_NODE:
+                    var result = '';
+                    var childNodes = this.childNodes;
+                    for (var i = 0; i < childNodes.length; i++) {
+                        result += childNodes[i].textContent;
+                    }
+                    return result;
+                case Node.ATTRIBUTE_NODE:
+                    return this.value;
+                case Node.TEXT_NODE:
+                case Node.PROCESSING_INSTRUCTION_NODE:
+                case Node.COMMENT_NODE:
+                    return this.data;
+                default:
+                    return null;
+            }
         }
 
-        // TODO: impl, tests
+        // TODO: tests
         ,
         set: function set(value) {
-            return native.textContent.set.call(this, value);
+            switch (this.nodeType) {
+                case Node.DOCUMENT_FRAGMENT_NODE:
+                case Node.ELEMENT_NODE:
+                    var node = null;
+                    if (value !== '') {
+                        node = this.ownerDocument.createTextNode(value);
+                    }
+                    $.replaceAll(node, this);
+                    return;
+            }
+
+            return $.native.Node.textContent.set.call(this, value);
         }
     }]);
 
     return _class;
-}(Node);
+}();
 
 exports.default = _class;
 
@@ -1417,14 +1486,22 @@ function preceding(element1, element2) {
     return precedingSiblings(ancestors1[i - 1], ancestors1[i], ancestors2[i]);
 }
 
-},{"../utils.js":20}],11:[function(require,module,exports){
+},{"../utils.js":19}],10:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     https://dom.spec.whatwg.org/#interface-shadowroot
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     https://www.w3.org/TR/shadow-dom/#the-shadowroot-interface
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     [Exposed=Window]
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     interface ShadowRoot : DocumentFragment
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     */
 
 var _utils = require('../utils.js');
 
@@ -1434,69 +1511,49 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /*
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               https://dom.spec.whatwg.org/#interface-shadowroot
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               https://www.w3.org/TR/shadow-dom/#the-shadowroot-interface
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               [Exposed=Window]
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               interface ShadowRoot : DocumentFragment
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               */
-
-var _class = function (_DocumentFragment) {
-    _inherits(_class, _DocumentFragment);
-
+var _class = function () {
     function _class() {
         _classCallCheck(this, _class);
-
-        return _possibleConstructorReturn(this, (_class.__proto__ || Object.getPrototypeOf(_class)).apply(this, arguments));
     }
 
     _createClass(_class, [{
         key: 'nodeName',
-
-
-        // TODO: tests
         get: function get() {
             return '#shadow-root';
         }
-
-        // TODO: tests
-
     }, {
         key: 'mode',
         get: function get() {
             return $.shadow(this).mode;
         }
-
-        // TODO: tests
-
     }, {
         key: 'host',
         get: function get() {
             return $.shadow(this).host;
         }
 
-        // TODO: impl, tests
+        // TODO: tests
 
     }, {
         key: 'innerHTML',
-        get: function get() {}
+        get: function get() {
+            return $.serializeHTMLFragment(this);
+        }
 
-        // TODO: impl, tests
+        // TODO: tests
         ,
-        set: function set(value) {}
+        set: function set(value) {
+            var fragment = $.parseHTMLFragment(value, this);
+            $.replaceAll(fragment, this);
+        }
     }]);
 
     return _class;
-}(DocumentFragment);
+}();
 
 exports.default = _class;
 
-},{"../utils.js":20}],12:[function(require,module,exports){
+},{"../utils.js":19}],11:[function(require,module,exports){
 'use strict';
 
 var _patch = require('./patch.js');
@@ -1511,14 +1568,183 @@ if (!nativeShadowDom || window.forceShadowDomPolyfill) {
     (0, _patch2.default)();
 }
 
-},{"./patch.js":19}],13:[function(require,module,exports){
+},{"./patch.js":18}],12:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
-    value: true
+            value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     https://dom.spec.whatwg.org/#interface-childnode
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     [NoInterfaceObject, Exposed=Window]
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     interface ChildNode
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     DocumentType implements ChildNode;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     Element implements ChildNode;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     CharacterData implements ChildNode;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     */
+
+exports.default = function (base) {
+
+            return function () {
+                        function _class() {
+                                    _classCallCheck(this, _class);
+                        }
+
+                        _createClass(_class, [{
+                                    key: 'before',
+
+
+                                    // TODO: tests
+                                    value: function before() {
+                                                // https://dom.spec.whatwg.org/#dom-childnode-before
+                                                // The before(nodes) method, when invoked, must run these steps:
+
+                                                // 1. Let parent be context object’s parent.
+                                                var parent = this.parentNode;
+
+                                                // 2. If parent is null, terminate these steps.
+                                                if (!parent) {
+                                                            return;
+                                                }
+
+                                                // 3. Let viablePreviousSibling be context object’s first preceding 
+                                                // sibling not in nodes, and null otherwise.
+                                                var viablePreviousSibling = this.previousSibling;
+
+                                                for (var _len = arguments.length, nodes = Array(_len), _key = 0; _key < _len; _key++) {
+                                                            nodes[_key] = arguments[_key];
+                                                }
+
+                                                while (viablePreviousSibling && nodes.indexOf(viablePreviousSibling) !== -1) {
+                                                            viablePreviousSibling = viablePreviousSibling.previousSibling;
+                                                }
+
+                                                // 4. Let node be the result of converting nodes into a node, given 
+                                                // nodes and context object’s node document. Rethrow any exceptions.
+                                                var node = $.convertNodesIntoANode(nodes, this.ownerDocument);
+
+                                                // 5. If viablePreviousSibling is null, set it to parent’s first child, 
+                                                // and to viablePreviousSibling’s next sibling otherwise.
+                                                if (viablePreviousSibling === null) {
+                                                            viablePreviousSibling = parent.firstChild;
+                                                } else {
+                                                            viablePreviousSibling = viablePreviousSibling.nextSibling;
+                                                }
+
+                                                // 6. Pre-insert node into parent before viablePreviousSibling. 
+                                                // Rethrow any exceptions.
+                                                $.preInsert(node, parent, viablePreviousSibling);
+                                    }
+
+                                    // TODO: tests
+
+                        }, {
+                                    key: 'after',
+                                    value: function after() {
+                                                // https://dom.spec.whatwg.org/#dom-childnode-after
+                                                // The after(nodes) method, when invoked, must run these steps:
+
+                                                // 1. Let parent be context object’s parent.
+                                                var parent = this.parentNode;
+
+                                                // 2. If parent is null, terminate these steps.
+                                                if (!parent) {
+                                                            return;
+                                                }
+
+                                                // 3. Let viableNextSibling be context object’s first following 
+                                                // sibling not in nodes, and null otherwise.
+                                                var viableNextSibling = this.nextSibling;
+
+                                                for (var _len2 = arguments.length, nodes = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+                                                            nodes[_key2] = arguments[_key2];
+                                                }
+
+                                                while (viableNextSibling && nodes.indexOf(viableNextSibling) !== -1) {
+                                                            viableNextSibling = viableNextSibling.nextSibling;
+                                                }
+
+                                                // 4. Let node be the result of converting nodes into a node, given 
+                                                // nodes and context object’s node document. Rethrow any exceptions.
+                                                var node = $.convertNodesIntoANode(nodes, this.ownerDocument);
+
+                                                // 5. Pre-insert node into parent before viableNextSibling. Rethrow 
+                                                // any exceptions.
+                                                $.preInsert(node, parent, viableNextSibling);
+                                    }
+
+                                    // TODO: tests
+
+                        }, {
+                                    key: 'replaceWith',
+                                    value: function replaceWith() {
+                                                // https://dom.spec.whatwg.org/#dom-childnode-replacewith
+                                                // The replaceWith(nodes) method, when invoked, must run these steps:
+
+                                                // 1. Let parent be context object’s parent.
+                                                var parent = this.parentNode;
+
+                                                // 2. If parent is null, terminate these steps.
+                                                if (!parent) {
+                                                            return;
+                                                }
+
+                                                // 3. Let viableNextSibling be context object’s first following 
+                                                // sibling not in nodes, and null otherwise.
+                                                var viableNextSibling = this.nextSibling;
+
+                                                for (var _len3 = arguments.length, nodes = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
+                                                            nodes[_key3] = arguments[_key3];
+                                                }
+
+                                                while (viableNextSibling && nodes.indexOf(viableNextSibling) !== -1) {
+                                                            viableNextSibling = viableNextSibling.nextSibling;
+                                                }
+
+                                                // 4. Let node be the result of converting nodes into a node, given 
+                                                // nodes and context object’s node document. Rethrow any exceptions.
+                                                var node = $.convertNodesIntoANode(nodes, this.ownerDocument);
+
+                                                // 5. If context object’s parent is parent, replace the context object 
+                                                // with node within parent. Rethrow any exceptions.
+                                                if (this.parentNode == parent) {
+                                                            parent.replaceChild(this, node);
+                                                }
+                                                // 6. Otherwise, pre-insert node into parent before viableNextSibling. 
+                                                // Rethrow any exceptions.
+                                                else {
+                                                                        parent.insertBefore(node, viableNextSibling);
+                                                            }
+                                    }
+
+                                    // TODO: tests
+
+                        }, {
+                                    key: 'remove',
+                                    value: function remove() {
+                                                // https://dom.spec.whatwg.org/#dom-childnode-remove
+                                                // The remove() method, when invoked, must run these steps:
+
+                                                // 1. If context object’s parent is null, terminate these steps.
+                                                var parent = this.parentNode;
+
+                                                if (!parent) {
+                                                            return;
+                                                }
+
+                                                // 2. Remove the context object from context object’s parent.
+                                                $.remove(this, parent);
+                                    }
+                        }]);
+
+                        return _class;
+            }();
+};
 
 var _utils = require('../utils.js');
 
@@ -1528,204 +1754,35 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /*
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               https://dom.spec.whatwg.org/#interface-childnode
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               [NoInterfaceObject, Exposed=Window]
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               interface ChildNode
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               DocumentType implements ChildNode;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Element implements ChildNode;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               CharacterData implements ChildNode;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               */
-
-exports.default = function (base) {
-    return function (_base) {
-        _inherits(_class, _base);
-
-        function _class() {
-            _classCallCheck(this, _class);
-
-            return _possibleConstructorReturn(this, (_class.__proto__ || Object.getPrototypeOf(_class)).apply(this, arguments));
-        }
-
-        _createClass(_class, [{
-            key: 'before',
-
-
-            // TODO: tests
-            value: function before() {
-                // https://dom.spec.whatwg.org/#dom-childnode-before
-                // The before(nodes) method, when invoked, must run these steps:
-
-                // 1. Let parent be context object’s parent.
-                var parent = this.parentNode;
-
-                // 2. If parent is null, terminate these steps.
-                if (!parent) {
-                    return;
-                }
-
-                // 3. Let viablePreviousSibling be context object’s first preceding 
-                // sibling not in nodes, and null otherwise.
-                var viablePreviousSibling = this.previousSibling;
-
-                for (var _len = arguments.length, nodes = Array(_len), _key = 0; _key < _len; _key++) {
-                    nodes[_key] = arguments[_key];
-                }
-
-                while (viablePreviousSibling && nodes.indexOf(viablePreviousSibling) !== -1) {
-                    viablePreviousSibling = viablePreviousSibling.previousSibling;
-                }
-
-                // 4. Let node be the result of converting nodes into a node, given 
-                // nodes and context object’s node document. Rethrow any exceptions.
-                var node = $.convertNodesIntoANode(nodes, this.ownerDocument);
-
-                // 5. If viablePreviousSibling is null, set it to parent’s first child, 
-                // and to viablePreviousSibling’s next sibling otherwise.
-                if (viablePreviousSibling === null) {
-                    viablePreviousSibling = parent.firstChild;
-                } else {
-                    viablePreviousSibling = viablePreviousSibling.nextSibling;
-                }
-
-                // 6. Pre-insert node into parent before viablePreviousSibling. 
-                // Rethrow any exceptions.
-                $.preInsert(node, parent, viablePreviousSibling);
-            }
-
-            // TODO: tests
-
-        }, {
-            key: 'after',
-            value: function after() {
-                // https://dom.spec.whatwg.org/#dom-childnode-after
-                // The after(nodes) method, when invoked, must run these steps:
-
-                // 1. Let parent be context object’s parent.
-                var parent = this.parentNode;
-
-                // 2. If parent is null, terminate these steps.
-                if (!parent) {
-                    return;
-                }
-
-                // 3. Let viableNextSibling be context object’s first following 
-                // sibling not in nodes, and null otherwise.
-                var viableNextSibling = this.nextSibling;
-
-                for (var _len2 = arguments.length, nodes = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-                    nodes[_key2] = arguments[_key2];
-                }
-
-                while (viableNextSibling && nodes.indexOf(viableNextSibling) !== -1) {
-                    viableNextSibling = viableNextSibling.nextSibling;
-                }
-
-                // 4. Let node be the result of converting nodes into a node, given 
-                // nodes and context object’s node document. Rethrow any exceptions.
-                var node = $.convertNodesIntoANode(nodes, this.ownerDocument);
-
-                // 5. Pre-insert node into parent before viableNextSibling. Rethrow 
-                // any exceptions.
-                $.preInsert(node, parent, viableNextSibling);
-            }
-
-            // TODO: tests
-
-        }, {
-            key: 'replaceWith',
-            value: function replaceWith() {
-                // https://dom.spec.whatwg.org/#dom-childnode-replacewith
-                // The replaceWith(nodes) method, when invoked, must run these steps:
-
-                // 1. Let parent be context object’s parent.
-                var parent = this.parentNode;
-
-                // 2. If parent is null, terminate these steps.
-                if (!parent) {
-                    return;
-                }
-
-                // 3. Let viableNextSibling be context object’s first following 
-                // sibling not in nodes, and null otherwise.
-                var viableNextSibling = this.nextSibling;
-
-                for (var _len3 = arguments.length, nodes = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
-                    nodes[_key3] = arguments[_key3];
-                }
-
-                while (viableNextSibling && nodes.indexOf(viableNextSibling) !== -1) {
-                    viableNextSibling = viableNextSibling.nextSibling;
-                }
-
-                // 4. Let node be the result of converting nodes into a node, given 
-                // nodes and context object’s node document. Rethrow any exceptions.
-                var node = $.convertNodesIntoANode(nodes, this.ownerDocument);
-
-                // 5. If context object’s parent is parent, replace the context object 
-                // with node within parent. Rethrow any exceptions.
-                if (this.parentNode == parent) {
-                    parent.replaceChild(this, node);
-                }
-                // 6. Otherwise, pre-insert node into parent before viableNextSibling. 
-                // Rethrow any exceptions.
-                else {
-                        parent.insertBefore(node, viableNextSibling);
-                    }
-            }
-
-            // TODO: tests
-
-        }, {
-            key: 'remove',
-            value: function remove() {
-                // https://dom.spec.whatwg.org/#dom-childnode-remove
-                // The remove() method, when invoked, must run these steps:
-
-                // 1. If context object’s parent is null, terminate these steps.
-                var parent = this.parentNode;
-
-                if (!parent) {
-                    return;
-                }
-
-                // 2. Remove the context object from context object’s parent.
-                $.remove(this, parent);
-            }
-        }]);
-
-        return _class;
-    }(base);
-};
-
-},{"../utils.js":20}],14:[function(require,module,exports){
+},{"../utils.js":19}],13:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     https://dom.spec.whatwg.org/#mixin-documentorshadowroot
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     https://www.w3.org/TR/shadow-dom/#extensions-to-the-documentorshadowroot-mixin
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     [NoInterfaceObject, Exposed=Window]
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     interface DocumentOrShadowRoot
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     Document implements DocumentOrShadowRoot;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     ShadowRoot implements DocumentOrShadowRoot;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     */
 
 exports.default = function (base) {
 
     var native = {
-        activeElement: Object.getOwnPropertyDescriptor(base.prototype, 'activeElement')
+        activeElement: $.prop(base, 'activeElement')
     };
 
-    return function (_base) {
-        _inherits(_class, _base);
-
+    return function () {
         function _class() {
             _classCallCheck(this, _class);
-
-            return _possibleConstructorReturn(this, (_class.__proto__ || Object.getPrototypeOf(_class)).apply(this, arguments));
         }
 
         _createClass(_class, [{
@@ -1736,125 +1793,14 @@ exports.default = function (base) {
                   https://www.w3.org/TR/shadow-dom/#extensions-to-the-documentorshadowroot-mixin
                   */
 
-            // Selection?        getSelection();
-            // Element?          elementFromPoint(double x, double y);
-            // sequence<Element> elementsFromPoint(double x, double y);
-            // CaretPosition?    caretPositionFromPoint(double x, double y);
-            // readonly attribute Element?       activeElement;
-            // readonly attribute StyleSheetList styleSheets;
-
-            // TODO: tests
+            // TODO: impl, tests
             get: function get() {
                 return native.activeElement.get.call(this);
             }
         }]);
 
         return _class;
-    }(base);
-};
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /*
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               https://dom.spec.whatwg.org/#mixin-documentorshadowroot
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               https://www.w3.org/TR/shadow-dom/#extensions-to-the-documentorshadowroot-mixin
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               [NoInterfaceObject, Exposed=Window]
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               interface DocumentOrShadowRoot
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Document implements DocumentOrShadowRoot;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               ShadowRoot implements DocumentOrShadowRoot;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               */
-
-},{}],15:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-exports.default = function (base) {
-
-    var native = {
-        previousElementSibling: Object.getOwnPropertyDescriptor(base.prototype, 'previousElementSibling'),
-        nextElementSibling: Object.getOwnPropertyDescriptor(base.prototype, 'nextElementSibling')
-    };
-
-    return function (_base) {
-        _inherits(_class, _base);
-
-        function _class() {
-            _classCallCheck(this, _class);
-
-            return _possibleConstructorReturn(this, (_class.__proto__ || Object.getPrototypeOf(_class)).apply(this, arguments));
-        }
-
-        _createClass(_class, [{
-            key: 'previousElementSibling',
-
-
-            // TODO: tests
-            get: function get() {
-                var parentNode = $.shadow(this).parentNode;
-                if (parentNode) {
-                    var childNodes = $.shadow(parentNode).childNodes;
-                    var index = childNodes.indexOf(this);
-
-                    if (index === 0) {
-                        return null;
-                    }
-
-                    do {
-                        var previous = childNodes[--index];
-
-                        if (previous.nodeType === Node.ELEMENT_NODE) {
-                            return previous;
-                        }
-                    } while (index > 0);
-
-                    return null;
-                }
-
-                return native.previousElementSibling.get.call(this);
-            }
-
-            // TODO: tests
-
-        }, {
-            key: 'nextElementSibling',
-            get: function get() {
-                var parentNode = $.shadow(this).parentNode;
-                if (parentNode) {
-                    var childNodes = $.shadow(parentNode).childNodes;
-                    var index = childNodes.indexOf(this);
-
-                    if (index === childNodes.length - 1) {
-                        return null;
-                    }
-
-                    do {
-                        var previous = childNodes[++index];
-
-                        if (previous.nodeType === Node.ELEMENT_NODE) {
-                            return previous;
-                        }
-                    } while (index < childNodes.length);
-
-                    return null;
-                }
-
-                return native.nextElementSibling.get.call(this);
-            }
-        }]);
-
-        return _class;
-    }(base);
+    }();
 };
 
 var _utils = require('../utils.js');
@@ -1865,62 +1811,145 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+},{"../utils.js":19}],14:[function(require,module,exports){
+'use strict';
 
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /*
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               https://dom.spec.whatwg.org/#interface-nondocumenttypechildnode
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               [NoInterfaceObject, Exposed=Window]
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               interface NonDocumentTypeChildNode
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Element implements NonDocumentTypeChildNode;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               CharacterData implements NonDocumentTypeChildNode;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               */
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
 
-},{"../utils.js":20}],16:[function(require,module,exports){
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     https://dom.spec.whatwg.org/#interface-nondocumenttypechildnode
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     [NoInterfaceObject, Exposed=Window]
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     interface NonDocumentTypeChildNode
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     Element implements NonDocumentTypeChildNode;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     CharacterData implements NonDocumentTypeChildNode;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     */
+
+exports.default = function (base) {
+
+    var native = {
+        previousElementSibling: $.prop(base, 'previousElementSibling'),
+        nextElementSibling: $.prop(base, 'nextElementSibling')
+    };
+
+    return function () {
+        function _class() {
+            _classCallCheck(this, _class);
+        }
+
+        _createClass(_class, [{
+            key: 'previousElementSibling',
+
+
+            // TODO: tests
+            get: function get() {
+                var parentNode = $.shadow(this).parentNode;
+
+                if (!parentNode) {
+                    if (native.previousElementSibling) {
+                        return native.previousElementSibling.get(this);
+                    }
+                    parentNode = this.parentNode;
+                }
+
+                var childNodes = $.shadow(parentNode).childNodes;
+                var index = childNodes.indexOf(this);
+
+                if (index === 0) {
+                    return null;
+                }
+
+                do {
+                    var previous = childNodes[--index];
+
+                    if (previous.nodeType === Node.ELEMENT_NODE) {
+                        return previous;
+                    }
+                } while (index > 0);
+
+                return null;
+            }
+
+            // TODO: tests
+
+        }, {
+            key: 'nextElementSibling',
+            get: function get() {
+                var parentNode = $.shadow(this).parentNode;
+
+                if (!parentNode) {
+                    if (native.nextElementSibling) {
+                        return native.nextElementSibling.get(this);
+                    }
+                    parentNode = this.parentNode;
+                }
+
+                var childNodes = $.shadow(parentNode).childNodes;
+                var index = childNodes.indexOf(this);
+
+                if (index === childNodes.length - 1) {
+                    return null;
+                }
+
+                do {
+                    var previous = childNodes[++index];
+
+                    if (previous.nodeType === Node.ELEMENT_NODE) {
+                        return previous;
+                    }
+                } while (index < childNodes.length);
+
+                return null;
+            }
+        }]);
+
+        return _class;
+    }();
+};
+
+var _utils = require('../utils.js');
+
+var $ = _interopRequireWildcard(_utils);
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+},{"../utils.js":19}],15:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     https://dom.spec.whatwg.org/#interface-nonelementparentnode
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     [NoInterfaceObject, Exposed=Window]
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     interface NonElementParentNode
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     Document implements NonElementParentNode;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     DocumentFragment implements NonElementParentNode;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     */
 
 exports.default = function (base) {
 
-    var native = {
-        getElementById: base.prototype.getElementById
-    };
-
-    return function (_base) {
-        _inherits(_class, _base);
-
+    return function () {
         function _class() {
             _classCallCheck(this, _class);
-
-            return _possibleConstructorReturn(this, (_class.__proto__ || Object.getPrototypeOf(_class)).apply(this, arguments));
         }
 
         _createClass(_class, [{
             key: "getElementById",
-
-
-            // TODO: tests
             value: function getElementById(id) {
                 // https://dom.spec.whatwg.org/#dom-nonelementparentnode-getelementbyid
-
-                // If the native implementation returns a correct element, go with that.
-
-                var candidateResult = native.getElementById.call(this, id);
-                var candidateRoot = candidateResult.getRootNode({ composed: false });
-
-                if (this === candidateRoot) {
-                    return candidateResult;
-                }
-
-                // Otherwise, go through our polyfilled algorithm.
 
                 var firstChild = this.firstChild;
 
@@ -1955,50 +1984,43 @@ exports.default = function (base) {
         }]);
 
         return _class;
-    }(base);
+    }();
 };
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /*
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               https://dom.spec.whatwg.org/#interface-nonelementparentnode
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               [NoInterfaceObject, Exposed=Window]
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               interface NonElementParentNode
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Document implements NonElementParentNode;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               DocumentFragment implements NonElementParentNode;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               */
-
-},{}],17:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     https://dom.spec.whatwg.org/#interface-parentnode
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     [NoInterfaceObject, Exposed=Window]
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     interface ParentNode
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     Document implements ParentNode;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     DocumentFragment implements ParentNode;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     Element implements ParentNode;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     */
 
 exports.default = function (base) {
 
     var native = {
-        children: Object.getOwnPropertyDescriptor(base.prototype, 'children'),
-        firstElementChild: Object.getOwnPropertyDescriptor(base.prototype, 'firstElementChild'),
-        lastElementChild: Object.getOwnPropertyDescriptor(base.prototype, 'lastElementChild'),
-        childElementCount: Object.getOwnPropertyDescriptor(base.prototype, 'childElementCount')
+        children: $.prop(base, 'children'),
+        firstElementChild: $.prop(base, 'firstElementChild'),
+        lastElementChild: $.prop(base, 'lastElementChild'),
+        childElementCount: $.prop(base, 'childElementCount')
     };
 
-    return function (_base) {
-        _inherits(_class, _base);
-
+    return function () {
         function _class() {
             _classCallCheck(this, _class);
-
-            return _possibleConstructorReturn(this, (_class.__proto__ || Object.getPrototypeOf(_class)).apply(this, arguments));
         }
 
         _createClass(_class, [{
@@ -2016,7 +2038,7 @@ exports.default = function (base) {
 
                 // 1. Let node be the result of converting nodes into a node given 
                 // nodes and context object’s node document. Rethrow any exceptions.
-                var node = $.convertNodesIntoANode(nodes, this.ownerDocument);
+                var node = $.convertNodesIntoANode(nodes, this.ownerDocument || this);
 
                 // 2. Pre-insert node into context object before the context object’s 
                 // first child. Rethrow any exceptions.
@@ -2037,7 +2059,7 @@ exports.default = function (base) {
 
                 // 1. Let node be the result of converting nodes into a node given 
                 // nodes and context object’s node document. Rethrow any exceptions.
-                var node = $.convertNodesIntoANode(nodes, this.ownerDocument);
+                var node = $.convertNodesIntoANode(nodes, this.ownerDocument || this);
 
                 // 2. Append node to context object. Rethrow any exceptions.
                 $.append(node, this);
@@ -2101,87 +2123,96 @@ exports.default = function (base) {
             }
         }, {
             key: 'children',
-
-
-            // TODO: tests
             get: function get() {
                 var childNodes = $.shadow(this).childNodes;
-                if (childNodes) {
-                    var elements = [];
-                    for (var i = 0; i < childNodes.length; i++) {
-                        var node = childNodes[i];
-                        if (node.nodeType == Node.ELEMENT_NODE) {
-                            elements.push(node);
-                        }
-                    }
 
-                    return elements;
+                if (!childNodes) {
+                    if (native.children) {
+                        return native.children.get.call(this);
+                    }
+                    childNodes = this.childNodes;
                 }
 
-                return native.children.get.call(this);
+                var elements = [];
+
+                for (var i = 0; i < childNodes.length; i++) {
+                    var node = childNodes[i];
+                    if (node.nodeType == Node.ELEMENT_NODE) {
+                        elements.push(node);
+                    }
+                }
+
+                return elements;
             }
-
-            // TODO: tests
-
         }, {
             key: 'firstElementChild',
             get: function get() {
                 var childNodes = $.shadow(this).childNodes;
-                if (childNodes) {
-                    for (var i = 0; i < childNodes.length; i++) {
-                        var node = childNodes[i];
-                        if (node.nodeType == Node.ELEMENT_NODE) {
-                            return node;
-                        }
+
+                if (!childNodes) {
+                    if (native.firstElementChild) {
+                        return native.firstElementChild.get.call(this);
                     }
-                    return null;
+                    childNodes = this.childNodes;
                 }
 
-                return native.firstElementChild.get.call(this);
+                for (var i = 0; i < childNodes.length; i++) {
+                    var node = childNodes[i];
+                    if (node.nodeType == Node.ELEMENT_NODE) {
+                        return node;
+                    }
+                }
+
+                return null;
             }
-
-            // TODO: tests
-
         }, {
             key: 'lastElementChild',
             get: function get() {
                 var childNodes = $.shadow(this).childNodes;
-                if (childNodes) {
-                    for (var i = childNodes.length - 1; i >= 0; i--) {
-                        var node = childNodes[i];
-                        if (node.nodeType == Node.ELEMENT_NODE) {
-                            return node;
-                        }
+
+                if (!childNodes) {
+                    if (native.lastElementChild) {
+                        return native.lastElementChild.get.call(this);
                     }
-                    return null;
+                    childNodes = this.childNodes;
                 }
 
-                return native.lastElementChild.get.call(this);
+                for (var i = childNodes.length - 1; i >= 0; i--) {
+                    var node = childNodes[i];
+                    if (node.nodeType == Node.ELEMENT_NODE) {
+                        return node;
+                    }
+                }
+
+                return null;
             }
-
-            // TODO: tests
-
         }, {
             key: 'childElementCount',
             get: function get() {
                 var childNodes = $.shadow(this).childNodes;
-                if (childNodes) {
-                    var count = 0;
-                    for (var i = 0; i < childNodes.length; i++) {
-                        var node = childNodes[i];
-                        if (node.nodeType == Node.ELEMENT_NODE) {
-                            count++;
-                        }
+
+                if (!childNodes) {
+                    if (native.childElementCount) {
+                        return native.childElementCount.get.call(this);
                     }
-                    return count;
+                    childNodes = this.childNodes;
                 }
 
-                return native.childElementCount.get.call(this);
+                var count = 0;
+
+                for (var i = 0; i < childNodes.length; i++) {
+                    var node = childNodes[i];
+                    if (node.nodeType == Node.ELEMENT_NODE) {
+                        count++;
+                    }
+                }
+
+                return count;
             }
         }]);
 
         return _class;
-    }(base);
+    }();
 };
 
 var _utils = require('../utils.js');
@@ -2192,29 +2223,43 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /*
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               https://dom.spec.whatwg.org/#interface-parentnode
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               [NoInterfaceObject, Exposed=Window]
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               interface ParentNode
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Document implements ParentNode;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               DocumentFragment implements ParentNode;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Element implements ParentNode;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               */
-
-},{"../utils.js":20}],18:[function(require,module,exports){
+},{"../utils.js":19}],17:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     https://dom.spec.whatwg.org/#mixin-slotable
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     [NoInterfaceObject, Exposed=Window]
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     interface Slotable
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     Element implements Slotable;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     Text implements Slotable;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     */
+
+exports.default = function (base) {
+
+    return function () {
+        function _class() {
+            _classCallCheck(this, _class);
+        }
+
+        _createClass(_class, [{
+            key: 'assignedSlot',
+            get: function get() {
+                // TODO: efficiency (https://github.com/whatwg/dom/issues/369)
+                return $.findASlot(this, true);
+            }
+        }]);
+
+        return _class;
+    }();
+};
 
 var _utils = require('../utils.js');
 
@@ -2224,46 +2269,7 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
-
-function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; } /*
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               https://dom.spec.whatwg.org/#mixin-slotable
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               [NoInterfaceObject, Exposed=Window]
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               interface Slotable
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Element implements Slotable;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               Text implements Slotable;
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               */
-
-exports.default = function (base) {
-    return function (_base) {
-        _inherits(_class, _base);
-
-        function _class() {
-            _classCallCheck(this, _class);
-
-            return _possibleConstructorReturn(this, (_class.__proto__ || Object.getPrototypeOf(_class)).apply(this, arguments));
-        }
-
-        _createClass(_class, [{
-            key: 'assignedSlot',
-
-
-            // TODO: tests
-            get: function get() {
-                // TODO: efficiency
-                return $.findASlot(this, true);
-            }
-        }]);
-
-        return _class;
-    }(base);
-};
-
-},{"../utils.js":20}],19:[function(require,module,exports){
+},{"../utils.js":19}],18:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2271,21 +2277,38 @@ Object.defineProperty(exports, "__esModule", {
 });
 
 exports.default = function () {
+
+    // Element.matches(selectors) polyfill from MDN
+    // https://developer.mozilla.org/en-US/docs/Web/API/Element/matches#Polyfill
+
+    if (!Element.prototype.matches) {
+        Element.prototype.matches = Element.prototype.matchesSelector || Element.prototype.mozMatchesSelector || Element.prototype.msMatchesSelector || Element.prototype.oMatchesSelector || Element.prototype.webkitMatchesSelector || function (s) {
+            var matches = (this.document || this.ownerDocument).querySelectorAll(s);
+            var i = matches.length;
+            while (--i >= 0 && matches.item(i) !== this) {}
+            return i > -1;
+        };
+    }
+
     // Globally applied interfaces
 
-    //$.extend(CustomEvent, $CustomEvent);
     $.extend(Document, _Document2.default);
     $.extend(Element, _Element2.default);
-    //$.extend(Event, $Event);
-    //$.extend(EventTarget, $EventTarget);
-    $.extend(HTMLUnknownElement, _HTMLSlotElement2.default);
-    if ('HTMLSlotElement' in window) {
-        // In case we are forcing a polyfill
-        $.extend(HTMLSlotElement, _HTMLSlotElement2.default);
+    $.extend(Event, _Event2.default);
+
+    if ('EventTarget' in Window) {
+        $.extend(EventTarget, (0, _EventTarget2.default)(EventTarget));
+    } else {
+        // In IE, EventTarget is not exposed and Window's
+        // EventTarget methods are not the same as Node's.
+        $.extend(Window, (0, _EventTarget2.default)(Window));
+        $.extend(Node, (0, _EventTarget2.default)(Node));
     }
+
+    $.extend(HTMLSlotElement, _HTMLSlotElement2.default);
     $.extend(HTMLTableElement, _HTMLTableElement2.default);
-    $.extend(HTMLTableSectionElement, _HTMLTableSectionElement2.default);
     $.extend(HTMLTableRowElement, _HTMLTableRowElement2.default);
+    $.extend(HTMLTableSectionElement, _HTMLTableSectionElement2.default);
     $.extend(Node, _Node2.default);
 
     // Globally applied mixins
@@ -2309,15 +2332,21 @@ exports.default = function () {
 
     $.extend(Element, (0, _Slotable2.default)(Element));
     $.extend(Text, (0, _Slotable2.default)(Text));
+
+    // For IE, Edge
+
+    delete HTMLElement.prototype.children;
+    delete HTMLElement.prototype.parentElement;
+    delete HTMLElement.prototype.innerHTML;
+    delete HTMLElement.prototype.outerHTML;
+    delete HTMLElement.prototype.insertAdjacentText;
+    delete HTMLElement.prototype.insertAdjacentElement;
+    delete HTMLElement.prototype.insertAdjacentHTML;
 };
 
 var _utils = require('./utils.js');
 
 var $ = _interopRequireWildcard(_utils);
-
-var _CustomEvent = require('./interfaces/CustomEvent.js');
-
-var _CustomEvent2 = _interopRequireDefault(_CustomEvent);
 
 var _Document = require('./interfaces/Document.js');
 
@@ -2343,13 +2372,13 @@ var _HTMLTableElement = require('./interfaces/HTMLTableElement.js');
 
 var _HTMLTableElement2 = _interopRequireDefault(_HTMLTableElement);
 
-var _HTMLTableSectionElement = require('./interfaces/HTMLTableSectionElement.js');
-
-var _HTMLTableSectionElement2 = _interopRequireDefault(_HTMLTableSectionElement);
-
 var _HTMLTableRowElement = require('./interfaces/HTMLTableRowElement.js');
 
 var _HTMLTableRowElement2 = _interopRequireDefault(_HTMLTableRowElement);
+
+var _HTMLTableSectionElement = require('./interfaces/HTMLTableSectionElement.js');
+
+var _HTMLTableSectionElement2 = _interopRequireDefault(_HTMLTableSectionElement);
 
 var _Node = require('./interfaces/Node.js');
 
@@ -2387,7 +2416,10 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-},{"./interfaces/CustomEvent.js":1,"./interfaces/Document.js":2,"./interfaces/Element.js":3,"./interfaces/Event.js":4,"./interfaces/EventTarget.js":5,"./interfaces/HTMLSlotElement.js":6,"./interfaces/HTMLTableElement.js":7,"./interfaces/HTMLTableRowElement.js":8,"./interfaces/HTMLTableSectionElement.js":9,"./interfaces/Node.js":10,"./interfaces/ShadowRoot.js":11,"./mixins/ChildNode.js":13,"./mixins/DocumentOrShadowRoot.js":14,"./mixins/NonDocumentTypeChildNode.js":15,"./mixins/NonElementParentNode.js":16,"./mixins/ParentNode.js":17,"./mixins/Slotable.js":18,"./utils.js":20}],20:[function(require,module,exports){
+// In case we would force the polyfill
+var HTMLSlotElement = window.HTMLSlotElement || window.HTMLUnknownElement;
+
+},{"./interfaces/Document.js":1,"./interfaces/Element.js":2,"./interfaces/Event.js":3,"./interfaces/EventTarget.js":4,"./interfaces/HTMLSlotElement.js":5,"./interfaces/HTMLTableElement.js":6,"./interfaces/HTMLTableRowElement.js":7,"./interfaces/HTMLTableSectionElement.js":8,"./interfaces/Node.js":9,"./interfaces/ShadowRoot.js":10,"./mixins/ChildNode.js":12,"./mixins/DocumentOrShadowRoot.js":13,"./mixins/NonDocumentTypeChildNode.js":14,"./mixins/NonElementParentNode.js":15,"./mixins/ParentNode.js":16,"./mixins/Slotable.js":17,"./utils.js":19}],19:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2398,6 +2430,15 @@ exports.extend = extend;
 exports.shadow = shadow;
 exports.convertNodesIntoANode = convertNodesIntoANode;
 exports.isValidCustomElementName = isValidCustomElementName;
+exports.shadowIncludingDescendant = shadowIncludingDescendant;
+exports.shadowIncludingInclusiveDescendant = shadowIncludingInclusiveDescendant;
+exports.shadowIncludingAncestor = shadowIncludingAncestor;
+exports.shadowIncludingInclusiveAncestor = shadowIncludingInclusiveAncestor;
+exports.closedShadowHidden = closedShadowHidden;
+exports.retarget = retarget;
+exports.insertAdjacent = insertAdjacent;
+exports.parseHTMLFragment = parseHTMLFragment;
+exports.serializeHTMLFragment = serializeHTMLFragment;
 exports.findASlot = findASlot;
 exports.findSlotables = findSlotables;
 exports.findFlattenedSlotables = findFlattenedSlotables;
@@ -2418,17 +2459,41 @@ exports.adopt = adopt;
 
 function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
 
-var native = {
-    insertBefore: Node.prototype.insertBefore,
-    removeChild: Node.prototype.removeChild,
-    cloneNode: Node.prototype.cloneNode,
-    appendChild: Node.prototype.appendChild,
-    parentNode: Object.getOwnPropertyDescriptor(Node.prototype, 'parentNode'),
-    firstChild: Object.getOwnPropertyDescriptor(Node.prototype, 'firstChild'),
-    childNodes: Object.getOwnPropertyDescriptor(Node.prototype, 'childNodes')
+var prop = exports.prop = function prop(type, name) {
+    return Object.getOwnPropertyDescriptor(type.prototype, name);
 };
 
-var slice = function slice(array) {
+var native = exports.native = {
+    Document: {
+        getElementsByTagName: Document.prototype.getElementsByTagName,
+        getElementsByTagNameNS: Document.prototype.getElementsByTagNameNS,
+        getElementsByClassName: Document.prototype.getElementsByClassName
+    },
+    Element: {
+        getElementsByTagName: Element.prototype.getElementsByTagName,
+        getElementsByTagNameNS: Element.prototype.getElementsByTagNameNS,
+        getElementsByClassName: Element.prototype.getElementsByClassName,
+        innerHTML: prop(Element, 'innerHTML') || prop(HTMLElement, 'innerHTML'),
+        setAttribute: Element.prototype.setAttribute
+    },
+    Node: {
+        parentNode: prop(Node, 'parentNode'),
+        hasChildNodes: Node.prototype.hasChildNodes,
+        childNodes: prop(Node, 'childNodes'),
+        firstChild: prop(Node, 'firstChild'),
+        lastChild: prop(Node, 'lastChild'),
+        previousSibling: prop(Node, 'previousSibling'),
+        nextSibling: prop(Node, 'nextSibling'),
+        textContent: prop(Node, 'textContent'),
+        normalize: Node.prototype.normalize,
+        cloneNode: Node.prototype.cloneNode,
+        insertBefore: Node.prototype.insertBefore,
+        removeChild: Node.prototype.removeChild,
+        appendChild: Node.prototype.appendChild
+    }
+};
+
+var slice = exports.slice = function slice(array) {
     return Array.prototype.slice.call(array);
 };
 
@@ -2514,6 +2579,229 @@ function isValidCustomElementName(localName) {
     return regex.test(localName);
 }
 
+function shadowIncludingDescendant(nodeA, nodeB) {
+    do {
+        if (nodeA.nodeName === '#shadow-root') {
+            nodeA = nodeA.host;
+        } else {
+            nodeA = nodeA.parentNode;
+        }
+        if (nodeA === nodeB) {
+            return true;
+        }
+    } while (nodeA !== null);
+    return false;
+}
+
+function shadowIncludingInclusiveDescendant(nodeA, nodeB) {
+    return nodeA === nodeB || shadowIncludingDescendant(nodeA, nodeB);
+}
+
+function shadowIncludingAncestor(nodeA, nodeB) {
+    return shadowIncludingDescendant(nodeB, nodeA);
+}
+
+function shadowIncludingInclusiveAncestor(nodeA, nodeB) {
+    return nodeA === nodeB || shadowIncludingAncestor(nodeA, nodeB);
+}
+
+function closedShadowHidden(nodeA, nodeB) {
+    // https://dom.spec.whatwg.org/#concept-closed-shadow-hidden
+    var root = nodeA.getRootNode({ composed: false });
+
+    if (root.localName !== '#shadow-root') {
+        return false;
+    }
+
+    if (shadowIncludingInclusiveAncestor(root, nodeB)) {
+        return false;
+    }
+
+    if (root.mode === 'closed' || closedShadowHidden(root.host, nodeB)) {
+        return true;
+    }
+
+    return false;
+}
+
+function retarget(nodeA, nodeB) {
+    // https://dom.spec.whatwg.org/#retarget
+    // To retarget an object A against an object B, repeat these steps 
+    // until they return an object:
+
+    var root = void 0;
+    while (root = nodeA.getRootNode()) {
+        // 1. If A’s root is not a shadow root, or A’s root is a shadow-including 
+        // inclusive ancestor of B, then return A.
+        if (root.localName !== '#shadow-root' || shadowIncludingInclusiveAncestor(root, nodeB)) {
+            return nodeA;
+        }
+        // 2. Set A to A’s root’s host.
+        nodeA = root.host;
+    }
+}
+
+function insertAdjacent(element, where, node) {
+    if (!(node instanceof Node)) {
+        throw makeError('TypeError');
+    }
+    var parent = void 0;
+    // https://dom.spec.whatwg.org/#insert-adjacent
+    switch ((where || '').toLowerCase()) {
+        case "beforebegin":
+            if (parent = element.parentNode) {
+                return preInsert(node, parent, element);
+            }
+            return null;
+        case "afterbegin":
+            return preInsert(node, element, element.firstChild);
+        case "beforeend":
+            return preInsert(node, element, null);
+        case "afterend":
+            if (parent = element.parentNode) {
+                return preInsert(node, parent, element.nextSibling);
+            }
+            return null;
+        default:
+            throw makeError('SyntaxError');
+    }
+}
+
+function parseHTMLFragment(markup, context) {
+    var temp = context.ownerDocument.createElement('body');
+    native.Element.innerHTML.set.call(temp, markup);
+    var childNodes = native.Node.childNodes.get.call(temp);
+    var fragment = context.ownerDocument.createDocumentFragment();
+    for (var i = 0; i < childNodes.length; i++) {
+        native.Node.appendChild.call(fragment, childNodes[i]);
+    }
+    return fragment;
+}
+
+function serializeHTMLFragment(node) {
+    // https://www.w3.org/TR/html5/single-page.html#html-fragment-serialization-algorithm
+
+    // 1. Let s be a string, and initialize it to the empty string.
+    var s = '';
+
+    // 2. If the node is a template element, then let the node instead be the 
+    // template element's template contents (a DocumentFragment node).
+    if (node.localName === 'template') {
+        var content = node.content;
+        if (content) {
+            node = content;
+        }
+    }
+
+    // 3. For each child node of the node, in tree order, run the following steps:
+    var childNodes = node.childNodes;
+    for (var i = 0; i < childNodes.length; i++) {
+        // 1. Let current node be the child node being processed.
+        var currentNode = childNodes[i];
+        // 2. Append the appropriate string from the following list to s:
+        switch (currentNode.nodeType) {
+            case Node.ELEMENT_NODE:
+                var tagName = void 0;
+                switch (currentNode.namespaceURI) {
+                    case 'http://www.w3.org/1999/xhtml':
+                    case 'http://www.w3.org/1998/Math/MathML':
+                    case 'http://www.w3.org/2000/svg':
+                        tagName = currentNode.localName;
+                        break;
+                    default:
+                        tagName = currentNode.qualifiedName;
+                        break;
+                }
+                s += '<' + tagName;
+                var attributes = currentNode.attributes;
+                for (var j = 0; j < attributes.length; j++) {
+                    var attribute = attributes[j];
+                    s += ' ' + serializeAttributeName(attribute);
+                    s += '="' + escapeString(attribute.value) + '"';
+                }
+                s += '>';
+                switch (currentNode.localName) {
+                    case 'area':case 'base':case 'basefont':case 'bgsound':
+                    case 'br':case 'col':case 'embed':case 'frame':case 'hr':
+                    case 'img':case 'input':case 'keygen':case 'link':case 'meta':
+                    case 'param':case 'source':case 'track':case 'wbr':
+                        continue;
+                    case 'pre':case 'textarea':case 'listing':
+                        var firstChild = currentNode.firstChild;
+                        if (firstChild && firstChild.nodeType === Node.TEXT_NODE && firstChild.data[0] === '\n') {
+                            s += '\n';
+                        }
+                        break;
+                }
+                s += serializeHTMLFragment(currentNode);
+                s += '</' + tagName + '>';
+                break;
+            case Node.TEXT_NODE:
+                switch (currentNode.parentNode.localName) {
+                    case 'style':case 'script':case 'xmp':case 'iframe':
+                    case 'noembed':case 'noframes':case 'plaintext':case 'noscript':
+                        s += currentNode.data;
+                        break;
+                    default:
+                        s += escapeString(currentNode.data);
+                        break;
+                }
+                break;
+            case Node.COMMENT_NODE:
+                s += '<!--' + currentNode.data + '-->';
+                break;
+            case Node.PROCESSING_INSTRUCTION_NODE:
+                s += '<?' + currentNode.target + ' ' + currentNode.data + '>';
+                break;
+            case Node.DOCUMENT_TYPE_NODE:
+                s += '<!DOCTYPE ' + currentNode.name + '>';
+                break;
+        }
+    }
+
+    // 4. The result of the algorithm is the string s.
+    return s;
+
+    function escapeString(string, attributeMode) {
+        if (!string || !string.length) {
+            return '';
+        }
+
+        string = string.replace('&', '&amp;');
+        string = string.replace('\xA0', '&nbsp;');
+
+        if (attributeMode) {
+            string = string.replace('"', '&quot;');
+        } else {
+            string = string.replace('<', '&lt;');
+            string = string.replace('>', '&gt;');
+        }
+
+        return string;
+    }
+
+    function serializeAttributeName(attribute) {
+        var namespaceURI = attribute.namespaceURI;
+        var localName = attribute.localName;
+        if (!namespaceURI) {
+            return localName;
+        }
+        switch (namespaceURI) {
+            case 'http://www.w3.org/XML/1998/namespace':
+                return 'xml:' + localName;
+            case 'http://www.w3.org/2000/xmlns/':
+                if (localName === 'xmlns') {
+                    return localName;
+                }
+                return 'xmlns:' + localName;
+            case 'http://www.w3.org/1999/xlink':
+                return 'xlink:' + localName;
+            default:
+                return attribute.name;
+        }
+    }
+}
+
 // https://dom.spec.whatwg.org/#finding-slots-and-slotables
 
 function findASlot(slotable, open) {
@@ -2528,25 +2816,25 @@ function findASlot(slotable, open) {
     }
 
     // 2. Let shadow be slotable’s parent’s shadow root.
-    var shadow = parent.shadowRoot;
+    var shadowRoot = shadow(parent).shadowRoot;
 
     // 3. If shadow is null, then return null.
-    if (!shadow) {
+    if (!shadowRoot) {
         return null;
     }
 
     // 4. If the open flag is set and shadow’s mode is not "open", then return null.
-    if (open && shadow.mode !== 'open') {
+    if (open === true && shadowRoot.mode !== 'open') {
         return null;
     }
 
     // 5. Return the first slot in shadow’s tree whose name is slotable’s name, if any, and null otherwise.
-    if (!shadow.firstChild) {
+    if (!shadowRoot.firstChild) {
         return null;
     }
 
-    var name = slotable instanceof Element ? slotable.getAttribute('slot') : null;
-    var stack = [{ node: shadow.firstChild, recursed: false }];
+    var name = slotable instanceof Element ? slotable.slot : null;
+    var stack = [{ node: shadowRoot.firstChild, recursed: false }];
 
     while (stack.length) {
         var frame = stack.pop();
@@ -2677,28 +2965,28 @@ function assignSlotables(slot, suppressSignaling) {
     // 4a. If we haven't tracked them yet, track the slot's logical children
     if (!shadow(slot).childNodes) {
         shadow(slot, {
-            childNodes: slice(native.childNodes.get.call(slot))
+            childNodes: slice(native.Node.childNodes.get.call(slot))
         });
     }
 
     // 4b. We need to clean out the slot
     var firstChild = void 0;
-    while (firstChild = native.firstChild.get.call(slot)) {
-        native.removeChild.call(slot, firstChild);
+    while (firstChild = native.Node.firstChild.get.call(slot)) {
+        native.Node.removeChild.call(slot, firstChild);
     }
 
     // 4c. do what the spec said
     for (var _i3 = 0; _i3 < slotables.length; _i3++) {
         var slotable = slotables[_i3];
         shadow(slotable, { assignedSlot: slot });
-        native.appendChild.call(slot, slotable);
+        native.Node.appendChild.call(slot, slotable);
     }
 
     // 4d. if there were no slotables we need to insert its fallback content
     if (!slotables.length) {
         var childNodes = shadow(slot).childNodes;
         for (var _i4 = 0; _i4 < childNodes.length; _i4++) {
-            native.appendChild.call(slot, childNodes[_i4]);
+            native.Node.appendChild.call(slot, childNodes[_i4]);
         }
     }
 }
@@ -2721,7 +3009,7 @@ function assignSlotablesForATree(tree, noSignalSlots) {
         var slot = slots[i];
 
         // 1. Let suppress signaling flag be set, if slot is in noSignalSlots, and unset otherwise.
-        var suppressSignaling = noSignalSlots.indexOf(slot) !== -1;
+        var suppressSignaling = noSignalSlots && noSignalSlots.indexOf(slot) !== -1;
 
         // 2. Run assign slotables for slot with suppress signaling flag.
         assignSlotables(slot, suppressSignaling);
@@ -2843,10 +3131,10 @@ function insert(node, parent, child, suppressObservers) {
             // If it's a shadow root, perform physical insert on the host.
             var shadowHost = shadow(parent).host;
             if (shadowHost) {
-                native.insertBefore.call(shadowHost, _node, child);
+                native.Node.insertBefore.call(shadowHost, _node, child);
             }
         } else {
-            native.insertBefore.call(parent, _node, child);
+            native.Node.insertBefore.call(parent, _node, child);
         }
 
         // 2. If parent is a shadow host and node is a slotable, then assign a slot for node.
@@ -2857,7 +3145,7 @@ function insert(node, parent, child, suppressObservers) {
         // 3. If parent is a slot whose assigned nodes is the empty list, then run signal a slot change for parent.
         if (parent.localName === 'slot' && parent.assignedNodes().length === 0) {
             // 3a. Physically append the child into the slot.
-            native.appendChild.call(parent, _node);
+            native.Node.appendChild.call(parent, _node);
             // 3b. Do what the spec said
             signalASlotChange(parent);
         }
@@ -3025,7 +3313,7 @@ function remove(node, parent, suppessObservers) {
         childNodes.splice(nodeIndex, 1);
     }
     delete shadow(node).parentNode;
-    native.removeChild.call(native.parentNode.get.call(node), node);
+    native.Node.removeChild.call(native.Node.parentNode.get.call(node), node);
 
     // 10. If node is assigned, then run assign slotables for node’s assigned slot.
     var assignedSlot = shadow(node).assignedSlot;
@@ -3090,7 +3378,7 @@ function clone(node, document, cloneChildren) {
     // 5. Run any cloning steps defined for node in other applicable 
     // specifications and pass copy, node, document and the clone children 
     // flag if set, as parameters.
-    var copy = native.cloneNode.call(node, false);
+    var copy = native.Node.cloneNode.call(node, false);
 
     // 6. If the clone children flag is set, clone all the children of node 
     // and append them to copy, with document as specified and the clone 
@@ -3121,4 +3409,4 @@ function adopt(node, document) {
     // 3. If document is not the same as oldDocument, run these substeps:
 }
 
-},{}]},{},[12]);
+},{}]},{},[11]);

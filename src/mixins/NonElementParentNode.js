@@ -12,26 +12,10 @@ DocumentFragment implements NonElementParentNode;
 
 export default function (base) {
 
-    const native = {
-        getElementById: base.prototype.getElementById
-    };
+    return class {
 
-    return class extends base {
-
-        // TODO: tests
         getElementById(id) {
             // https://dom.spec.whatwg.org/#dom-nonelementparentnode-getelementbyid
-
-            // If the native implementation returns a correct element, go with that.
-
-            const candidateResult = native.getElementById.call(this, id);
-            const candidateRoot = candidateResult.getRootNode({ composed: false });
-
-            if (this === candidateRoot) {
-                return candidateResult;
-            }
-
-            // Otherwise, go through our polyfilled algorithm.
 
             let firstChild = this.firstChild;
 

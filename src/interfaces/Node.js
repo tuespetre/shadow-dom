@@ -9,20 +9,7 @@ interface Node : EventTarget
 
 import * as $ from '../utils.js';
 
-const native = {
-    parentNode: Object.getOwnPropertyDescriptor(Node.prototype, 'parentNode'),
-    parentElement: Object.getOwnPropertyDescriptor(Node.prototype, 'parentElement'),
-    hasChildNodes: Node.prototype.hasChildNodes,
-    childNodes: Object.getOwnPropertyDescriptor(Node.prototype, 'childNodes'),
-    firstChild: Object.getOwnPropertyDescriptor(Node.prototype, 'firstChild'),
-    lastChild: Object.getOwnPropertyDescriptor(Node.prototype, 'lastChild'),
-    previousSibling: Object.getOwnPropertyDescriptor(Node.prototype, 'previousSibling'),
-    nextSibling: Object.getOwnPropertyDescriptor(Node.prototype, 'nextSibling'),
-    textContent: Object.getOwnPropertyDescriptor(Node.prototype, 'textContent'),
-    normalize: Node.prototype.normalize
-};
-
-export default class extends Node {
+export default class {
 
     getRootNode(options) {
         // https://dom.spec.whatwg.org/#dom-node-getrootnode
@@ -58,19 +45,16 @@ export default class extends Node {
             return parentNode;
         }
 
-        return native.parentNode.get.call(this);
+        return $.native.Node.parentNode.get.call(this);
     }
 
     get parentElement() {
-        const parentNode = $.shadow(this).parentNode;
-        if (parentNode) {
-            if (parentNode.nodeType === Node.ELEMENT_NODE) {
-                return parentNode;
-            }
-            return null;
+        const parentNode = this.parentNode;
+        if (parentNode && parentNode.nodeType === Node.ELEMENT_NODE) {
+            return parentNode;
         }
 
-        return native.parentElement.get.call(this);
+        return null;
     }
 
     // TODO: tests
@@ -80,7 +64,7 @@ export default class extends Node {
             return childNodes.length > 0;
         }
 
-        return native.hasChildNodes.call(this);
+        return $.native.Node.hasChildNodes.call(this);
     }
 
     // TODO: tests
@@ -90,7 +74,7 @@ export default class extends Node {
             return childNodes.slice();
         }
 
-        return native.childNodes.get.call(this);
+        return $.native.Node.childNodes.get.call(this);
     }
 
     // TODO: tests
@@ -103,7 +87,7 @@ export default class extends Node {
             return null;
         }
 
-        return native.firstChild.get.call(this);
+        return $.native.Node.firstChild.get.call(this);
     }
 
     // TODO: tests
@@ -116,7 +100,7 @@ export default class extends Node {
             return null;
         }
 
-        return native.lastChild.get.call(this);
+        return $.native.Node.lastChild.get.call(this);
     }
 
     // TODO: tests
@@ -128,7 +112,7 @@ export default class extends Node {
             return siblingIndex < 0 ? null : childNodes[siblingIndex];
         }
 
-        return native.previousSibling.get.call(this);
+        return $.native.Node.previousSibling.get.call(this);
     }
 
     // TODO: tests
@@ -140,25 +124,76 @@ export default class extends Node {
             return siblingIndex === childNodes.length ? null : childNodes[siblingIndex];
         }
 
-        return native.nextSibling.get.call(this);
+        return $.native.Node.nextSibling.get.call(this);
     }
 
-    // TODO: impl, tests
+    // TODO: tests
     get textContent() {
-        return native.textContent.get.call(this);
+        switch (this.nodeType) {
+            case Node.DOCUMENT_FRAGMENT_NODE:
+            case Node.ELEMENT_NODE:
+                let result = '';
+                const childNodes = this.childNodes;
+                for (let i = 0; i < childNodes.length; i++) {
+                    result += childNodes[i].textContent;
+                }
+                return result;
+            case Node.ATTRIBUTE_NODE:
+                return this.value;
+            case Node.TEXT_NODE:
+            case Node.PROCESSING_INSTRUCTION_NODE:
+            case Node.COMMENT_NODE:
+                return this.data;
+            default:
+                return null;
+        }
     }
 
-    // TODO: impl, tests
+    // TODO: tests
     set textContent(value) {
-        return native.textContent.set.call(this, value);
+        switch (this.nodeType) {
+            case Node.DOCUMENT_FRAGMENT_NODE:
+            case Node.ELEMENT_NODE:
+                let node = null;
+                if (value !== '') {
+                    node = this.ownerDocument.createTextNode(value);
+                }
+                $.replaceAll(node, this);
+                return;
+        }
+
+        return $.native.Node.textContent.set.call(this, value);
     }
 
-    // TODO: impl, tests
+    // TODO: tests
     normalize() {
         // https://dom.spec.whatwg.org/#dom-node-normalize
         // The normalize() method, when invoked, must run these steps 
         // for each descendant exclusive Text node node of context object:
-        return native.normalize.call(this);
+        const childNodes = this.childNodes;
+        for (let i = 0; i < childNodes.length; i++) {
+            let childNode = childNodes[i];
+            if (childNode.hasChildNodes()) {
+                childNode.normalize();
+            }
+            else if (childNode.nodeType === Node.TEXT_NODE) {
+                let length = childNode.data.length;
+                if (length === 0) {
+                    $.remove(childNode, this);
+                    continue;
+                }
+                let j;
+                for (j = i + 1; j < childNodes.length; j++) {
+                    let nextSibling = childNodes[j];
+                    if (nextSibling.nodeType !== Node.TEXT_NODE) {
+                        break;
+                    }
+                    childNode.data += nextSibling.data;
+                    i++;
+                    continue;
+                }
+            }
+        }
     }
 
     // TODO: tests
@@ -268,7 +303,7 @@ export default class extends Node {
 
             if (attr1 && node1 && node2 === node1) {
                 let attrs = node2.atttributes;
-                for (var i = 0; i < attrs.length; i++) {
+                for (let i = 0; i < attrs.length; i++) {
                     const attr = attrs[i];
                     if (attr.isEqualNode(attr1)) {
                         return Document.prototype.DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC

@@ -16,17 +16,11 @@ dictionary ElementCreationOptions {
 
 import * as $ from '../utils.js';
 
-const native = {
-    getElementsByTagName: Document.prototype.getElementsByTagName,
-    getElementsByTagNameNS: Document.prototype.getElementsByTagNameNS,
-    getElementsByClassName: Document.prototype.getElementsByClassName
-};
-
-export default class extends Document {
+export default class {
 
     // TODO: tests
     getElementsByTagName(qualifiedName) {
-        const collection = native.getElementsByTagName.call(this, qualifiedName);
+        const collection = $.native.Document.getElementsByTagName.call(this, qualifiedName);
         const filtered = [];
 
         for (let i = 0; i < collection.length; i++) {
@@ -41,7 +35,7 @@ export default class extends Document {
 
     // TODO: tests
     getElementsByTagNameNS(ns, localName) {
-        const collection = native.getElementsByTagNameNS.call(this, ns, localName);
+        const collection = $.native.Document.getElementsByTagNameNS.call(this, ns, localName);
         const filtered = [];
 
         for (let i = 0; i < collection.length; i++) {
@@ -56,7 +50,7 @@ export default class extends Document {
 
     // TODO: tests
     getElementsByClassName(names) {
-        const collection = native.getElementsByClassName.call(this, name);
+        const collection = $.native.Document.getElementsByClassName.call(this, name);
         const filtered = [];
 
         for (let i = 0; i < collection.length; i++) {

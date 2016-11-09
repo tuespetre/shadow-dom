@@ -9,14 +9,14 @@ suite('Node', function () {
         suite('when composed is false', function () {
 
             test('returns the document for connected nodes outside of a shadow tree', function () {
-                var document = window.document.implementation.createHTMLDocument();
+                var document = window.document.implementation.createHTMLDocument('test');
                 var div = document.createElement('div');
                 document.body.appendChild(div);
                 assert.equal(div.getRootNode(), document);
             });
 
             test('returns the topmost node for disconnected nodes outside of a shadow tree', function () {
-                var document = window.document.implementation.createHTMLDocument();
+                var document = window.document.implementation.createHTMLDocument('test');
                 var div = document.createElement('div');
                 assert.equal(div.getRootNode(), div);
                 var span = document.createElement('span');
@@ -25,7 +25,7 @@ suite('Node', function () {
             });
 
             test('returns the shadow root for nodes inside of a shadow tree', function () {
-                var document = window.document.implementation.createHTMLDocument();
+                var document = window.document.implementation.createHTMLDocument('test');
                 var div = document.createElement('div');
                 var shadow = div.attachShadow({ mode: 'open' });
                 var span = document.createElement('span');
@@ -38,14 +38,14 @@ suite('Node', function () {
         suite('when composed is true', function () {
 
             test('returns the document for connected nodes outside of a shadow tree', function () {
-                var document = window.document.implementation.createHTMLDocument();
+                var document = window.document.implementation.createHTMLDocument('test');
                 var div = document.createElement('div');
                 document.body.appendChild(div);
                 assert.equal(div.getRootNode({ composed: true }), document);
             });
 
             test('returns the topmost node for disconnected nodes outside of a shadow tree', function () {
-                var document = window.document.implementation.createHTMLDocument();
+                var document = window.document.implementation.createHTMLDocument('test');
                 var div = document.createElement('div');
                 assert.equal(div.getRootNode(), div);
                 var span = document.createElement('span');
@@ -54,7 +54,7 @@ suite('Node', function () {
             });
 
             test('returns the document for connected nodes inside of a shadow tree', function () {
-                var document = window.document.implementation.createHTMLDocument();
+                var document = window.document.implementation.createHTMLDocument('test');
                 var div = document.createElement('div');
                 var shadow = div.attachShadow({ mode: 'open' });
                 var span = document.createElement('span');
@@ -64,7 +64,7 @@ suite('Node', function () {
             });
 
             test('returns the topmost element for disconnected nodes inside of a shadow tree', function () {
-                var document = window.document.implementation.createHTMLDocument();
+                var document = window.document.implementation.createHTMLDocument('test');
                 var div = document.createElement('div');
                 var shadow = div.attachShadow({ mode: 'open' });
                 var span = document.createElement('span');

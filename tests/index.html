@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html>
 
 <head>
@@ -19,8 +20,14 @@
   </script>
   <script src="./interfaces/Element.js"></script>
   <script src="./interfaces/Node.js"></script>
+  <script src="./mixins/NonElementParentNode.js"></script>
+  <script src="./mixins/ParentNode.js"></script>
+  <script src="./mixins/Slotable.js"></script>
   <script>
     mocha.checkLeaks();
+    mocha.globals([
+      '$0', '$1', '$2', '$3', '$4', '$_' // IE/Edge developer tools
+    ]);
     mocha.run();
   </script>
 </body>

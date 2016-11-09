@@ -12,12 +12,15 @@ Text implements Slotable;
 
 import * as $ from '../utils.js';
 
-export default base => class extends base {
+export default function(base) {
+    
+    return class {
 
-    // TODO: tests
-    get assignedSlot() {
-        // TODO: efficiency
-        return $.findASlot(this, true);
-    }
+        get assignedSlot() {
+            // TODO: efficiency (https://github.com/whatwg/dom/issues/369)
+            return $.findASlot(this, true);
+        }
+
+    };
 
 }

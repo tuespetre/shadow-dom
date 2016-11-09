@@ -6,7 +6,7 @@ https://www.w3.org/TR/html5/single-page.html#the-tbody-element
 
 import * as $ from '../utils.js';
 
-export default class extends HTMLTableSectionElement {
+export default class {
 
     deleteRow(index) {
         // https://www.w3.org/TR/html5/single-page.html#dom-tbody-deleterow

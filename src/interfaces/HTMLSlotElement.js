@@ -12,7 +12,7 @@ dictionary AssignedNodesOptions {
 
 import * as $ from '../utils.js';
 
-export default class extends HTMLUnknownElement {
+export default class {
 
     // TODO: tests
     get name() {

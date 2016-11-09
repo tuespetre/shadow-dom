@@ -11,13 +11,15 @@ ShadowRoot implements DocumentOrShadowRoot;
 
 */
 
+import * as $ from '../utils.js';
+
 export default function (base) {
 
     const native = {
-        activeElement: Object.getOwnPropertyDescriptor(base.prototype, 'activeElement')
+        activeElement: $.prop(base, 'activeElement')
     };
 
-    return class extends base {
+    return class {
 
         /*
     
@@ -25,14 +27,7 @@ export default function (base) {
     
         */
 
-        // Selection?        getSelection();
-        // Element?          elementFromPoint(double x, double y);
-        // sequence<Element> elementsFromPoint(double x, double y);
-        // CaretPosition?    caretPositionFromPoint(double x, double y);
-        // readonly attribute Element?       activeElement;
-        // readonly attribute StyleSheetList styleSheets;
-
-        // TODO: tests
+        // TODO: impl, tests
         get activeElement() {
             return native.activeElement.get.call(this);
         }

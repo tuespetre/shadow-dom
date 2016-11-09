@@ -6,7 +6,7 @@ https://www.w3.org/TR/html5/single-page.html#the-table-element
 
 import * as $ from '../utils.js';
 
-export default class extends HTMLTableElement {
+export default class {
 
     deleteCaption() {
         const caption = this.caption;
