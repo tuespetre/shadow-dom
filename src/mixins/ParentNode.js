@@ -1,25 +1,14 @@
-/*
-
-https://dom.spec.whatwg.org/#interface-parentnode
-
-[NoInterfaceObject, Exposed=Window]
-interface ParentNode
-
-Document implements ParentNode;
-DocumentFragment implements ParentNode;
-Element implements ParentNode;
-
-*/
+// https://dom.spec.whatwg.org/#interface-parentnode
 
 import * as $ from '../utils.js';
 
 export default function(base) {
 
     const native = {
-        children: $.prop(base, 'children'),
-        firstElementChild: $.prop(base, 'firstElementChild'),
-        lastElementChild: $.prop(base, 'lastElementChild'),
-        childElementCount: $.prop(base, 'childElementCount'),
+        children: $.descriptor(base, 'children'),
+        firstElementChild: $.descriptor(base, 'firstElementChild'),
+        lastElementChild: $.descriptor(base, 'lastElementChild'),
+        childElementCount: $.descriptor(base, 'childElementCount'),
     };
 
     return class {

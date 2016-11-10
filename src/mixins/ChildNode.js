@@ -1,15 +1,4 @@
-/*
-
-https://dom.spec.whatwg.org/#interface-childnode
-
-[NoInterfaceObject, Exposed=Window]
-interface ChildNode
-
-DocumentType implements ChildNode;
-Element implements ChildNode;
-CharacterData implements ChildNode;
-
-*/
+// https://dom.spec.whatwg.org/#interface-childnode
 
 import * as $ from '../utils.js';
 

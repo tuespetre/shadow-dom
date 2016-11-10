@@ -1,38 +1,44 @@
 export const slice = array => Array.prototype.slice.call(array);
 
-export const prop = (type, name) => Object.getOwnPropertyDescriptor(type.prototype, name);
+export const descriptor = (type, name) => Object.getOwnPropertyDescriptor(type.prototype, name);
 
-export const native = {
+export const descriptors = {
     Document: {
-        getElementsByTagName: Document.prototype.getElementsByTagName,
-        getElementsByTagNameNS: Document.prototype.getElementsByTagNameNS,
-        getElementsByClassName: Document.prototype.getElementsByClassName
+        activeElement: descriptor(Document, 'activeElement'),
+        getElementsByTagName: descriptor(Document, 'getElementsByTagName'),
+        getElementsByTagNameNS: descriptor(Document, 'getElementsByTagNameNS'),
+        getElementsByClassName: descriptor(Document, 'getElementsByClassName')
     },
     Element: {
-        getElementsByTagName: Element.prototype.getElementsByTagName,
-        getElementsByTagNameNS: Element.prototype.getElementsByTagNameNS,
-        getElementsByClassName: Element.prototype.getElementsByClassName,
-        innerHTML: prop(Element, 'innerHTML') || prop(HTMLElement, 'innerHTML'),
-        setAttribute: Element.prototype.setAttribute
+        getElementsByTagName: descriptor(Element, 'getElementsByTagName'),
+        getElementsByTagNameNS: descriptor(Element, 'getElementsByTagNameNS'),
+        getElementsByClassName: descriptor(Element, 'getElementsByClassName'),
+        innerHTML: descriptor(Element, 'innerHTML') || descriptor(HTMLElement, 'innerHTML'),
+        setAttribute: descriptor(Element, 'setAttribute')
     },
     Event: {
-        currentTarget: prop(Event, 'currentTarget'),
-        target: prop(Event, 'target')
+        currentTarget: descriptor(Event, 'currentTarget'),
+        target: descriptor(Event, 'target')
+    },
+    FocusEvent: {
+        relatedTarget: descriptor(FocusEvent, 'relatedTarget')
+    },
+    MouseEvent: {
+        relatedTarget: descriptor(MouseEvent, 'relatedTarget')
     },
     Node: {
-        parentNode: prop(Node, 'parentNode'),
-        hasChildNodes: Node.prototype.hasChildNodes,
-        childNodes: prop(Node, 'childNodes'),
-        firstChild: prop(Node, 'firstChild'),
-        lastChild: prop(Node, 'lastChild'),
-        previousSibling: prop(Node, 'previousSibling'),
-        nextSibling: prop(Node, 'nextSibling'),
-        textContent: prop(Node, 'textContent'),
-        normalize: Node.prototype.normalize,
-        cloneNode: Node.prototype.cloneNode,
-        insertBefore: Node.prototype.insertBefore,
-        removeChild: Node.prototype.removeChild,
-        appendChild: Node.prototype.appendChild
+        parentNode: descriptor(Node, 'parentNode'),
+        hasChildNodes: descriptor(Node, 'hasChildNodes'),
+        childNodes: descriptor(Node, 'childNodes'),
+        firstChild: descriptor(Node, 'firstChild'),
+        lastChild: descriptor(Node, 'lastChild'),
+        previousSibling: descriptor(Node, 'previousSibling'),
+        nextSibling: descriptor(Node, 'nextSibling'),
+        textContent: descriptor(Node, 'textContent'),
+        cloneNode: descriptor(Node, 'cloneNode'),
+        insertBefore: descriptor(Node, 'insertBefore'),
+        removeChild: descriptor(Node, 'removeChild'),
+        appendChild: descriptor(Node, 'appendChild')
     }
 };
 
@@ -57,46 +63,32 @@ export function extend(object, ...mixins) {
     }
 }
 
-export function shadow(object, info) {
+export function shadow(object) {
     const shadow = object._shadow || {};
-    if (info) {
-        const names = Object.getOwnPropertyNames(info);
-        for (let i = 0; i < names.length; i++) {
-            const name = names[i];
-            shadow[name] = info[name];
-        }
-    }
     return object._shadow = shadow;
 }
 
-export function convertNodesIntoANode(nodes, document) {
-    // https://dom.spec.whatwg.org/#converting-nodes-into-a-node
-    let node = null;
+export function filterByRoot(node, descendants) {
+    const contextRoot = root(node);
+    const filtered = [];
 
-    for (let i = 0; i < nodes.length; i++) {
-        const item = nodes[i];
-
-        if (typeof item === "string") {
-            nodes[i] = document.createTextNode(item);
+    for (let i = 0; i < descendants.length; i++) {
+        const item = descendants[i];
+        if (root(item) === contextRoot) {
+            filtered.push(item)
         }
     }
 
-    if (nodes.length === 1) {
-        node = nodes[0];
-    }
-    else {
-        node = document.createDocumentFragment();
-
-        for (let i = 0; i < nodes.length; i++) {
-            node.appendChild(nodes[i]);
-        }
-    }
-
-    return node;
+    return filtered;
 }
 
+export function isShadowRoot(node) {
+    return node.nodeName === '#shadow-root';
+}
+
+// https://html.spec.whatwg.org/multipage/scripting.html#valid-custom-element-name
+
 export function isValidCustomElementName(localName) {
-    // https://html.spec.whatwg.org/multipage/scripting.html#valid-custom-element-name
     switch (localName) {
         case "annotation-xml":
         case "color-profile":
@@ -110,108 +102,21 @@ export function isValidCustomElementName(localName) {
     }
 
     // For now, to reduce complexity, we are leaving the unicode sets out...
+    // TODO: Consider adding 'full' support (for Unicode)
     const regex = /[a-z](-|\.|[0-9]|_|[a-z])+-(-|\.|[0-9]|_|[a-z])+/g;
 
     return regex.test(localName);
 }
 
-export function shadowIncludingDescendant(nodeA, nodeB) {
-    do {
-        if (nodeA.nodeName === '#shadow-root') {
-            nodeA = nodeA.host;
-        }
-        else {
-            nodeA = nodeA.parentNode;
-        }
-        if (nodeA === nodeB) {
-            return true;
-        }
-    }
-    while (nodeA !== null);
-    return false;
-}
-
-export function shadowIncludingInclusiveDescendant(nodeA, nodeB) {
-    return nodeA === nodeB || shadowIncludingDescendant(nodeA, nodeB);
-}
-
-export function shadowIncludingAncestor(nodeA, nodeB) {
-    return shadowIncludingDescendant(nodeB, nodeA);
-}
-
-export function shadowIncludingInclusiveAncestor(nodeA, nodeB) {
-    return nodeA === nodeB || shadowIncludingAncestor(nodeA, nodeB);
-}
-
-export function closedShadowHidden(nodeA, nodeB) {
-    // https://dom.spec.whatwg.org/#concept-closed-shadow-hidden
-    const root = nodeA.getRootNode({ composed: false });
-
-    if (root.nodeName !== '#shadow-root') {
-        return false;
-    }
-
-    if (shadowIncludingInclusiveAncestor(root, nodeB)) {
-        return false;
-    }
-
-    if (root.mode === 'closed' || closedShadowHidden(root.host, nodeB)) {
-        return true;
-    }
-
-    return false;
-}
-
-export function retarget(nodeA, nodeB) {
-    // https://dom.spec.whatwg.org/#retarget
-    // To retarget an object A against an object B, repeat these steps 
-    // until they return an object:
-
-    let root;
-    while (root = nodeA.getRootNode()) {
-        // 1. If A’s root is not a shadow root, or A’s root is a shadow-including 
-        // inclusive ancestor of B, then return A.
-        if (root.nodeName !== '#shadow-root' || shadowIncludingInclusiveAncestor(root, nodeB)) {
-            return nodeA;
-        }
-        // 2. Set A to A’s root’s host.
-        nodeA = root.host;
-    }
-}
-
-export function insertAdjacent(element, where, node) {
-    if (!(node instanceof Node)) {
-        throw makeError('TypeError');
-    }
-    let parent;
-    // https://dom.spec.whatwg.org/#insert-adjacent
-    switch ((where || '').toLowerCase()) {
-        case "beforebegin":
-            if (parent = element.parentNode) {
-                return preInsert(node, parent, element);
-            }
-            return null;
-        case "afterbegin":
-            return preInsert(node, element, element.firstChild);
-        case "beforeend":
-            return preInsert(node, element, null);
-        case "afterend":
-            if (parent = element.parentNode) {
-                return preInsert(node, parent, element.nextSibling);
-            }
-            return null;
-        default:
-            throw makeError('SyntaxError');
-    }
-}
+// https://www.w3.org/TR/DOM-Parsing/
 
 export function parseHTMLFragment(markup, context) {
     let temp = context.ownerDocument.createElement('body');
-    native.Element.innerHTML.set.call(temp, markup);
-    const childNodes = native.Node.childNodes.get.call(temp);
+    descriptors.Element.innerHTML.set.call(temp, markup);
+    const childNodes = descriptors.Node.childNodes.get.call(temp);
     const fragment = context.ownerDocument.createDocumentFragment();
     for (let i = 0; i < childNodes.length; i++) {
-        native.Node.appendChild.call(fragment, childNodes[i]);
+        descriptors.Node.appendChild.value.call(fragment, childNodes[i]);
     }
     return fragment;
 }
@@ -343,6 +248,249 @@ export function serializeHTMLFragment(node) {
     }
 }
 
+// https://dom.spec.whatwg.org/#trees
+
+export function root(node) {
+    let root = node;
+    let parent = root.parentNode;
+
+    while (parent != null) {
+        root = parent;
+        parent = root.parentNode;
+    }
+
+    return root;
+}
+
+export function descendant(nodeA, nodeB) {
+    let parent = nodeA.parentNode;
+
+    while (parent != null) {
+        if (nodeB === parent) {
+            return true;
+        }
+        parent = parent.parentNode;
+    }
+
+    return false;
+}
+
+export function inclusiveDescendant(nodeA, nodeB) {
+    return nodeA === nodeB || descendant(nodeA, nodeB);
+}
+
+export function ancestor(nodeA, nodeB) {
+    let parent = nodeB.parentNode;
+
+    while (parent != null) {
+        if (nodeA === parent) {
+            return true;
+        }
+        parent = parent.parentNode;
+    }
+
+    return false;
+}
+
+export function inclusiveAncestor(nodeA, nodeB) {
+    return nodeA === nodeB || ancestor(nodeA, nodeB);
+}
+
+// https://dom.spec.whatwg.org/#interface-parentnode
+
+export function convertNodesIntoANode(nodes, document) {
+    let node = null;
+
+    for (let i = 0; i < nodes.length; i++) {
+        const item = nodes[i];
+
+        if (typeof item === "string") {
+            nodes[i] = document.createTextNode(item);
+        }
+    }
+
+    if (nodes.length === 1) {
+        node = nodes[0];
+    }
+    else {
+        node = document.createDocumentFragment();
+
+        for (let i = 0; i < nodes.length; i++) {
+            node.appendChild(nodes[i]);
+        }
+    }
+
+    return node;
+}
+
+// https://dom.spec.whatwg.org/#interface-node
+
+export function clone(node, document, cloneChildren) {
+    // https://dom.spec.whatwg.org/#concept-node-clone
+    // To clone a node, with an optional document and clone children flag, run these steps:
+
+    // 1. If document is not given, let document be node’s node document.
+    document = document || node.ownerDocument;
+
+    // Use a shortcut here
+    // 2. If node is an element, then:
+    // 3. Otherwise, let copy be a node that implements the same interfaces 
+    // as node, and fulfills these additional requirements, switching on node:
+    // 4. Set copy’s node document and document to copy, if copy is a document, 
+    // and set copy’s node document to document otherwise.
+    // 5. Run any cloning steps defined for node in other applicable 
+    // specifications and pass copy, node, document and the clone children 
+    // flag if set, as parameters.
+    const copy = descriptors.Node.cloneNode.value.call(node, false);
+
+    // 6. If the clone children flag is set, clone all the children of node 
+    // and append them to copy, with document as specified and the clone 
+    // children flag being set.
+    if (cloneChildren === true) {
+        const childNodes = slice(node.childNodes);
+        for (let i = 0; i < childNodes.length; i++) {
+            append(childNodes[i].cloneNode(true), copy);
+        }
+    }
+
+    return copy;
+}
+
+export function adopt(node, document) {
+    // https://dom.spec.whatwg.org/#concept-node-adopt
+
+    // 1. Let oldDocument be node’s node document.
+    let oldDocument = node.ownerDocument;
+
+    // 2. If node’s parent is not null, remove node from its parent.
+    const parent = node.parentNode;
+    if (parent != null) {
+        remove(node, parent);
+    }
+
+    // Skip (CustomElements, native)
+    // 3. If document is not the same as oldDocument, run these substeps:
+}
+
+// https://dom.spec.whatwg.org/#interface-documentfragment
+
+export function hostIncludingInclusiveAncestor(nodeA, nodeB) {
+    if (inclusiveAncestor(nodeA, nodeB)) {
+        return true;
+    }
+
+    const host = root(nodeB).host;
+
+    if (host && hostIncludingInclusiveAncestor(nodeA, host)) {
+        return true;
+    }
+
+    return false;
+}
+
+// https://dom.spec.whatwg.org/#interface-shadowroot
+
+export function shadowIncludingRoot(node) {
+    let rootNode = root(node);
+    if (isShadowRoot(rootNode)) {
+        rootNode = shadowIncludingRoot(rootNode.host);
+    }
+    return rootNode;
+}
+
+export function shadowIncludingDescendant(nodeA, nodeB) {
+    do {
+        if (isShadowRoot(nodeA)) {
+            nodeA = nodeA.host;
+        }
+        else {
+            nodeA = nodeA.parentNode;
+        }
+        if (nodeA === nodeB) {
+            return true;
+        }
+    }
+    while (nodeA != null);
+
+    return false;
+}
+
+export function shadowIncludingInclusiveDescendant(nodeA, nodeB) {
+    return nodeA === nodeB || shadowIncludingDescendant(nodeA, nodeB);
+}
+
+export function shadowIncludingAncestor(nodeA, nodeB) {
+    return shadowIncludingDescendant(nodeB, nodeA);
+}
+
+export function shadowIncludingInclusiveAncestor(nodeA, nodeB) {
+    return nodeA === nodeB || shadowIncludingAncestor(nodeA, nodeB);
+}
+
+export function closedShadowHidden(nodeA, nodeB) {
+    // https://dom.spec.whatwg.org/#concept-closed-shadow-hidden
+    const rootNode = root(nodeA);
+
+    if (!isShadowRoot(rootNode)) {
+        return false;
+    }
+
+    if (shadowIncludingInclusiveAncestor(rootNode, nodeB)) {
+        return false;
+    }
+
+    if (rootNode.mode === 'closed' || closedShadowHidden(rootNode.host, nodeB)) {
+        return true;
+    }
+
+    return false;
+}
+
+export function retarget(nodeA, nodeB) {
+    // https://dom.spec.whatwg.org/#retarget
+    // To retarget an object A against an object B, repeat these steps 
+    // until they return an object:
+
+    let rootNode;
+    while (rootNode = root(nodeA)) {
+        // 1. If A’s root is not a shadow root, or A’s root is a shadow-including 
+        // inclusive ancestor of B, then return A.
+        if (!isShadowRoot(rootNode) || shadowIncludingInclusiveAncestor(rootNode, nodeB)) {
+            return nodeA;
+        }
+        // 2. Set A to A’s root’s host.
+        nodeA = rootNode.host;
+    }
+}
+
+// https://dom.spec.whatwg.org/#interface-element
+
+export function insertAdjacent(element, where, node) {
+    if (!(node instanceof Node)) {
+        throw makeError('TypeError');
+    }
+    let parent;
+    // https://dom.spec.whatwg.org/#insert-adjacent
+    switch ((where || '').toLowerCase()) {
+        case "beforebegin":
+            if (parent = element.parentNode) {
+                return preInsert(node, parent, element);
+            }
+            return null;
+        case "afterbegin":
+            return preInsert(node, element, element.firstChild);
+        case "beforeend":
+            return preInsert(node, element, null);
+        case "afterend":
+            if (parent = element.parentNode) {
+                return preInsert(node, parent, element.nextSibling);
+            }
+            return null;
+        default:
+            throw makeError('SyntaxError');
+    }
+}
+
 // https://dom.spec.whatwg.org/#finding-slots-and-slotables
 
 export function findASlot(slotable, open) {
@@ -410,13 +558,13 @@ export function findSlotables(slot) {
     const result = [];
 
     // 2. If slot’s root is not a shadow root, then return result.
-    const root = slot.getRootNode({ composed: false });
-    if (root.nodeName != '#shadow-root') {
+    const slotRoot = root(slot);
+    if (!isShadowRoot(slotRoot)) {
         return result;
     }
 
     // 3. Let host be slot’s root’s host.
-    const host = root.host;
+    const host = slotRoot.host;
 
     // 4. For each slotable child of host, slotable, in tree order, run these substeps:
     const slotableChildren = slice(host.childNodes);
@@ -504,35 +652,34 @@ export function assignSlotables(slot, suppressSignaling) {
     }
 
     // 3. Set slot’s assigned nodes to slotables.
-    shadow(slot, { assignedNodes: slotables });
+    shadow(slot).assignedNodes = slotables;
 
     // 4. For each slotable in slotables, set slotable’s assigned slot to slot.
 
     // 4a. If we haven't tracked them yet, track the slot's logical children
     if (!shadow(slot).childNodes) {
-        shadow(slot, {
-            childNodes: slice(native.Node.childNodes.get.call(slot))
-        });
+        const childNodes = descriptors.Node.childNodes.get.call(slot);
+        shadow(slot).childNodes = slice(childNodes);
     }
 
     // 4b. We need to clean out the slot
     let firstChild;
-    while (firstChild = native.Node.firstChild.get.call(slot)) {
-        native.Node.removeChild.call(slot, firstChild);
+    while (firstChild = descriptors.Node.firstChild.get.call(slot)) {
+        descriptors.Node.removeChild.value.call(slot, firstChild);
     }
 
     // 4c. do what the spec said
     for (let i = 0; i < slotables.length; i++) {
         const slotable = slotables[i];
-        shadow(slotable, { assignedSlot: slot });
-        native.Node.appendChild.call(slot, slotable);
+        shadow(slotable).assignedSlot = slot;
+        descriptors.Node.appendChild.value.call(slot, slotable);
     }
 
     // 4d. if there were no slotables we need to insert its fallback content
     if (!slotables.length) {
         const childNodes = shadow(slot).childNodes;
         for (let i = 0; i < childNodes.length; i++) {
-            native.Node.appendChild.call(slot, childNodes[i]);
+            descriptors.Node.appendChild.value.call(slot, childNodes[i]);
         }
     }
 }
@@ -565,7 +712,7 @@ export function assignSlotablesForATree(tree, noSignalSlots) {
 export function assignASlot(slotable) {
     const slot = findASlot(slotable);
 
-    if (slot !== null) {
+    if (slot != null) {
         assignSlotables(slot);
     }
 }
@@ -593,16 +740,12 @@ export function ensurePreInsertionValidity(node, parent, child) {
     // 1. If parent is not a Document, DocumentFragment, or Element node, throw a HierarchyRequestError.
 
     // 2. If node is a host-including inclusive ancestor of parent, throw a HierarchyRequestError.
-    let ancestor = parent;
-    do {
-        if (ancestor === node) {
-            throw makeError('HierarchyRequestError');
-        }
+    if (hostIncludingInclusiveAncestor(node, parent)) {
+        throw makeError('HierarchyRequestError');
     }
-    while (ancestor = (ancestor.parentNode || ancestor.host));
 
     // 3. If child is not null and its parent is not parent, then throw a NotFoundError.
-    if (child !== null && child.parentNode !== parent) {
+    if (child != null && child.parentNode !== parent) {
         throw makeError('NotFoundError');
     }
 
@@ -676,15 +819,15 @@ export function insert(node, parent, child, suppressObservers) {
             else {
                 childNodes.push(node);
             }
-            shadow(node, { parentNode: parent });
+            shadow(node).parentNode = parent;
             // If it's a shadow root, perform physical insert on the host.
             const shadowHost = shadow(parent).host;
             if (shadowHost) {
-                native.Node.insertBefore.call(shadowHost, node, child);
+                descriptors.Node.insertBefore.value.call(shadowHost, node, child);
             }
         }
         else {
-            native.Node.insertBefore.call(parent, node, child);
+            descriptors.Node.insertBefore.value.call(parent, node, child);
         }
 
         // 2. If parent is a shadow host and node is a slotable, then assign a slot for node.
@@ -695,7 +838,7 @@ export function insert(node, parent, child, suppressObservers) {
         // 3. If parent is a slot whose assigned nodes is the empty list, then run signal a slot change for parent.
         if (parent.localName === 'slot' && parent.assignedNodes().length === 0) {
             // 3a. Physically append the child into the slot.
-            native.Node.appendChild.call(parent, node);
+            descriptors.Node.appendChild.value.call(parent, node);
             // 3b. Do what the spec said
             signalASlotChange(parent);
         }
@@ -735,16 +878,12 @@ export function replace(child, node, parent) {
     // 1. If parent is not a Document, DocumentFragment, or Element node, throw a HierarchyRequestError.
 
     // 2. If node is a host-including inclusive ancestor of parent, throw a HierarchyRequestError.
-    let ancestor = parent;
-    do {
-        if (ancestor === node) {
-            throw makeError('HierarchyRequestError');
-        }
+    if (hostIncludingInclusiveAncestor(node, parent)) {
+        throw makeError('HierarchyRequestError');
     }
-    while (ancestor = (ancestor.parentNode || ancestor.host));
 
     // 3. If child’s parent is not parent, then throw a NotFoundError.
-    if (child !== null && child.parentNode !== parent) {
+    if (child.parentNode !== parent) {
         throw makeError('NotFoundError');
     }
 
@@ -774,7 +913,7 @@ export function replace(child, node, parent) {
 
     // 12. If child’s parent is not null, run these substeps:
     const childParent = child.parentNode;
-    if (childParent !== null) {
+    if (childParent != null) {
         // Skip (MutationObserver)
         // 1. Set removedNodes to a list solely containing child.
         // removedNodes.push(child);
@@ -798,7 +937,7 @@ export function replaceAll(node, parent) {
     // To replace all with a node within a parent, run these steps:
 
     // 1. If node is not null, adopt node into parent’s node document.
-    if (node !== null) {
+    if (node != null) {
         adopt(node, parent.ownerDocument);
     }
 
@@ -816,7 +955,7 @@ export function replaceAll(node, parent) {
     }
 
     // 5. If node is not null, insert node into parent before null with the suppress observers flag set.
-    if (node !== null) {
+    if (node != null) {
         insert(node, parent, null, true);
     }
 
@@ -866,7 +1005,7 @@ export function remove(node, parent, suppessObservers) {
         childNodes.splice(nodeIndex, 1);
     }
     delete shadow(node).parentNode;
-    native.Node.removeChild.call(native.Node.parentNode.get.call(node), node);
+    descriptors.Node.removeChild.value.call(descriptors.Node.parentNode.get.call(node), node);
 
     // 10. If node is assigned, then run assign slotables for node’s assigned slot.
     const assignedSlot = shadow(node).assignedSlot;
@@ -913,51 +1052,4 @@ export function remove(node, parent, suppessObservers) {
     // 17. If suppress observers flag is unset, queue a mutation record of "childList" for parent 
     // with removedNodes a list solely containing node, nextSibling oldNextSibling, and previousSibling 
     // oldPreviousSibling.
-}
-
-export function clone(node, document, cloneChildren) {
-    // https://dom.spec.whatwg.org/#concept-node-clone
-    // To clone a node, with an optional document and clone children flag, run these steps:
-
-    // 1. If document is not given, let document be node’s node document.
-    document = document || node.ownerDocument;
-
-    // Use a shortcut here
-    // 2. If node is an element, then:
-    // 3. Otherwise, let copy be a node that implements the same interfaces 
-    // as node, and fulfills these additional requirements, switching on node:
-    // 4. Set copy’s node document and document to copy, if copy is a document, 
-    // and set copy’s node document to document otherwise.
-    // 5. Run any cloning steps defined for node in other applicable 
-    // specifications and pass copy, node, document and the clone children 
-    // flag if set, as parameters.
-    const copy = native.Node.cloneNode.call(node, false);
-
-    // 6. If the clone children flag is set, clone all the children of node 
-    // and append them to copy, with document as specified and the clone 
-    // children flag being set.
-    if (cloneChildren === true) {
-        const childNodes = slice(node.childNodes);
-        for (let i = 0; i < childNodes.length; i++) {
-            append(childNodes[i].cloneNode(true), copy);
-        }
-    }
-
-    return copy;
-}
-
-export function adopt(node, document) {
-    // https://dom.spec.whatwg.org/#concept-node-adopt
-
-    // 1. Let oldDocument be node’s node document.
-    let oldDocument = node.ownerDocument;
-
-    // 2. If node’s parent is not null, remove node from its parent.
-    const parent = node.parentNode;
-    if (parent !== null) {
-        remove(node, parent);
-    }
-
-    // Skip (CustomElements, native)
-    // 3. If document is not the same as oldDocument, run these substeps:
 }

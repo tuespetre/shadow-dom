@@ -1,14 +1,4 @@
-/*
-
-https://dom.spec.whatwg.org/#interface-nonelementparentnode
-
-[NoInterfaceObject, Exposed=Window]
-interface NonElementParentNode
-
-Document implements NonElementParentNode;
-DocumentFragment implements NonElementParentNode;
-
-*/
+// https://dom.spec.whatwg.org/#interface-nonelementparentnode
 
 export default function(base) {
 

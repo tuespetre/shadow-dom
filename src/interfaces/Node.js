@@ -1,42 +1,12 @@
-/*
-
-https://dom.spec.whatwg.org/#interface-node
-
-[Exposed=Window]
-interface Node : EventTarget
-
-*/
+// https://dom.spec.whatwg.org/#interface-node
 
 import * as $ from '../utils.js';
 
 export default class {
 
     getRootNode(options) {
-        // https://dom.spec.whatwg.org/#dom-node-getrootnode
-
         const composed = options && (options.composed === true);
-
-        let root, ancestor;
-
-        root = ancestor = this;
-
-        if (!composed) {
-            while (ancestor = ancestor.parentNode) {
-                root = ancestor;
-            }
-
-            return root;
-        }
-
-        while (ancestor = ancestor.parentNode) {
-            root = ancestor;
-
-            if (root.nodeName === '#shadow-root') {
-                root = ancestor = root.host;
-            }
-        }
-
-        return root;
+        return composed ? $.shadowIncludingRoot(this) : $.root(this);
     }
 
     get parentNode() {
@@ -45,7 +15,7 @@ export default class {
             return parentNode;
         }
 
-        return $.native.Node.parentNode.get.call(this);
+        return $.descriptors.Node.parentNode.get.call(this);
     }
 
     get parentElement() {
@@ -64,7 +34,7 @@ export default class {
             return childNodes.length > 0;
         }
 
-        return $.native.Node.hasChildNodes.call(this);
+        return $.descriptors.Node.hasChildNodes.value.call(this);
     }
 
     // TODO: tests
@@ -74,7 +44,7 @@ export default class {
             return childNodes.slice();
         }
 
-        return $.native.Node.childNodes.get.call(this);
+        return $.descriptors.Node.childNodes.get.call(this);
     }
 
     // TODO: tests
@@ -87,7 +57,7 @@ export default class {
             return null;
         }
 
-        return $.native.Node.firstChild.get.call(this);
+        return $.descriptors.Node.firstChild.get.call(this);
     }
 
     // TODO: tests
@@ -100,7 +70,7 @@ export default class {
             return null;
         }
 
-        return $.native.Node.lastChild.get.call(this);
+        return $.descriptors.Node.lastChild.get.call(this);
     }
 
     // TODO: tests
@@ -112,7 +82,7 @@ export default class {
             return siblingIndex < 0 ? null : childNodes[siblingIndex];
         }
 
-        return $.native.Node.previousSibling.get.call(this);
+        return $.descriptors.Node.previousSibling.get.call(this);
     }
 
     // TODO: tests
@@ -124,7 +94,7 @@ export default class {
             return siblingIndex === childNodes.length ? null : childNodes[siblingIndex];
         }
 
-        return $.native.Node.nextSibling.get.call(this);
+        return $.descriptors.Node.nextSibling.get.call(this);
     }
 
     // TODO: tests
@@ -162,7 +132,7 @@ export default class {
                 return;
         }
 
-        return $.native.Node.textContent.set.call(this, value);
+        return $.descriptors.Node.textContent.set.call(this, value);
     }
 
     // TODO: tests
@@ -202,7 +172,7 @@ export default class {
         // The cloneNode(deep) method, when invoked, must run these steps:
 
         // 1. If context object is a shadow root, then throw a NotSupportedError.
-        if (this.nodeName === '#shadow-root') {
+        if ($.isShadowRoot(this)) {
             throw $.makeError('NotSupportedError');
         }
 
@@ -317,7 +287,7 @@ export default class {
             }
         }
 
-        if (!node1 || !node2 || node1.getRootNode() !== node2.getRootNode()) {
+        if (!node1 || !node2 || $.root(node1) !== $.root(node2)) {
             return Document.prototype.DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC
                 + Document.prototype.DOCUMENT_POSITION_FOLLOWING
                 + Document.prototype.DOCUMENT_POSITION_DISCONNECTED;

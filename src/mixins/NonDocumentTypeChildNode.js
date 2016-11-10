@@ -1,22 +1,12 @@
-/*
-
-https://dom.spec.whatwg.org/#interface-nondocumenttypechildnode
-
-[NoInterfaceObject, Exposed=Window]
-interface NonDocumentTypeChildNode
-
-Element implements NonDocumentTypeChildNode;
-CharacterData implements NonDocumentTypeChildNode;
-
-*/
+// https://dom.spec.whatwg.org/#interface-nondocumenttypechildnode
 
 import * as $ from '../utils.js';
 
 export default function (base) {
 
     const native = {
-        previousElementSibling: $.prop(base, 'previousElementSibling'),
-        nextElementSibling: $.prop(base, 'nextElementSibling')
+        previousElementSibling: $.descriptor(base, 'previousElementSibling'),
+        nextElementSibling: $.descriptor(base, 'nextElementSibling')
     };
 
     return class {

@@ -1,13 +1,10 @@
-/*
-
-https://www.w3.org/TR/html5/single-page.html#the-tr-element
-
-*/
+// https://www.w3.org/TR/html5/single-page.html#the-tr-element
 
 import * as $ from '../utils.js';
 
 export default class {
 
+    // TODO: tests
     deleteCell(index) {
         // https://www.w3.org/TR/html5/single-page.html#dom-tr-deletecell
         if (index === -1) {

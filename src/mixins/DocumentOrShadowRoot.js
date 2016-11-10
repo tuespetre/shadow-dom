@@ -1,37 +1,25 @@
-/*
-
-https://dom.spec.whatwg.org/#mixin-documentorshadowroot
-https://www.w3.org/TR/shadow-dom/#extensions-to-the-documentorshadowroot-mixin
-
-[NoInterfaceObject, Exposed=Window]
-interface DocumentOrShadowRoot
-
-Document implements DocumentOrShadowRoot;
-ShadowRoot implements DocumentOrShadowRoot;
-
-*/
+// https://dom.spec.whatwg.org/#mixin-documentorshadowroot
+// https://www.w3.org/TR/shadow-dom/#extensions-to-the-documentorshadowroot-mixin
 
 import * as $ from '../utils.js';
 
-export default function (base) {
+export default class {
 
-    const native = {
-        activeElement: $.prop(base, 'activeElement')
-    };
+    // TODO: consider getSelection()
+    // TODO: consider elementFromPoint(double x, double y)
+    // TODO: consider elementsFromPoint(double x, double y)
+    // TODO: consider get styleSheets()
 
-    return class {
+    // TODO: tests
+    get activeElement() {
+        const document = this.ownerDocument || this;
+        const nativeActiveElement = native.activeElement.get.call(document);
 
-        /*
-    
-        https://www.w3.org/TR/shadow-dom/#extensions-to-the-documentorshadowroot-mixin
-    
-        */
-
-        // TODO: impl, tests
-        get activeElement() {
-            return native.activeElement.get.call(this);
+        if (!nativeActiveElement || document != $.shadowIncludingRoot(this)) {
+            return null;
         }
 
-    };
+        return $.retarget(nativeActiveElement, this);
+    }
 
 }

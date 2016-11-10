@@ -17,6 +17,7 @@
     "js-string-escape": "latest",
     "mocha": "^3.1.2",
     "through2": "latest",
+    "uglify-js": "^2.7.4",
     "uglifyify": "latest",
     "watch": "latest"
   },

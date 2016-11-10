@@ -1,12 +1,12 @@
 'use strict';
 
-suite('Event', function () {
+suite('Event', function() {
 
     var assert = chai.assert;
 
-    suite('constructor()', function () {
+    suite('constructor()', function() {
 
-        test('respects init.bubbles', function () {
+        test('respects init.bubbles', function() {
             var event = new Event('test', {
                 bubbles: true
             });
@@ -14,7 +14,7 @@ suite('Event', function () {
             assert.isTrue(event.bubbles);
         });
 
-        test('respects init.cancelable', function () {
+        test('respects init.cancelable', function() {
             var event = new Event('test', {
                 cancelable: true
             });
@@ -22,7 +22,7 @@ suite('Event', function () {
             assert.isTrue(event.cancelable);
         });
 
-        test('respects init.composed', function () {
+        test('respects init.composed', function() {
             var event = new Event('test', {
                 composed: true
             });
@@ -32,9 +32,9 @@ suite('Event', function () {
 
     });
 
-    suite('get currentTarget()', function () {
+    suite('get currentTarget()', function() {
 
-        test('returns correctly retargeted values', function () {
+        test('returns correctly retargeted values', function() {
             var event = new Event('test', { composed: true, bubbles: true });
             var target = document.createElement('span');
             var div1 = document.createElement('div');
@@ -47,7 +47,7 @@ suite('Event', function () {
             shadow2.append(div3);
             shadow3.append(target);
             var targets = [];
-            var handler = function (event) {
+            var handler = function(event) {
                 targets.push([event.currentTarget, this])
             };
             div1.addEventListener('test', handler);
@@ -68,9 +68,9 @@ suite('Event', function () {
 
     });
 
-    suite('get target()', function () {
+    suite('get target()', function() {
 
-        test('returns correctly retargeted values', function () {
+        test('returns correctly retargeted values', function() {
             var event = new Event('test', { composed: true, bubbles: true });
             var target = document.createElement('span');
             var div1 = document.createElement('div');
@@ -83,7 +83,7 @@ suite('Event', function () {
             shadow2.append(div3);
             shadow3.append(target);
             var targets = [];
-            var handler = function (event) {
+            var handler = function(event) {
                 targets.push(event.target);
             };
             div1.addEventListener('test', handler);
@@ -103,9 +103,9 @@ suite('Event', function () {
 
     });
 
-    suite('get relatedTarget()', function () {
+    suite('get relatedTarget()', function() {
 
-        test('returns correctly retargeted values', function () {
+        test('returns correctly retargeted values', function() {
             var event = document.createEvent('MouseEvent');
             var target = document.createElement('span');
             var related = document.createElement('span');
@@ -119,7 +119,7 @@ suite('Event', function () {
             shadow2.append(div3);
             shadow3.append(target, related);
             var targets = [];
-            var handler = function (event) {
+            var handler = function(event) {
                 targets.push(event.relatedTarget);
             };
             div1.addEventListener('click', handler);
@@ -135,6 +135,58 @@ suite('Event', function () {
             assert.equal(targets.length, expected.length);
             for (var i = 0; i < targets.length; i++) {
                 assert.equal(targets[i], expected[i]);
+            }
+        });
+
+    });
+
+    suite('composedPath()', function() {
+
+        test('returns correctly retargeted values', function() {
+            // Note: events created via constructor can be dispatched
+            // all the way up to the document's documentElement,
+            // but if the document is not the global window.document,
+            // the event will not be dispatched at the document.
+            var document = window.document.implementation.createHTMLDocument('test');
+            var event = new Event('test', { composed: true, bubbles: true });
+            var target = document.createElement('span');
+            var div1 = document.createElement('div');
+            var div2 = document.createElement('div');
+            var div3 = document.createElement('div');
+            var shadow1 = div1.attachShadow({ mode: 'open' });
+            var shadow2 = div2.attachShadow({ mode: 'closed' });
+            var shadow3 = div3.attachShadow({ mode: 'open' });
+            shadow1.append(div2);
+            shadow2.append(div3);
+            shadow3.append(target);
+            var actual = [];
+            var expected = [];
+            var handler = function(event) {
+                actual.push(event.composedPath());
+            };
+            target.addEventListener('test', handler);
+            expected.push([target, shadow3, div3, shadow2, div2, shadow1, div1]);
+            shadow3.addEventListener('test', handler);
+            expected.push([target, shadow3, div3, shadow2, div2, shadow1, div1]);
+            div3.addEventListener('test', handler);
+            expected.push([target, shadow3, div3, shadow2, div2, shadow1, div1]);
+            shadow2.addEventListener('test', handler);
+            expected.push([target, shadow3, div3, shadow2, div2, shadow1, div1]);
+            div2.addEventListener('test', handler);
+            expected.push([div2, shadow1, div1]);
+            shadow1.addEventListener('test', handler);
+            expected.push([div2, shadow1, div1]);
+            div1.addEventListener('test', handler);
+            expected.push([div2, shadow1, div1]);
+            target.dispatchEvent(event);
+            assert.equal(actual.length, expected.length);
+            for (var i = 0; i < actual.length; i++) {
+                var _actual = actual[i];
+                var _expected = expected[i];
+                assert.equal(_actual.length, _expected.length);
+                for (var j = 0; j < _actual.length; j++) {
+                    assert.equal(_actual[j], _expected[j]);
+                }
             }
         });
 

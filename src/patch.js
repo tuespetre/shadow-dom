@@ -19,9 +19,6 @@ import $NonElementParentNode from './mixins/NonElementParentNode.js';
 import $ParentNode from './mixins/ParentNode.js';
 import $Slotable from './mixins/Slotable.js';
 
-// In case we would force the polyfill
-const HTMLSlotElement = window.HTMLSlotElement || window.HTMLUnknownElement;
-
 export default function () {
 
     // Element.matches(selectors) polyfill from MDN
@@ -59,8 +56,8 @@ export default function () {
 
     // Event interface
     $.extend(Event, $Event);
-    $.extend(FocusEvent, hasRelatedTarget(FocusEvent));
-    $.extend(MouseEvent, hasRelatedTarget(MouseEvent));
+    $.extend(FocusEvent, hasRelatedTarget);
+    $.extend(MouseEvent, hasRelatedTarget);
     $Event.prototype = Event.prototype;
     window.Event = $Event;
 
@@ -76,7 +73,7 @@ export default function () {
     }
 
     // HTMLSlotElement interface
-    $.extend(HTMLSlotElement, $HTMLSlotElement);
+    $.extend(HTMLSlotElement || HTMLUnknownElement, $HTMLSlotElement);
 
     // HTMLTableElement interface
     $.extend(HTMLTableElement, $HTMLTableElement);
@@ -96,8 +93,8 @@ export default function () {
     $.extend(CharacterData, $ChildNode(CharacterData));
 
     // DocumentOrShadowRoot mixin
-    $.extend(Document, $DocumentOrShadowRoot(Document));
-    $.extend($ShadowRoot, $DocumentOrShadowRoot($ShadowRoot));
+    $.extend(Document, $DocumentOrShadowRoot);
+    $.extend($ShadowRoot, $DocumentOrShadowRoot);
 
     // NonDocumentTypeChildNode mixin
     $.extend(Element, $NonDocumentTypeChildNode(Element));

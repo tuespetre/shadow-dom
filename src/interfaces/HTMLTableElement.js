@@ -1,13 +1,10 @@
-/*
-
-https://www.w3.org/TR/html5/single-page.html#the-table-element
-
-*/
+// https://www.w3.org/TR/html5/single-page.html#the-table-element
 
 import * as $ from '../utils.js';
 
 export default class {
 
+    // TODO: tests
     deleteCaption() {
         const caption = this.caption;
         if (caption) {
@@ -15,6 +12,7 @@ export default class {
         }
     }
 
+    // TODO: tests
     deleteTHead() {
         const tHead = this.tHead;
         if (tHead) {
@@ -22,6 +20,7 @@ export default class {
         }
     }
 
+    // TODO: tests
     deleteTFoot() {
         const tFoot = this.tFoot;
         if (tFoot) {
@@ -29,6 +28,7 @@ export default class {
         }
     }
 
+    // TODO: tests
     deleteRow(index) {
         // https://www.w3.org/TR/html5/single-page.html#dom-table-deleterow
         if (index === -1) {

@@ -1,14 +1,4 @@
-/*
-
-https://dom.spec.whatwg.org/#mixin-slotable
-
-[NoInterfaceObject, Exposed=Window]
-interface Slotable
-
-Element implements Slotable;
-Text implements Slotable;
-
-*/
+// https://dom.spec.whatwg.org/#mixin-slotable
 
 import * as $ from '../utils.js';
 

@@ -1,15 +1,4 @@
-/*
-
-https://dom.spec.whatwg.org/#interface-event
-
-[Constructor(DOMString type, optional CustomEventInit eventInitDict), Exposed=(Window,Worker)]
-interface CustomEvent : Event 
-
-dictionary CustomEventInit : EventInit {
-  any detail = null;
-};
-
-*/
+// https://dom.spec.whatwg.org/#interface-event
 
 import * as $ from '../utils.js';
 

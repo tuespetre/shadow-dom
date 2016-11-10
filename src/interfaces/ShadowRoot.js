@@ -1,12 +1,5 @@
-/*
-
-https://dom.spec.whatwg.org/#interface-shadowroot
-https://www.w3.org/TR/shadow-dom/#the-shadowroot-interface
-
-[Exposed=Window]
-interface ShadowRoot : DocumentFragment
-
-*/
+// https://dom.spec.whatwg.org/#interface-shadowroot
+// https://www.w3.org/TR/shadow-dom/#the-shadowroot-interface
 
 import * as $ from '../utils.js';
 

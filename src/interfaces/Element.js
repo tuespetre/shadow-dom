@@ -1,50 +1,12 @@
-/*
-
-https://dom.spec.whatwg.org/#interface-element
-https://www.w3.org/TR/DOM-Parsing/#extensions-to-the-element-interface
-
-[Exposed=Window]
-interface Element : Node
-
-dictionary ShadowRootInit {
-  required ShadowRootMode mode;
-};
-
-*/
+// https://dom.spec.whatwg.org/#interface-element
 
 import * as $ from '../utils.js';
 
 import $ShadowRoot from '../interfaces/ShadowRoot.js';
 
-function updateSlotableName(element, localName, oldValue, value, namespace) {
-    // https://dom.spec.whatwg.org/#slotable-name
-    if (localName === 'slot' && namespace === null) {
-        if (value === oldValue) {
-            return;
-        }
-        if (value === null && oldValue === '') {
-            return;
-        }
-        if (value === '' && oldValue === null) {
-            return;
-        }
-        if (value === null || value === '') {
-            $.native.Element.setAttribute.call(element, 'slot', '');
-        }
-        else {
-            $.native.Element.setAttribute.call(element, 'slot', value);
-        }
-        const assignedSlot = $.shadow(element).assignedSlot;
-        if (assignedSlot) {
-            $.assignSlotables(assignedSlot);
-        }
-        $.assignASlot(element);
-    }
-}
-
 export default class {
 
-    // TODO: Override setAttribute, setAttributeNS, removeAttribute,
+    // TODO: Consider overriding setAttribute, setAttributeNS, removeAttribute,
     // removeAttributeNS, setAttributeNode, setAttributeNodeNS, 
     // and removeAttributeNode to detect slot changes.
 
@@ -89,25 +51,20 @@ export default class {
 
         $.extend(shadow, $ShadowRoot);
 
-        $.shadow(shadow, {
-            host: this,
-            mode: init.mode,
-            childNodes: []
-        });
+        $.shadow(shadow).host = this;
+        $.shadow(shadow).mode = init.mode;
+        $.shadow(shadow).childNodes = [];
 
-        $.shadow(this, {
-            shadowRoot: shadow,
-            childNodes: $.slice(this.childNodes)
-        });
+        const childNodes = $.descriptors.Node.childNodes.get.call(this);
 
-        const childNodes = $.shadow(this).childNodes;
+        $.shadow(this).shadowRoot = shadow;
+        $.shadow(this).childNodes = $.slice(this.childNodes);
+        
         for (let i = 0; i < childNodes.length; i++) {
-            $.shadow(childNodes[i], {
-                parentNode: this
-            });
+            $.shadow(childNodes[i]).parentNode = this;
         }
 
-        $.native.Element.innerHTML.set.call(this, null);
+        $.descriptors.Element.innerHTML.set.call(this, null);
 
         return shadow;
     }
@@ -138,50 +95,20 @@ export default class {
 
     // TODO: tests
     getElementsByTagName(qualifiedName) {
-        const contextRoot = this.getRootNode({ composed: false });
-        const collection = $.native.Element.getElementsByTagName.call(this, qualifiedName);
-        const filtered = [];
-
-        for (let i = 0; i < collection.length; i++) {
-            const item = collection[i];
-            if (contextRoot === item.getRootNode({ composed: false })) {
-                filtered.push(item)
-            }
-        }
-
-        return filtered;
+        const results = $.descriptors.Element.getElementsByTagName.value.call(this, qualifiedName);
+        return $.filterByRoot(this, results);
     }
 
     // TODO: tests
     getElementsByTagNameNS(ns, localName) {
-        const contextRoot = this.getRootNode({ composed: false });
-        const collection = $.native.Element.getElementsByTagNameNS.call(this, ns, localName);
-        const filtered = [];
-
-        for (let i = 0; i < collection.length; i++) {
-            const item = collection[i];
-            if (contextRoot === item.getRootNode({ composed: false })) {
-                filtered.push(item)
-            }
-        }
-
-        return filtered;
+        const results = $.descriptors.Element.getElementsByTagNameNS.value.call(this, ns, localName);
+        return $.filterByRoot(this, results);
     }
 
     // TODO: tests
     getElementsByClassName(names) {
-        const contextRoot = this.getRootNode({ composed: false });
-        const collection = $.native.Element.getElementsByClassName.call(this, name);
-        const filtered = [];
-
-        for (let i = 0; i < collection.length; i++) {
-            const item = collection[i];
-            if (contextRoot === item.getRootNode({ composed: false })) {
-                filtered.push(item)
-            }
-        }
-
-        return filtered;
+        const results = $.descriptors.Element.getElementsByClassName.value.call(this, name);
+        return $.filterByRoot(this, results);
     }
 
     // TODO: tests
@@ -244,4 +171,30 @@ export default class {
         $.insertAdjacent(this, position, fragment);
     }
 
+}
+
+function updateSlotableName(element, localName, oldValue, value, namespace) {
+    // https://dom.spec.whatwg.org/#slotable-name
+    if (localName === 'slot' && namespace == null) {
+        if (value === oldValue) {
+            return;
+        }
+        if (value == null && oldValue === '') {
+            return;
+        }
+        if (value === '' && oldValue == null) {
+            return;
+        }
+        if (value == null || value === '') {
+            $.descriptors.Element.setAttribute.value.call(element, 'slot', '');
+        }
+        else {
+            $.descriptors.Element.setAttribute.value.call(element, 'slot', value);
+        }
+        const assignedSlot = $.shadow(element).assignedSlot;
+        if (assignedSlot) {
+            $.assignSlotables(assignedSlot);
+        }
+        $.assignASlot(element);
+    }
 }
