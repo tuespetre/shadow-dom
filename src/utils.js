@@ -1,5 +1,6 @@
-export const prop = (type, name) =>
-    Object.getOwnPropertyDescriptor(type.prototype, name);
+export const slice = array => Array.prototype.slice.call(array);
+
+export const prop = (type, name) => Object.getOwnPropertyDescriptor(type.prototype, name);
 
 export const native = {
     Document: {
@@ -13,6 +14,10 @@ export const native = {
         getElementsByClassName: Element.prototype.getElementsByClassName,
         innerHTML: prop(Element, 'innerHTML') || prop(HTMLElement, 'innerHTML'),
         setAttribute: Element.prototype.setAttribute
+    },
+    Event: {
+        currentTarget: prop(Event, 'currentTarget'),
+        target: prop(Event, 'target')
     },
     Node: {
         parentNode: prop(Node, 'parentNode'),
@@ -30,8 +35,6 @@ export const native = {
         appendChild: Node.prototype.appendChild
     }
 };
-
-export const slice = array => Array.prototype.slice.call(array);
 
 export function makeError(name, message) {
     const error = new Error(message || name);
@@ -144,7 +147,7 @@ export function closedShadowHidden(nodeA, nodeB) {
     // https://dom.spec.whatwg.org/#concept-closed-shadow-hidden
     const root = nodeA.getRootNode({ composed: false });
 
-    if (root.localName !== '#shadow-root') {
+    if (root.nodeName !== '#shadow-root') {
         return false;
     }
 
@@ -168,7 +171,7 @@ export function retarget(nodeA, nodeB) {
     while (root = nodeA.getRootNode()) {
         // 1. If A’s root is not a shadow root, or A’s root is a shadow-including 
         // inclusive ancestor of B, then return A.
-        if (root.localName !== '#shadow-root' || shadowIncludingInclusiveAncestor(root, nodeB)) {
+        if (root.nodeName !== '#shadow-root' || shadowIncludingInclusiveAncestor(root, nodeB)) {
             return nodeA;
         }
         // 2. Set A to A’s root’s host.

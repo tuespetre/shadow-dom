@@ -39,7 +39,7 @@ export default class {
         }
 
         // 2. Return the result of finding flattened slotables with this element.
-        return $.findFlattenedSlotables(this);    
+        return $.findFlattenedSlotables(this);
     }
 
 }

@@ -1,8 +1,9 @@
 import * as $ from './utils.js';
 
+import $CustomEvent from './interfaces/CustomEvent.js';
 import $Document from './interfaces/Document.js';
 import $Element from './interfaces/Element.js';
-import $Event from './interfaces/Event.js';
+import { default as $Event, hasRelatedTarget } from './interfaces/Event.js';
 import $EventTarget from './interfaces/EventTarget.js';
 import $HTMLSlotElement from './interfaces/HTMLSlotElement.js';
 import $HTMLTableElement from './interfaces/HTMLTableElement.js';
@@ -21,32 +22,49 @@ import $Slotable from './mixins/Slotable.js';
 // In case we would force the polyfill
 const HTMLSlotElement = window.HTMLSlotElement || window.HTMLUnknownElement;
 
-export default function() {
+export default function () {
 
     // Element.matches(selectors) polyfill from MDN
     // https://developer.mozilla.org/en-US/docs/Web/API/Element/matches#Polyfill
-
+    // Purposefully chop out the polyfill function that uses querySelectorAll.
     if (!Element.prototype.matches) {
-        Element.prototype.matches = 
-            Element.prototype.matchesSelector || 
+        Element.prototype.matches =
+            Element.prototype.matchesSelector ||
             Element.prototype.mozMatchesSelector ||
-            Element.prototype.msMatchesSelector || 
-            Element.prototype.oMatchesSelector || 
-            Element.prototype.webkitMatchesSelector ||
-            function(s) {
-                const matches = (this.document || this.ownerDocument).querySelectorAll(s);
-                let i = matches.length;
-                while (--i >= 0 && matches.item(i) !== this) {}
-                return i > -1;            
-            };
+            Element.prototype.msMatchesSelector ||
+            Element.prototype.oMatchesSelector ||
+            Element.prototype.webkitMatchesSelector;
     }
 
-    // Globally applied interfaces
+    // CustomEvent interface
+    $.extend(CustomEvent, $CustomEvent);
+    $CustomEvent.prototype = CustomEvent.prototype;
+    window.CustomEvent = $CustomEvent;
 
+    // Document interface
     $.extend(Document, $Document);
-    $.extend(Element, $Element);
-    $.extend(Event, $Event);
 
+    // Element interface
+    $.extend(Element, $Element);
+    {
+        // For IE, Edge
+        delete HTMLElement.prototype.children;
+        delete HTMLElement.prototype.parentElement;
+        delete HTMLElement.prototype.innerHTML;
+        delete HTMLElement.prototype.outerHTML;
+        delete HTMLElement.prototype.insertAdjacentText;
+        delete HTMLElement.prototype.insertAdjacentElement;
+        delete HTMLElement.prototype.insertAdjacentHTML;
+    }
+
+    // Event interface
+    $.extend(Event, $Event);
+    $.extend(FocusEvent, hasRelatedTarget(FocusEvent));
+    $.extend(MouseEvent, hasRelatedTarget(MouseEvent));
+    $Event.prototype = Event.prototype;
+    window.Event = $Event;
+
+    // EventTarget
     if ('EventTarget' in Window) {
         $.extend(EventTarget, $EventTarget(EventTarget));
     }
@@ -57,42 +75,45 @@ export default function() {
         $.extend(Node, $EventTarget(Node));
     }
 
+    // HTMLSlotElement interface
     $.extend(HTMLSlotElement, $HTMLSlotElement);
+
+    // HTMLTableElement interface
     $.extend(HTMLTableElement, $HTMLTableElement);
+
+    // HTMLTableRowElement interface
     $.extend(HTMLTableRowElement, $HTMLTableRowElement);
+
+    // HTMLTableSectionElement interface
     $.extend(HTMLTableSectionElement, $HTMLTableSectionElement);
+
+    // Node interface
     $.extend(Node, $Node);
 
-    // Globally applied mixins
-
+    // ChildNode mixin
     $.extend(DocumentType, $ChildNode(DocumentType));
     $.extend(Element, $ChildNode(Element));
     $.extend(CharacterData, $ChildNode(CharacterData));
 
+    // DocumentOrShadowRoot mixin
     $.extend(Document, $DocumentOrShadowRoot(Document));
     $.extend($ShadowRoot, $DocumentOrShadowRoot($ShadowRoot));
 
+    // NonDocumentTypeChildNode mixin
     $.extend(Element, $NonDocumentTypeChildNode(Element));
     $.extend(CharacterData, $NonDocumentTypeChildNode(CharacterData));
 
+    // NonElementParentNode mixin
     $.extend(Document, $NonElementParentNode(Document));
     $.extend(DocumentFragment, $NonElementParentNode(DocumentFragment));
 
+    // ParentNode mixin
     $.extend(Document, $ParentNode(Document));
     $.extend(DocumentFragment, $ParentNode(DocumentFragment));
     $.extend(Element, $ParentNode(Element));
 
+    // Slotable mixin
     $.extend(Element, $Slotable(Element));
     $.extend(Text, $Slotable(Text));
-
-    // For IE, Edge
-
-    delete HTMLElement.prototype.children;
-    delete HTMLElement.prototype.parentElement;
-    delete HTMLElement.prototype.innerHTML;
-    delete HTMLElement.prototype.outerHTML;
-    delete HTMLElement.prototype.insertAdjacentText;
-    delete HTMLElement.prototype.insertAdjacentElement;
-    delete HTMLElement.prototype.insertAdjacentHTML;
 
 }

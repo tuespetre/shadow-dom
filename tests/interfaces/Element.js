@@ -113,13 +113,13 @@ suite('Element', function () {
 
     suite('get shadowRoot()', function () {
 
-        test('returns open shadow root', function() {
+        test('returns open shadow root', function () {
             var div = document.createElement('div');
             var shadow = div.attachShadow({ mode: 'open' });
             assert.equal(div.shadowRoot, shadow);
         });
 
-        test('does not return closed shadow root', function() {
+        test('does not return closed shadow root', function () {
             var div = document.createElement('div');
             div.attachShadow({ mode: 'closed' });
             assert.isNull(div.shadowRoot);

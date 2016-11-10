@@ -10,7 +10,7 @@ DocumentFragment implements NonElementParentNode;
 
 */
 
-export default function (base) {
+export default function(base) {
 
     return class {
 

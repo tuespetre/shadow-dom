@@ -5,6 +5,53 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
+var _utils = require('../utils.js');
+
+var $ = _interopRequireWildcard(_utils);
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } } /*
+                                                                                                                                                          
+                                                                                                                                                          https://dom.spec.whatwg.org/#interface-event
+                                                                                                                                                          
+                                                                                                                                                          [Constructor(DOMString type, optional CustomEventInit eventInitDict), Exposed=(Window,Worker)]
+                                                                                                                                                          interface CustomEvent : Event 
+                                                                                                                                                          
+                                                                                                                                                          dictionary CustomEventInit : EventInit {
+                                                                                                                                                            any detail = null;
+                                                                                                                                                          };
+                                                                                                                                                          
+                                                                                                                                                          */
+
+var _class = function _class(type, init) {
+    _classCallCheck(this, _class);
+
+    var bubbles = false;
+    var cancelable = false;
+    var composed = false;
+    var detail = null;
+    if (init) {
+        bubbles = init.bubbles === true;
+        cancelable = init.cancelable === true;
+        composed = init.composed === true;
+        detail = init.detail || null;
+    }
+    var event = document.createEvent('CustomEvent');
+    event.initCustomEvent(type, bubbles, cancelable, detail);
+    $.shadow(event).composed = composed;
+    return event;
+};
+
+exports.default = _class;
+
+},{"../utils.js":20}],2:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      https://dom.spec.whatwg.org/#interface-document
@@ -89,14 +136,6 @@ var _class = function () {
             return filtered;
         }
 
-        // [NewObject] Element createElement(DOMString localName, optional ElementCreationOptions options);
-        // [NewObject] Element createElementNS(DOMString? namespace, DOMString qualifiedName, optional ElementCreationOptions options);
-        // [NewObject] DocumentFragment createDocumentFragment();
-        // [NewObject] Text createTextNode(DOMString data);
-        // [NewObject] CDATASection createCDATASection(DOMString data);
-        // [NewObject] Comment createComment(DOMString data);
-        // [NewObject] ProcessingInstruction createProcessingInstruction(DOMString target, DOMString data);
-
         // TODO: tests
 
     }, {
@@ -108,21 +147,6 @@ var _class = function () {
 
             return $.clone(node, this, deep);
         }
-
-        // [CEReactions, NewObject] Node importNode(Node node, optional boolean deep = false);
-        // [CEReactions] Node adoptNode(Node node);
-
-        // [NewObject] Attr createAttribute(DOMString localName);
-        // [NewObject] Attr createAttributeNS(DOMString? namespace, DOMString qualifiedName);
-
-        // [NewObject] Event createEvent(DOMString interface);
-
-        // [NewObject] Range createRange();
-
-        // // NodeFilter.SHOW_ALL = 0xFFFFFFFF
-        // [NewObject] NodeIterator createNodeIterator(Node root, optional unsigned long whatToShow = 0xFFFFFFFF, optional NodeFilter? filter = null);
-        // [NewObject] TreeWalker createTreeWalker(Node root, optional unsigned long whatToShow = 0xFFFFFFFF, optional NodeFilter? filter = null);
-
     }]);
 
     return _class;
@@ -130,7 +154,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":19}],2:[function(require,module,exports){
+},{"../utils.js":20}],3:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -363,7 +387,7 @@ var _class = function () {
 
         // TODO: Override setAttribute, setAttributeNS, removeAttribute,
         // removeAttributeNS, setAttributeNode, setAttributeNodeNS, 
-        // and removeAttributeNode to detect slot changes
+        // and removeAttributeNode to detect slot changes.
 
         get: function get() {
             // The slot attribute must reflect the "slot" content attribute.
@@ -436,7 +460,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../interfaces/ShadowRoot.js":10,"../utils.js":19}],3:[function(require,module,exports){
+},{"../interfaces/ShadowRoot.js":11,"../utils.js":20}],4:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -460,6 +484,8 @@ var _createClass = function () { function defineProperties(target, props) { for 
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      */
 
+exports.hasRelatedTarget = hasRelatedTarget;
+
 var _utils = require('../utils.js');
 
 var $ = _interopRequireWildcard(_utils);
@@ -471,38 +497,45 @@ function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var _class = function () {
-
-    // TODO: impl, tests
     function _class(type, init) {
         _classCallCheck(this, _class);
 
-        $.shadow(this).composed = init && init.composed === true;
+        var bubbles = false;
+        var cancelable = false;
+        var composed = false;
+        if (init) {
+            bubbles = init.bubbles === true;
+            cancelable = init.cancelable === true;
+            composed = init.composed === true;
+        }
+        var event = document.createEvent('event');
+        event.initEvent(type, bubbles, cancelable);
+        $.shadow(event).composed = composed;
+        return event;
     }
 
-    // TODO: impl, tests
-
-
     _createClass(_class, [{
+        key: 'stopImmediatePropagation',
+        value: function stopImmediatePropagation() {
+            this.stopPropagation();
+            $.shadow(this).stopImmediatePropagationFlag = true;
+        }
+
+        // TODO: tests
+
+    }, {
         key: 'composedPath',
-
-
-        // TODO: impl, tests
         value: function composedPath() {
-            var composedPath = $.shadow(this).composedPath;
-
-            if (composedPath) {
-                return composedPath.slice();
-            }
-
             // https://dom.spec.whatwg.org/#dom-event-composedpath
 
             // 1. Let composedPath be a new empty list.
-            composedPath = $.shadow(this).composedPath = [];
+            var composedPath = [];
 
             // 2. Let currentTarget be context object’s currentTarget attribute value.
             var currentTarget = this.currentTarget;
 
             // 3. For each tuple in context object’s path:
+            var nativeTarget = $.native.Event.target.get.call(this);
             var path = calculatePath(this);
 
             if (currentTarget instanceof Window) {
@@ -566,63 +599,162 @@ var _class = function () {
                     }
                 }
             } else {
-                var _composedPath;
-
-                (_composedPath = composedPath).push.apply(_composedPath, _toConsumableArray(path));
+                composedPath.push.apply(composedPath, _toConsumableArray(path));
             }
 
             // 4. return composedPath.
             return composedPath.slice();
         }
     }, {
-        key: 'target',
-        get: function get() {
-            return null;
-        }
-
-        // TODO: impl, tests
-
-    }, {
         key: 'currentTarget',
         get: function get() {
-            return null;
+            return $.shadow(this).currentTarget;
+        }
+    }, {
+        key: 'target',
+        get: function get() {
+            var target = $.shadow(this).target;
+            if (!target) {
+                target = getTarget(this);
+                $.shadow(this).target = target;
+            }
+            return target;
         }
     }, {
         key: 'composed',
         get: function get() {
-            return $.shadow(this).composed;
+            return $.shadow(this).composed || builtInComposedEvents.indexOf(this.type) !== -1;
         }
     }]);
 
     return _class;
 }();
 
+// FocusEvent:
+// relatedTarget will be the element losing or gaining focus
+// MouseEvent:
+// relatedTarget will be the element being moved into or out of
+
+
 exports.default = _class;
+function hasRelatedTarget(base) {
 
+    var native = {
+        relatedTarget: $.prop(base, 'relatedTarget')
+    };
 
-function calculatePath(event) {
+    return function () {
+        function _class2() {
+            _classCallCheck(this, _class2);
+        }
+
+        _createClass(_class2, [{
+            key: 'target',
+            get: function get() {
+                var target = $.shadow(this).target;
+                if (!target) {
+                    target = getTarget(this, native.relatedTarget);
+                    $.shadow(this).target = target;
+                }
+                return target;
+            }
+        }, {
+            key: 'relatedTarget',
+            get: function get() {
+                var relatedTarget = $.shadow(this).relatedTarget;
+                if (!relatedTarget) {
+                    var nativeTarget = $.native.Event.target.get.call(event);
+                    var path = calculatePath(this, nativeTarget, native.relatedTarget);
+                    for (var i = 0; i < path.length; i++) {
+                        var _path$i = _slicedToArray(path[i], 3),
+                            item = _path$i[0],
+                            _relatedTarget = _path$i[2];
+
+                        if (item === this.currentTarget) {
+                            $.shadow(this).relatedTarget = _relatedTarget;
+                            return _relatedTarget;
+                        }
+                    }
+                }
+            }
+        }]);
+
+        return _class2;
+    }();
+};
+
+function getTarget(event, relatedTargetDescriptor) {
+    var nativeTarget = $.native.Event.target.get.call(event);
+    var path = calculatePath(event, nativeTarget, relatedTargetDescriptor);
+    for (var i = 0; i < path.length; i++) {
+        var _path$i2 = _slicedToArray(path[i], 1),
+            item = _path$i2[0];
+
+        if (item === event.currentTarget) {
+            for (var j = i; j >= 0; j--) {
+                var _path$j = _slicedToArray(path[j], 2),
+                    target = _path$j[1];
+
+                if (target !== null) {
+                    return target;
+                }
+            }
+            return undefined;
+        }
+    }
+    return undefined;
+}
+
+function calculatePath(event, target, relatedTargetDescriptor) {
     var path = $.shadow(event).path;
 
     if (path) {
         return path;
     }
 
-    // Starting at step 8:
     // https://dom.spec.whatwg.org/#concept-event-dispatch
 
     path = $.shadow(event).path = [];
 
+    // Skip (native)
+    // 1. Set event’s dispatch flag.
+
+    // 2. Let targetOverride be target, if legacy target override flag is 
+    // not given, and target’s associated Document otherwise. 
+    var targetOverride = target;
+
+    // 3. Let relatedTarget be the result of retargeting event’s relatedTarget 
+    // against target if event’s relatedTarget is non-null, and null otherwise.
+    var originalRelatedTarget = null;
+    var relatedTarget = null;
+    if (relatedTargetDescriptor) {
+        originalRelatedTarget = relatedTargetDescriptor.get.call(event);
+        if (originalRelatedTarget) {
+            relatedTarget = $.retarget(originalRelatedTarget, target);
+        }
+    }
+
+    // Skip (native)
+    // 4. If target is relatedTarget and target is not event’s relatedTarget, then return true.
+
+    // 5. Append (target, targetOverride, relatedTarget) to event’s path.
+    path.push([target, targetOverride, relatedTarget]);
+
+    // Skip (native)
+    // 6. Let isActivationEvent be true, if event is a MouseEvent object and 
+    // event’s type attribute is "click", and false otherwise.
+    // 7. Let activationTarget be target, if isActivationEvent is true and 
+    //target has activation behavior, and null otherwise.
+
     // 8. Let parent be the result of invoking target’s get the parent with event.
-    var target = event.target;
     var parent = getTheParent(target, event);
 
     // 9. While parent is non-null:
     while (parent !== null) {
         // 1. Let relatedTarget be the result of retargeting event’s relatedTarget
         // against parent if event’s relatedTarget is non-null, and null otherwise.
-        var relatedTarget = event.relatedTarget;
-        if (relatedTarget !== null) {
-            relatedTarget = $.retarget(relatedTarget, parent);
+        if (originalRelatedTarget) {
+            relatedTarget = $.retarget(originalRelatedTarget, parent);
         }
         // 2. If target’s root is a shadow-including inclusive ancestor of parent, then... 
         // append (parent, null, relatedTarget) to event’s path.
@@ -650,7 +782,7 @@ function calculatePath(event) {
     return path;
 }
 
-function getTheParent(target, event) {
+function getTheParent(node, event) {
     // https://dom.spec.whatwg.org/#get-the-parent
     // Each EventTarget object also has an associated get the parent 
     // algorithm, which takes an event event, and returns an EventTarget 
@@ -675,7 +807,7 @@ function getTheParent(target, event) {
                 return null;
             }
             return document.defaultView;
-        } else if (node.localName === '#shadow-root') {
+        } else if (node.nodeName === '#shadow-root') {
             if (!event.composed) {
                 var _$$shadow$path$ = _slicedToArray($.shadow(event).path[0], 1),
                     item = _$$shadow$path$[0];
@@ -692,27 +824,143 @@ function getTheParent(target, event) {
     return null;
 }
 
-},{"../utils.js":19}],4:[function(require,module,exports){
+var builtInComposedEvents = [
+// FocusEvent
+'blur', 'focus', 'focusin', 'focusout',
+// MouseEvent
+'click', 'dblclick', 'mousedown', 'mouseenter', 'mouseleave', 'mousemove', 'mouseout', 'mouseover', 'mouseup',
+// WheelEvent
+'wheel',
+// InputEvent
+'beforeinput', 'input',
+// KeyboardEvent
+'keydown', 'keyup',
+// CompositionEvent
+'compositionstart', 'compositionupdate', 'compositionend',
+// Legacy UIEvent
+'DOMActivate',
+// Legacy FocusEvent
+'DOMFocusIn', 'DOMFocusOut',
+// Legacy KeyboardEvent
+'keypress'];
+
+},{"../utils.js":20}],5:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
-  value: true
+    value: true
 });
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); /*
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     https://dom.spec.whatwg.org/#interface-eventtarget
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     [Exposed=(Window,Worker)]
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     interface EventTarget
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     callback interface EventListener {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       void handleEvent(Event event);
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     };
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     dictionary EventListenerOptions {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       boolean capture = false;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     };
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     dictionary AddEventListenerOptions : EventListenerOptions {
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       boolean passive = false;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       boolean once = false;
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     };
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     */
 
 exports.default = function (base) {
 
-  var native = {
-    addEventListener: base.prototype.addEventListener,
-    removeEventListener: base.prototype.removeEventListener
-  };
+    var native = {
+        addEventListener: base.prototype.addEventListener,
+        removeEventListener: base.prototype.removeEventListener
+    };
 
-  return function () {
-    function _class() {
-      _classCallCheck(this, _class);
-    }
+    return function () {
+        function _class() {
+            _classCallCheck(this, _class);
+        }
 
-    return _class;
-  }();
+        _createClass(_class, [{
+            key: 'addEventListener',
+            value: function addEventListener(type, callback, options) {
+                if (typeof callback !== 'function') {
+                    return;
+                }
+
+                var listener = { callback: callback, capture: false };
+
+                if (options != null) {
+                    if (typeof options === 'boolean') {
+                        listener.capture = options;
+                    } else {
+                        listener.capture = options.capture === true;
+                        listener.passive = options.passive === true;
+                        listener.once = options.once === true;
+                    }
+                }
+
+                var nativeOptions = listener.capture;
+                if (listenerOptionsObjectSupported) {
+                    nativeOptions = {
+                        capture: listener.capture,
+                        passive: listener.passive
+                    };
+                }
+
+                var target = $.shadow(this).host || this;
+                var collections = getListenerCollections(target, listener.capture);
+                var collection = collections[type];
+
+                if (!collection) {
+                    collection = collections[type] = new EventListenerCollection(target);
+                    native.addEventListener.call(target, type, collection.callback, nativeOptions);
+                }
+
+                collection.addListener(this, listener);
+            }
+        }, {
+            key: 'removeEventListener',
+            value: function removeEventListener(type, callback, options) {
+                if (typeof callback !== 'function') {
+                    return;
+                }
+
+                var listener = { callback: callback, capture: false };
+
+                if (options != null) {
+                    if (typeof options === 'boolean') {
+                        listener.capture = options;
+                    } else {
+                        listener.capture = options.capture === true;
+                    }
+                }
+
+                var nativeOptions = listener.capture;
+                if (listenerOptionsObjectSupported) {
+                    nativeOptions = {
+                        capture: listener.capture
+                    };
+                }
+
+                var target = $.shadow(this).host || this;
+                var collections = getListenerCollections(target, listener.capture);
+                var collection = collections[type];
+
+                if (!collection) {
+                    return;
+                }
+
+                collection.removeListener(this, listener);
+            }
+        }]);
+
+        return _class;
+    }();
 };
 
 var _utils = require('../utils.js');
@@ -721,29 +969,133 @@ var $ = _interopRequireWildcard(_utils);
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } } /*
-                                                                                                                                                          
-                                                                                                                                                          https://dom.spec.whatwg.org/#interface-eventtarget
-                                                                                                                                                          
-                                                                                                                                                          [Exposed=(Window,Worker)]
-                                                                                                                                                          interface EventTarget
-                                                                                                                                                          
-                                                                                                                                                          callback interface EventListener {
-                                                                                                                                                            void handleEvent(Event event);
-                                                                                                                                                          };
-                                                                                                                                                          
-                                                                                                                                                          dictionary EventListenerOptions {
-                                                                                                                                                            boolean capture = false;
-                                                                                                                                                          };
-                                                                                                                                                          
-                                                                                                                                                          dictionary AddEventListenerOptions : EventListenerOptions {
-                                                                                                                                                            boolean passive = false;
-                                                                                                                                                            boolean once = false;
-                                                                                                                                                          };
-                                                                                                                                                          
-                                                                                                                                                          */
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-},{"../utils.js":19}],5:[function(require,module,exports){
+var listenerOptionsObjectSupported = testForListenerOptionsObjectSupport();
+
+var EventListenerCollection = function () {
+    function EventListenerCollection(target) {
+        var _this = this;
+
+        _classCallCheck(this, EventListenerCollection);
+
+        this.target = target;
+        this.hostListeners = [];
+        this.shadowListeners = [];
+
+        this.callback = function (event) {
+            var shadowRoot = $.shadow(_this.target).shadowRoot;
+            switch (event.eventPhase) {
+                case Event.prototype.CAPTURING_PHASE:
+                    _this.invokeListeners(event, _this.target, _this.hostListeners);
+                    if (shadowRoot) {
+                        _this.invokeListeners(event, shadowRoot, _this.shadowListeners);
+                    }
+                    break;
+                case Event.prototype.AT_TARGET:
+                    var nativeTarget = $.native.Event.target.get.call(event);
+                    _this.invokeListeners(event, nativeTarget, _this.getListeners(nativeTarget));
+                    break;
+                case Event.prototype.BUBBLING_PHASE:
+                    if (shadowRoot) {
+                        _this.invokeListeners(event, shadowRoot, _this.shadowListeners);
+                    }
+                    _this.invokeListeners(event, _this.target, _this.hostListeners);
+                    break;
+            }
+        };
+    }
+
+    _createClass(EventListenerCollection, [{
+        key: 'getListeners',
+        value: function getListeners(target) {
+            return $.shadow(target).host ? this.shadowListeners : this.hostListeners;
+        }
+    }, {
+        key: 'addListener',
+        value: function addListener(target, listener) {
+            var listeners = this.getListeners(target);
+
+            for (var i = 0; i < listeners.length; i++) {
+                if (listener.callback === listeners[i].callback) {
+                    return;
+                }
+            }
+
+            listeners.push(listener);
+        }
+    }, {
+        key: 'removeListener',
+        value: function removeListener(target, listener) {
+            var listeners = this.getListeners(target);
+
+            for (var i = 0; i < listeners.length; i++) {
+                var other = listeners[i];
+                if (listener.callback === other.callback) {
+                    listeners.splice(i, 1);
+                    break;
+                }
+            }
+        }
+    }, {
+        key: 'invokeListeners',
+        value: function invokeListeners(event, currentTarget, listeners) {
+            var remove = [];
+            $.shadow(event).currentTarget = currentTarget;
+            $.shadow(event).target = null;
+            $.shadow(event).relatedTarget = null;
+            if (!event.target) {
+                // i.e. the event is not composed
+                event.stopImmediatePropagation();
+            } else {
+                for (var i = 0; i < listeners.length; i++) {
+                    var listener = listeners[i];
+                    var result = listener.callback.call(currentTarget, event);
+                    if (listener.once) {
+                        remove.push(listener);
+                    }
+                    if ($.shadow(event).stopImmediatePropagationFlag) {
+                        break;
+                    }
+                }
+                for (var _i = 0; _i < remove.length; _i++) {
+                    var index = listeners.indexOf(remove[_i]);
+                    listeners.splice(index, 1);
+                }
+            }
+        }
+    }]);
+
+    return EventListenerCollection;
+}();
+
+function getListenerCollections(target, capture) {
+    var shadow = $.shadow(target);
+
+    if (!shadow.listeners) {
+        shadow.listeners = {
+            capture: {},
+            bubble: {}
+        };
+    }
+
+    return capture ? shadow.listeners.capture : shadow.listeners.bubble;
+}
+
+function testForListenerOptionsObjectSupport() {
+    var supported = false;
+    var document = window.document.implementation.createHTMLDocument('test');
+    var handler = function handler(event) {
+        supported = event.eventPhase === Event.prototype.BUBBLING_PHASE;
+    };
+    document.addEventListener('test', handler, { capture: false });
+    var event = document.createEvent('event');
+    event.initEvent('test', true, false);
+    document.dispatchEvent(event);
+    return supported;
+}
+
+},{"../utils.js":20}],6:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -817,7 +1169,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":19}],6:[function(require,module,exports){
+},{"../utils.js":20}],7:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -886,7 +1238,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":19}],7:[function(require,module,exports){
+},{"../utils.js":20}],8:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -931,7 +1283,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":19}],8:[function(require,module,exports){
+},{"../utils.js":20}],9:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -973,7 +1325,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":19}],9:[function(require,module,exports){
+},{"../utils.js":20}],10:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1486,7 +1838,7 @@ function preceding(element1, element2) {
     return precedingSiblings(ancestors1[i - 1], ancestors1[i], ancestors2[i]);
 }
 
-},{"../utils.js":19}],10:[function(require,module,exports){
+},{"../utils.js":20}],11:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1553,7 +1905,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":19}],11:[function(require,module,exports){
+},{"../utils.js":20}],12:[function(require,module,exports){
 'use strict';
 
 var _patch = require('./patch.js');
@@ -1568,7 +1920,7 @@ if (!nativeShadowDom || window.forceShadowDomPolyfill) {
     (0, _patch2.default)();
 }
 
-},{"./patch.js":18}],12:[function(require,module,exports){
+},{"./patch.js":19}],13:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1754,7 +2106,7 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-},{"../utils.js":19}],13:[function(require,module,exports){
+},{"../utils.js":20}],14:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1811,7 +2163,7 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-},{"../utils.js":19}],14:[function(require,module,exports){
+},{"../utils.js":20}],15:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1920,7 +2272,7 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-},{"../utils.js":19}],15:[function(require,module,exports){
+},{"../utils.js":20}],16:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -1989,7 +2341,7 @@ exports.default = function (base) {
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-},{}],16:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2223,7 +2575,7 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-},{"../utils.js":19}],17:[function(require,module,exports){
+},{"../utils.js":20}],18:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2269,7 +2621,7 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-},{"../utils.js":19}],18:[function(require,module,exports){
+},{"../utils.js":20}],19:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2280,22 +2632,40 @@ exports.default = function () {
 
     // Element.matches(selectors) polyfill from MDN
     // https://developer.mozilla.org/en-US/docs/Web/API/Element/matches#Polyfill
-
+    // Purposefully chop out the polyfill function that uses querySelectorAll.
     if (!Element.prototype.matches) {
-        Element.prototype.matches = Element.prototype.matchesSelector || Element.prototype.mozMatchesSelector || Element.prototype.msMatchesSelector || Element.prototype.oMatchesSelector || Element.prototype.webkitMatchesSelector || function (s) {
-            var matches = (this.document || this.ownerDocument).querySelectorAll(s);
-            var i = matches.length;
-            while (--i >= 0 && matches.item(i) !== this) {}
-            return i > -1;
-        };
+        Element.prototype.matches = Element.prototype.matchesSelector || Element.prototype.mozMatchesSelector || Element.prototype.msMatchesSelector || Element.prototype.oMatchesSelector || Element.prototype.webkitMatchesSelector;
     }
 
-    // Globally applied interfaces
+    // CustomEvent interface
+    $.extend(CustomEvent, _CustomEvent2.default);
+    _CustomEvent2.default.prototype = CustomEvent.prototype;
+    window.CustomEvent = _CustomEvent2.default;
 
+    // Document interface
     $.extend(Document, _Document2.default);
-    $.extend(Element, _Element2.default);
-    $.extend(Event, _Event2.default);
 
+    // Element interface
+    $.extend(Element, _Element2.default);
+    {
+        // For IE, Edge
+        delete HTMLElement.prototype.children;
+        delete HTMLElement.prototype.parentElement;
+        delete HTMLElement.prototype.innerHTML;
+        delete HTMLElement.prototype.outerHTML;
+        delete HTMLElement.prototype.insertAdjacentText;
+        delete HTMLElement.prototype.insertAdjacentElement;
+        delete HTMLElement.prototype.insertAdjacentHTML;
+    }
+
+    // Event interface
+    $.extend(Event, _Event2.default);
+    $.extend(FocusEvent, (0, _Event.hasRelatedTarget)(FocusEvent));
+    $.extend(MouseEvent, (0, _Event.hasRelatedTarget)(MouseEvent));
+    _Event2.default.prototype = Event.prototype;
+    window.Event = _Event2.default;
+
+    // EventTarget
     if ('EventTarget' in Window) {
         $.extend(EventTarget, (0, _EventTarget2.default)(EventTarget));
     } else {
@@ -2305,48 +2675,55 @@ exports.default = function () {
         $.extend(Node, (0, _EventTarget2.default)(Node));
     }
 
+    // HTMLSlotElement interface
     $.extend(HTMLSlotElement, _HTMLSlotElement2.default);
+
+    // HTMLTableElement interface
     $.extend(HTMLTableElement, _HTMLTableElement2.default);
+
+    // HTMLTableRowElement interface
     $.extend(HTMLTableRowElement, _HTMLTableRowElement2.default);
+
+    // HTMLTableSectionElement interface
     $.extend(HTMLTableSectionElement, _HTMLTableSectionElement2.default);
+
+    // Node interface
     $.extend(Node, _Node2.default);
 
-    // Globally applied mixins
-
+    // ChildNode mixin
     $.extend(DocumentType, (0, _ChildNode2.default)(DocumentType));
     $.extend(Element, (0, _ChildNode2.default)(Element));
     $.extend(CharacterData, (0, _ChildNode2.default)(CharacterData));
 
+    // DocumentOrShadowRoot mixin
     $.extend(Document, (0, _DocumentOrShadowRoot2.default)(Document));
     $.extend(_ShadowRoot2.default, (0, _DocumentOrShadowRoot2.default)(_ShadowRoot2.default));
 
+    // NonDocumentTypeChildNode mixin
     $.extend(Element, (0, _NonDocumentTypeChildNode2.default)(Element));
     $.extend(CharacterData, (0, _NonDocumentTypeChildNode2.default)(CharacterData));
 
+    // NonElementParentNode mixin
     $.extend(Document, (0, _NonElementParentNode2.default)(Document));
     $.extend(DocumentFragment, (0, _NonElementParentNode2.default)(DocumentFragment));
 
+    // ParentNode mixin
     $.extend(Document, (0, _ParentNode2.default)(Document));
     $.extend(DocumentFragment, (0, _ParentNode2.default)(DocumentFragment));
     $.extend(Element, (0, _ParentNode2.default)(Element));
 
+    // Slotable mixin
     $.extend(Element, (0, _Slotable2.default)(Element));
     $.extend(Text, (0, _Slotable2.default)(Text));
-
-    // For IE, Edge
-
-    delete HTMLElement.prototype.children;
-    delete HTMLElement.prototype.parentElement;
-    delete HTMLElement.prototype.innerHTML;
-    delete HTMLElement.prototype.outerHTML;
-    delete HTMLElement.prototype.insertAdjacentText;
-    delete HTMLElement.prototype.insertAdjacentElement;
-    delete HTMLElement.prototype.insertAdjacentHTML;
 };
 
 var _utils = require('./utils.js');
 
 var $ = _interopRequireWildcard(_utils);
+
+var _CustomEvent = require('./interfaces/CustomEvent.js');
+
+var _CustomEvent2 = _interopRequireDefault(_CustomEvent);
 
 var _Document = require('./interfaces/Document.js');
 
@@ -2419,7 +2796,7 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 // In case we would force the polyfill
 var HTMLSlotElement = window.HTMLSlotElement || window.HTMLUnknownElement;
 
-},{"./interfaces/Document.js":1,"./interfaces/Element.js":2,"./interfaces/Event.js":3,"./interfaces/EventTarget.js":4,"./interfaces/HTMLSlotElement.js":5,"./interfaces/HTMLTableElement.js":6,"./interfaces/HTMLTableRowElement.js":7,"./interfaces/HTMLTableSectionElement.js":8,"./interfaces/Node.js":9,"./interfaces/ShadowRoot.js":10,"./mixins/ChildNode.js":12,"./mixins/DocumentOrShadowRoot.js":13,"./mixins/NonDocumentTypeChildNode.js":14,"./mixins/NonElementParentNode.js":15,"./mixins/ParentNode.js":16,"./mixins/Slotable.js":17,"./utils.js":19}],19:[function(require,module,exports){
+},{"./interfaces/CustomEvent.js":1,"./interfaces/Document.js":2,"./interfaces/Element.js":3,"./interfaces/Event.js":4,"./interfaces/EventTarget.js":5,"./interfaces/HTMLSlotElement.js":6,"./interfaces/HTMLTableElement.js":7,"./interfaces/HTMLTableRowElement.js":8,"./interfaces/HTMLTableSectionElement.js":9,"./interfaces/Node.js":10,"./interfaces/ShadowRoot.js":11,"./mixins/ChildNode.js":13,"./mixins/DocumentOrShadowRoot.js":14,"./mixins/NonDocumentTypeChildNode.js":15,"./mixins/NonElementParentNode.js":16,"./mixins/ParentNode.js":17,"./mixins/Slotable.js":18,"./utils.js":20}],20:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2459,6 +2836,10 @@ exports.adopt = adopt;
 
 function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
 
+var slice = exports.slice = function slice(array) {
+    return Array.prototype.slice.call(array);
+};
+
 var prop = exports.prop = function prop(type, name) {
     return Object.getOwnPropertyDescriptor(type.prototype, name);
 };
@@ -2476,6 +2857,10 @@ var native = exports.native = {
         innerHTML: prop(Element, 'innerHTML') || prop(HTMLElement, 'innerHTML'),
         setAttribute: Element.prototype.setAttribute
     },
+    Event: {
+        currentTarget: prop(Event, 'currentTarget'),
+        target: prop(Event, 'target')
+    },
     Node: {
         parentNode: prop(Node, 'parentNode'),
         hasChildNodes: Node.prototype.hasChildNodes,
@@ -2491,10 +2876,6 @@ var native = exports.native = {
         removeChild: Node.prototype.removeChild,
         appendChild: Node.prototype.appendChild
     }
-};
-
-var slice = exports.slice = function slice(array) {
-    return Array.prototype.slice.call(array);
 };
 
 function makeError(name, message) {
@@ -2609,7 +2990,7 @@ function closedShadowHidden(nodeA, nodeB) {
     // https://dom.spec.whatwg.org/#concept-closed-shadow-hidden
     var root = nodeA.getRootNode({ composed: false });
 
-    if (root.localName !== '#shadow-root') {
+    if (root.nodeName !== '#shadow-root') {
         return false;
     }
 
@@ -2633,7 +3014,7 @@ function retarget(nodeA, nodeB) {
     while (root = nodeA.getRootNode()) {
         // 1. If A’s root is not a shadow root, or A’s root is a shadow-including 
         // inclusive ancestor of B, then return A.
-        if (root.localName !== '#shadow-root' || shadowIncludingInclusiveAncestor(root, nodeB)) {
+        if (root.nodeName !== '#shadow-root' || shadowIncludingInclusiveAncestor(root, nodeB)) {
             return nodeA;
         }
         // 2. Set A to A’s root’s host.
@@ -3409,4 +3790,4 @@ function adopt(node, document) {
     // 3. If document is not the same as oldDocument, run these substeps:
 }
 
-},{}]},{},[11]);
+},{}]},{},[12]);

@@ -46,7 +46,7 @@ export default class {
 
     // TODO: Override setAttribute, setAttributeNS, removeAttribute,
     // removeAttributeNS, setAttributeNode, setAttributeNodeNS, 
-    // and removeAttributeNode to detect slot changes
+    // and removeAttributeNode to detect slot changes.
 
     get slot() {
         // The slot attribute must reflect the "slot" content attribute.
@@ -69,7 +69,7 @@ export default class {
         }
 
         switch (this.localName) {
-            case "article": case "aside": case "blockquote": case "body": 
+            case "article": case "aside": case "blockquote": case "body":
             case "div": case "footer": case "h1": case "h2": case "h3":
             case "h4": case "h5": case "h6": case "header": case "main":
             case "nav": case "p": case "section": case "span":
@@ -86,7 +86,7 @@ export default class {
         }
 
         const shadow = this.ownerDocument.createDocumentFragment();
-        
+
         $.extend(shadow, $ShadowRoot);
 
         $.shadow(shadow, {
@@ -114,7 +114,7 @@ export default class {
 
     get shadowRoot() {
         // https://dom.spec.whatwg.org/#dom-element-shadowroot
-        
+
         let shadowRoot = $.shadow(this).shadowRoot;
 
         if (!shadowRoot || shadowRoot.mode === 'closed') {
@@ -216,7 +216,7 @@ export default class {
     // TODO: tests
     get outerHTML() {
         // https://w3c.github.io/DOM-Parsing/#dom-element-outerhtml
-        return $.serializeHTMLFragment({ childNodes: [ this ] });
+        return $.serializeHTMLFragment({ childNodes: [this] });
     }
 
     // TODO: tests

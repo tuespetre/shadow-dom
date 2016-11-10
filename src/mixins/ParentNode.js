@@ -13,7 +13,7 @@ Element implements ParentNode;
 
 import * as $ from '../utils.js';
 
-export default function (base) {
+export default function(base) {
 
     const native = {
         children: $.prop(base, 'children'),

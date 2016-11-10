@@ -16,7 +16,7 @@ suite('ParentNode', function () {
             var span2 = document.createElement('span');
             div.append(span1, text, span2);
             this.expected = {
-                children: [ span1, span2 ],
+                children: [span1, span2],
                 firstElementChild: span1,
                 lastElementChild: span2,
                 childElementCount: 2
@@ -36,7 +36,7 @@ suite('ParentNode', function () {
             div.attachShadow({ mode: 'open' });
             div.shadowRoot.append(document.createElement('p'));
             this.expected = {
-                children: [ span1, span2 ],
+                children: [span1, span2],
                 firstElementChild: span1,
                 lastElementChild: span2,
                 childElementCount: 2
@@ -49,7 +49,7 @@ suite('ParentNode', function () {
         getterSuite(function () {
             var document = window.document.implementation.createHTMLDocument('test');
             this.expected = {
-                children: [ document.documentElement ],
+                children: [document.documentElement],
                 firstElementChild: document.documentElement,
                 lastElementChild: document.documentElement,
                 childElementCount: 1
@@ -67,7 +67,7 @@ suite('ParentNode', function () {
             var span2 = document.createElement('span');
             fragment.append(span1, text, span2);
             this.expected = {
-                children: [ span1, span2 ],
+                children: [span1, span2],
                 firstElementChild: span1,
                 lastElementChild: span2,
                 childElementCount: 2
@@ -75,7 +75,7 @@ suite('ParentNode', function () {
             this.object = fragment;
         });
     });
-    
+
     function getterSuite(Scenario) {
 
         suite('get children()', function () {

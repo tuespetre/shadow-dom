@@ -61,7 +61,7 @@ export default function (base) {
                 }
                 parentNode = this.parentNode;
             }
-            
+
             const childNodes = $.shadow(parentNode).childNodes;
             let index = childNodes.indexOf(this);
 
