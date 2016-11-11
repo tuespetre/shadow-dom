@@ -1101,7 +1101,6 @@ export function remove(node, parent, suppressObservers) {
 
 // TOOD: attribute 'change/append/remove/replace' observers
 // TODO: CharacterData 'replace data' observer (Node.normalize, etc.)
-// TODO: Caveat about garbage collection since we cannot do weak refs
 // TODO: tests
 
 function getOrCreateNodeObservers(node) {

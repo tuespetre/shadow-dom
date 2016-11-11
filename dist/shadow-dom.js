@@ -1264,7 +1264,7 @@ var _class = function () {
         key: 'normalize',
 
 
-        // TODO: tests
+        // TODO: invoke 'replace data', tests
         value: function normalize() {
             // https://dom.spec.whatwg.org/#dom-node-normalize
             // The normalize() method, when invoked, must run these steps 
@@ -1590,6 +1590,8 @@ var _class = function () {
             return $.descriptors.Node.nextSibling.get.call(this);
         }
 
+        // TODO: implement nodeValue
+
         // TODO: tests
 
     }, {
@@ -1615,7 +1617,7 @@ var _class = function () {
             }
         }
 
-        // TODO: tests
+        // TODO: invoke 'replace data', tests
         ,
         set: function set(value) {
             switch (this.nodeType) {
@@ -2431,6 +2433,8 @@ exports.default = function () {
         Element.prototype.matches = Element.prototype.matchesSelector || Element.prototype.mozMatchesSelector || Element.prototype.msMatchesSelector || Element.prototype.oMatchesSelector || Element.prototype.webkitMatchesSelector;
     }
 
+    // TODO: CharacterData interface (get data(), set data(value), data mutation methods)
+
     // CustomEvent interface
     $.extend(CustomEvent, _CustomEvent2.default);
     _CustomEvent2.default.prototype = CustomEvent.prototype;
@@ -2486,6 +2490,10 @@ exports.default = function () {
 
     // Node interface
     $.extend(Node, _Node2.default);
+
+    // TODO: implement Range interface
+
+    // TODO: implement Text interface (splitText(offset))
 
     // ChildNode mixin
     $.extend(DocumentType, (0, _ChildNode2.default)(DocumentType));
@@ -3739,7 +3747,6 @@ function remove(node, parent, suppressObservers) {
 
 // TOOD: attribute 'change/append/remove/replace' observers
 // TODO: CharacterData 'replace data' observer (Node.normalize, etc.)
-// TODO: Caveat about garbage collection since we cannot do weak refs
 // TODO: tests
 
 function getOrCreateNodeObservers(node) {

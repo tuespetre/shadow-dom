@@ -97,6 +97,8 @@ export default class {
         return $.descriptors.Node.nextSibling.get.call(this);
     }
 
+    // TODO: implement nodeValue
+
     // TODO: tests
     get textContent() {
         switch (this.nodeType) {
@@ -119,7 +121,7 @@ export default class {
         }
     }
 
-    // TODO: tests
+    // TODO: invoke 'replace data', tests
     set textContent(value) {
         switch (this.nodeType) {
             case Node.DOCUMENT_FRAGMENT_NODE:
@@ -135,7 +137,7 @@ export default class {
         return $.descriptors.Node.textContent.set.call(this, value);
     }
 
-    // TODO: tests
+    // TODO: invoke 'replace data', tests
     normalize() {
         // https://dom.spec.whatwg.org/#dom-node-normalize
         // The normalize() method, when invoked, must run these steps 

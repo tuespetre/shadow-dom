@@ -33,6 +33,8 @@ export default function () {
             Element.prototype.oMatchesSelector ||
             Element.prototype.webkitMatchesSelector;
     }
+    
+    // TODO: CharacterData interface (get data(), set data(value), data mutation methods)
 
     // CustomEvent interface
     $.extend(CustomEvent, $CustomEvent);
@@ -90,6 +92,10 @@ export default function () {
 
     // Node interface
     $.extend(Node, $Node);
+
+    // TODO: implement Range interface
+
+    // TODO: implement Text interface (splitText(offset))
 
     // ChildNode mixin
     $.extend(DocumentType, $ChildNode(DocumentType));
