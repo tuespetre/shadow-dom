@@ -34,7 +34,7 @@ var _class = function _class(type, init) {
 
 exports.default = _class;
 
-},{"../utils.js":20}],2:[function(require,module,exports){
+},{"../utils.js":21}],2:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -102,7 +102,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":20}],3:[function(require,module,exports){
+},{"../utils.js":21}],3:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -263,7 +263,8 @@ var _class = function () {
 
         // TODO: Override setAttribute, setAttributeNS, removeAttribute,
         // removeAttributeNS, setAttributeNode, setAttributeNodeNS, 
-        // and removeAttributeNode to detect slot changes.
+        // and removeAttributeNode to detect slot changes and work with
+        // MutationObservers.
 
         get: function get() {
             // The slot attribute must reflect the "slot" content attribute.
@@ -362,7 +363,7 @@ function updateSlotableName(element, localName, oldValue, value, namespace) {
     }
 }
 
-},{"../interfaces/ShadowRoot.js":11,"../utils.js":20}],4:[function(require,module,exports){
+},{"../interfaces/ShadowRoot.js":12,"../utils.js":21}],4:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -502,7 +503,7 @@ var builtInComposedEvents = [
 // Legacy KeyboardEvent
 'keypress'];
 
-},{"../utils.js":20}],5:[function(require,module,exports){
+},{"../utils.js":21}],5:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -910,7 +911,7 @@ function calculateTarget(currentTarget, path) {
     return null;
 }
 
-},{"../utils.js":20}],6:[function(require,module,exports){
+},{"../utils.js":21}],6:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -966,7 +967,7 @@ var _class = function () {
             return this.getAttribute('name');
         }
 
-        // TODO: impl, tests
+        // TODO: tests
         ,
         set: function set(value) {
             if (this.localName !== 'slot') {
@@ -1004,7 +1005,7 @@ function updateSlotName(element, localName, oldValue, value, namespace) {
     }
 }
 
-},{"../utils.js":20}],7:[function(require,module,exports){
+},{"../utils.js":21}],7:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1081,7 +1082,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":20}],8:[function(require,module,exports){
+},{"../utils.js":21}],8:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1125,7 +1126,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":20}],9:[function(require,module,exports){
+},{"../utils.js":21}],9:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1166,7 +1167,56 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":20}],10:[function(require,module,exports){
+},{"../utils.js":21}],10:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // https://dom.spec.whatwg.org/#interface-mutationobserver
+
+var _utils = require('../utils.js');
+
+var $ = _interopRequireWildcard(_utils);
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var _class = function () {
+    function _class(callback) {
+        _classCallCheck(this, _class);
+
+        var observer = $.createMutationObserver(callback);
+        $.shadow(this).observer = observer;
+        observer.interface = this;
+    }
+
+    _createClass(_class, [{
+        key: 'observe',
+        value: function observe(target, options) {
+            $.shadow(this).observer.observe(target, options);
+        }
+    }, {
+        key: 'disconnect',
+        value: function disconnect() {
+            $.shadow(this).observer.disconnect();
+        }
+    }, {
+        key: 'takeRecords',
+        value: function takeRecords() {
+            var records = $.shadow(this).observer.queue;
+            return records.splice(0, records.length);
+        }
+    }]);
+
+    return _class;
+}();
+
+exports.default = _class;
+
+},{"../utils.js":21}],11:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1648,7 +1698,7 @@ function preceding(element1, element2) {
     return precedingSiblings(ancestors1[i - 1], ancestors1[i], ancestors2[i]);
 }
 
-},{"../utils.js":20}],11:[function(require,module,exports){
+},{"../utils.js":21}],12:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1708,7 +1758,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":20}],12:[function(require,module,exports){
+},{"../utils.js":21}],13:[function(require,module,exports){
 'use strict';
 
 var _patch = require('./patch.js');
@@ -1723,7 +1773,7 @@ if (!nativeShadowDom || window.forceShadowDomPolyfill) {
     (0, _patch2.default)();
 }
 
-},{"./patch.js":19}],13:[function(require,module,exports){
+},{"./patch.js":20}],14:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1857,12 +1907,12 @@ exports.default = function (base) {
                                                 // 5. If context object’s parent is parent, replace the context object 
                                                 // with node within parent. Rethrow any exceptions.
                                                 if (this.parentNode == parent) {
-                                                            parent.replaceChild(this, node);
+                                                            $.replace(this, node, parent);
                                                 }
                                                 // 6. Otherwise, pre-insert node into parent before viableNextSibling. 
                                                 // Rethrow any exceptions.
                                                 else {
-                                                                        parent.insertBefore(node, viableNextSibling);
+                                                                        $.preInsert(node, parent, viableNextSibling);
                                                             }
                                     }
 
@@ -1898,7 +1948,7 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-},{"../utils.js":20}],14:[function(require,module,exports){
+},{"../utils.js":21}],15:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1948,7 +1998,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":20}],15:[function(require,module,exports){
+},{"../utils.js":21}],16:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2047,7 +2097,7 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-},{"../utils.js":20}],16:[function(require,module,exports){
+},{"../utils.js":21}],17:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -2106,7 +2156,7 @@ exports.default = function (base) {
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-},{}],17:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2329,7 +2379,7 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-},{"../utils.js":20}],18:[function(require,module,exports){
+},{"../utils.js":21}],19:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2365,7 +2415,7 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-},{"../utils.js":20}],19:[function(require,module,exports){
+},{"../utils.js":21}],20:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2420,7 +2470,7 @@ exports.default = function () {
     }
 
     // HTMLSlotElement interface
-    $.extend(HTMLSlotElement, _HTMLSlotElement2.default);
+    $.extend('HTMLSlotElement' in window ? HTMLSlotElement : HTMLUnknownElement, _HTMLSlotElement2.default);
 
     // HTMLTableElement interface
     $.extend(HTMLTableElement, _HTMLTableElement2.default);
@@ -2430,6 +2480,9 @@ exports.default = function () {
 
     // HTMLTableSectionElement interface
     $.extend(HTMLTableSectionElement, _HTMLTableSectionElement2.default);
+
+    // MutationObserver interface
+    window.MutationObserver = _MutationObserver2.default;
 
     // Node interface
     $.extend(Node, _Node2.default);
@@ -2501,6 +2554,10 @@ var _HTMLTableSectionElement = require('./interfaces/HTMLTableSectionElement.js'
 
 var _HTMLTableSectionElement2 = _interopRequireDefault(_HTMLTableSectionElement);
 
+var _MutationObserver = require('./interfaces/MutationObserver.js');
+
+var _MutationObserver2 = _interopRequireDefault(_MutationObserver);
+
 var _Node = require('./interfaces/Node.js');
 
 var _Node2 = _interopRequireDefault(_Node);
@@ -2537,10 +2594,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-// In case we would force the polyfill
-var HTMLSlotElement = window.HTMLSlotElement || window.HTMLUnknownElement;
-
-},{"./interfaces/CustomEvent.js":1,"./interfaces/Document.js":2,"./interfaces/Element.js":3,"./interfaces/Event.js":4,"./interfaces/EventTarget.js":5,"./interfaces/HTMLSlotElement.js":6,"./interfaces/HTMLTableElement.js":7,"./interfaces/HTMLTableRowElement.js":8,"./interfaces/HTMLTableSectionElement.js":9,"./interfaces/Node.js":10,"./interfaces/ShadowRoot.js":11,"./mixins/ChildNode.js":13,"./mixins/DocumentOrShadowRoot.js":14,"./mixins/NonDocumentTypeChildNode.js":15,"./mixins/NonElementParentNode.js":16,"./mixins/ParentNode.js":17,"./mixins/Slotable.js":18,"./utils.js":20}],20:[function(require,module,exports){
+},{"./interfaces/CustomEvent.js":1,"./interfaces/Document.js":2,"./interfaces/Element.js":3,"./interfaces/Event.js":4,"./interfaces/EventTarget.js":5,"./interfaces/HTMLSlotElement.js":6,"./interfaces/HTMLTableElement.js":7,"./interfaces/HTMLTableRowElement.js":8,"./interfaces/HTMLTableSectionElement.js":9,"./interfaces/MutationObserver.js":10,"./interfaces/Node.js":11,"./interfaces/ShadowRoot.js":12,"./mixins/ChildNode.js":14,"./mixins/DocumentOrShadowRoot.js":15,"./mixins/NonDocumentTypeChildNode.js":16,"./mixins/NonElementParentNode.js":17,"./mixins/ParentNode.js":18,"./mixins/Slotable.js":19,"./utils.js":21}],21:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2586,6 +2640,7 @@ exports.replace = replace;
 exports.replaceAll = replaceAll;
 exports.preRemove = preRemove;
 exports.remove = remove;
+exports.createMutationObserver = createMutationObserver;
 
 function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
 
@@ -3307,16 +3362,20 @@ function assignASlot(slotable) {
 
 // https://dom.spec.whatwg.org/#signaling-slot-change
 
-function signalASlotChange(slot) {}
-// https://dom.spec.whatwg.org/#signal-a-slot-change
-// To signal a slot change, for a slot slot, run these steps:
+function signalASlotChange(slot) {
+    // https://dom.spec.whatwg.org/#signal-a-slot-change
+    // To signal a slot change, for a slot slot, run these steps:
 
-// Skip (MutationObserver)
-// 1. If slot is not in unit of related similar-origin browsing contexts' 
-// signal slot list, append slot to unit of related similar-origin browsing 
-// contexts' signal slot list.
-// 2. Queue a mutation observer compound microtask.
+    // 1. If slot is not in unit of related similar-origin browsing contexts' 
+    // signal slot list, append slot to unit of related similar-origin browsing 
+    // contexts' signal slot list.
+    if (signalSlotList.indexOf(slot) === -1) {
+        signalSlotList.push(slot);
+    }
 
+    // 2. Queue a mutation observer compound microtask.
+    queueMutationObserverCompoundMicrotask();
+}
 
 // https://dom.spec.whatwg.org/#mutation-algorithms
 
@@ -3388,10 +3447,10 @@ function insert(node, parent, child, suppressObservers) {
         for (var i = 0; i < nodes.length; i++) {
             remove(nodes[i], node, true);
         }
-    }
 
-    // Skip (MutationObserver)
-    // 5. If node is a DocumentFragment node, queue a mutation record of "childList" for node with removedNodes nodes.
+        // 5. If node is a DocumentFragment node, queue a mutation record of "childList" for node with removedNodes nodes.
+        queueMutationRecord('childList', node, { removedNodes: nodes });
+    }
 
     // 6. For each node in nodes, in tree order, run these substeps:
     for (var _i5 = 0; _i5 < nodes.length; _i5++) {
@@ -3420,7 +3479,8 @@ function insert(node, parent, child, suppressObservers) {
             assignASlot(_node);
         }
 
-        // 3. If parent is a slot whose assigned nodes is the empty list, then run signal a slot change for parent.
+        // 3. If parent is a slot whose assigned nodes is the empty list, 
+        // then run signal a slot change for parent.
         if (parent.localName === 'slot' && parent.assignedNodes().length === 0) {
             // 3a. Physically append the child into the slot.
             descriptors.Node.appendChild.value.call(parent, _node);
@@ -3428,7 +3488,8 @@ function insert(node, parent, child, suppressObservers) {
             signalASlotChange(parent);
         }
 
-        // 4. Run assign slotables for a tree with node’s tree and a set containing each inclusive descendant of node that is a slot.
+        // 4. Run assign slotables for a tree with node’s tree and a set containing 
+        // each inclusive descendant of node that is a slot.
         var inclusiveSlotDescendants = [];
         if (_node.localName === 'slot') {
             inclusiveSlotDescendants.push(_node);
@@ -3443,10 +3504,16 @@ function insert(node, parent, child, suppressObservers) {
         // in shadow-including tree order, run these subsubsteps:
     }
 
-    // Skip (MutationObserver)
     // 7. If suppress observers flag is unset, queue a mutation record of "childList" for parent 
     // with addedNodes nodes, nextSibling child, and previousSibling child’s previous sibling or 
     // parent’s last child if child is null.
+    if (!suppressObservers) {
+        queueMutationRecord('childList', parent, {
+            addedNodes: nodes,
+            nextSibling: child,
+            previousSibling: child ? child.previousSibling : parent.lastChild
+        });
+    }
 }
 
 function append(node, parent) {
@@ -3485,36 +3552,38 @@ function replace(child, node, parent) {
         referenceChild = node.nextSibling;
     }
 
-    // Skip (MutationObserver)
     // 9. Let previousSibling be child’s previous sibling.
-    // const previousSibling = child.previousSibling;
+    var previousSibling = child.previousSibling;
 
     // 10. Adopt node into parent’s node document.
     adopt(node, parent.ownerDocument);
 
-    // Skip (MutationObserver)
     // 11. Let removedNodes be the empty list.
-    // const removedNodes = [];
+    var removedNodes = [];
 
     // 12. If child’s parent is not null, run these substeps:
     var childParent = child.parentNode;
     if (childParent != null) {
-        // Skip (MutationObserver)
         // 1. Set removedNodes to a list solely containing child.
-        // removedNodes.push(child);
+        removedNodes.push(child);
         // 2. Remove child from its parent with the suppress observers flag set.
         remove(child, parent, true);
     }
 
-    // Skip (MutationObserver)
     // 13. Let nodes be node’s children if node is a DocumentFragment node, and a list containing solely node otherwise.
+    var nodes = node instanceof DocumentFragment ? node.childNodes : [node];
 
     // 14. Insert node into parent before reference child with the suppress observers flag set.
     insert(node, parent, referenceChild, true);
 
-    // Skip (MutationObserver)
     // 15. Queue a mutation record of "childList" for target parent with addedNodes nodes, 
     // removedNodes removedNodes, nextSibling reference child, and previousSibling previousSibling.
+    queueMutationRecord('childList', parent, {
+        addedNodes: nodes,
+        removedNodes: removedNodes,
+        nextSibling: referenceChild,
+        previousSibling: previousSibling
+    });
 }
 
 function replaceAll(node, parent) {
@@ -3542,8 +3611,8 @@ function replaceAll(node, parent) {
         insert(node, parent, null, true);
     }
 
-    // Skip (MutationObserver)
     // 6. Queue a mutation record of "childList" for parent with addedNodes addedNodes and removedNodes removedNodes.
+    queueMutationRecord('childList', parent, { addedNodes: addedNodes, removedNodes: removedNodes });
 }
 
 function preRemove(child, parent) {
@@ -3562,7 +3631,7 @@ function preRemove(child, parent) {
     return child;
 }
 
-function remove(node, parent, suppessObservers) {
+function remove(node, parent, suppressObservers) {
     // https://dom.spec.whatwg.org/#concept-node-remove
     // To remove a node from a parent, with an optional suppress observers flag, run these steps:
 
@@ -3577,9 +3646,11 @@ function remove(node, parent, suppessObservers) {
     // 6. For each NodeIterator object iterator whose root’s node document is node’s node document, 
     // run the NodeIterator pre-removing steps given node and iterator.
 
-    // Skip (MutationObserver)
     // 7. Let oldPreviousSibling be node’s previous sibling.
+    var oldPreviousSibling = node.previousSibling;
+
     // 8. Let oldNextSibling be node’s next sibling.
+    var oldNextSibling = node.nextSibling;
 
     // 9. Remove node from its parent.
     var childNodes = shadow(parent).childNodes;
@@ -3588,7 +3659,8 @@ function remove(node, parent, suppessObservers) {
         childNodes.splice(nodeIndex, 1);
     }
     delete shadow(node).parentNode;
-    descriptors.Node.removeChild.value.call(descriptors.Node.parentNode.get.call(node), node);
+    var parentNode = descriptors.Node.parentNode.get.call(node);
+    descriptors.Node.removeChild.value.call(parentNode, node);
 
     // 10. If node is assigned, then run assign slotables for node’s assigned slot.
     var assignedSlot = shadow(node).assignedSlot;
@@ -3597,7 +3669,8 @@ function remove(node, parent, suppessObservers) {
         shadow(node).assignedSlot = null;
     }
 
-    // 11. If parent is a slot whose assigned nodes is the empty list, then run signal a slot change for parent.
+    // 11. If parent is a slot whose assigned nodes is the empty list,
+    // then run signal a slot change for parent.
     if (parent.localName === 'slot' && parent.assignedNodes().length === 0) {
         signalASlotChange(parent);
     }
@@ -3624,17 +3697,270 @@ function remove(node, parent, suppessObservers) {
     // Skip (CustomElements)
     // 14. If node is custom, then enqueue a custom element callback reaction 
     // with node, callback name "disconnectedCallback", and an empty argument list.
+
+    // Skip (CustomElements)
     // 15. For each shadow-including descendant descendant of node, in 
     // shadow-including tree order, run these substeps:
 
-    // Skip (MutationObserver)
-    // 16. For each inclusive ancestor inclusiveAncestor of parent, if inclusiveAncestor 
-    // has any registered observers whose options' subtree is true, then for each such registered 
-    // observer registered, append a transient registered observer whose observer and options are 
-    // identical to those of registered and source which is registered to node’s list of registered observers.
-    // 17. If suppress observers flag is unset, queue a mutation record of "childList" for parent 
-    // with removedNodes a list solely containing node, nextSibling oldNextSibling, and previousSibling 
-    // oldPreviousSibling.
+    // 16. For each inclusive ancestor inclusiveAncestor of parent...
+    var inclusiveAncestor = parent;
+    while (inclusiveAncestor) {
+        // ...if inclusiveAncestor has any registered observers whose options' 
+        // subtree is true, then for each such registered observer registered... 
+        var ancestorObservers = shadow(inclusiveAncestor).observers;
+        if (ancestorObservers) {
+            for (var i = 0; i < ancestorObservers.length; i++) {
+                var ancestorObserver = ancestorObservers[i];
+                if (ancestorObserver.options.subtree) {
+                    // ..append a transient registered observer whose observer and options are 
+                    // identical to those of registered and source which is registered to node’s 
+                    // list of registered observers.
+                    var transientObserver = createTransientObserver(ancestorObserver, node);
+                    mutationObservers.push(transientObserver);
+                }
+            }
+        }
+        inclusiveAncestor = inclusiveAncestor.parentNode;
+    }
+
+    // 17. If suppress observers flag is unset, queue a mutation record of "childList" 
+    // for parent with removedNodes a list solely containing node, nextSibling 
+    // oldNextSibling, and previousSibling oldPreviousSibling.
+    if (!suppressObservers) {
+        queueMutationRecord('childList', parent, {
+            removedNodes: [node],
+            nextSibling: oldNextSibling,
+            previousSibling: oldPreviousSibling
+        });
+    }
 }
 
-},{}]},{},[12]);
+// https://dom.spec.whatwg.org/#mutation-observers
+
+// TOOD: attribute 'change/append/remove/replace' observers
+// TODO: CharacterData 'replace data' observer (Node.normalize, etc.)
+// TODO: Caveat about garbage collection since we cannot do weak refs
+// TODO: tests
+
+function getOrCreateNodeObservers(node) {
+    var observers = shadow(node).observers;
+    return observers ? observers : shadow(node).observers = [];
+}
+
+function createMutationObserver(callback) {
+    return {
+        callback: callback,
+        queue: [],
+        nodes: [],
+        observe: function observe(node, options) {
+            if (this.nodes.length === 0) {
+                mutationObservers.push(this);
+            }
+            var nodeObservers = getOrCreateNodeObservers(node);
+            nodeObservers.push({ instance: this, options: options });
+            this.nodes.push(node);
+        },
+        disconnect: function disconnect() {
+            var index = mutationObservers.indexOf(this);
+            mutationObservers.splice(index, 1);
+            for (var i = 0; i < this.nodes.length; i++) {
+                var nodeObservers = getOrCreateNodeObservers(this.nodes[i]);
+                for (var j = 0; j < nodeObservers.length; j++) {
+                    if (nodeObservers[j].instance === this) {
+                        nodeObservers.splice(j, 1);
+                        break;
+                    }
+                }
+            }
+            this.nodes = [];
+        }
+    };
+}
+
+function createTransientObserver(observer, options, node) {
+    var transientObserver = {
+        observer: observer,
+        callback: observer.callback,
+        options: observer.options,
+        queue: [],
+        node: node,
+        disconnect: function disconnect() {
+            var nodeObservers = getOrCreateNodeObservers(this.node);
+            for (var j = 0; j < nodeObservers.length; j++) {
+                if (nodeObservers[j].instance === this) {
+                    nodeObservers.splice(j, 1);
+                    break;
+                }
+            }
+        }
+    };
+
+    var nodeObservers = getOrCreateNodeObservers(node);
+    nodeObservers.append({ instance: transientObserver, options: options });
+
+    return transientObserver;
+}
+
+var mutationObserverCompoundMicrotaskQueuedFlag = false;
+
+var mutationObservers = [];
+var signalSlotList = [];
+var theEmptyList = Object.freeze([]);
+
+function queueMutationRecord(type, target, details) {
+    // https://dom.spec.whatwg.org/#queueing-a-mutation-record
+    // 1. Let interested observers be an initially empty set of 
+    // MutationObserver objects optionally paired with a string.
+    var interestedObservers = [];
+    var pairedStrings = [];
+    // 2. Let nodes be the inclusive ancestors of target.
+    var nodes = [target];
+    var ancestor = target;
+    while (ancestor = ancestor.parentNode) {
+        nodes.push(ancestor);
+    }
+    // 3. Then, for each node in nodes... 
+    for (var i = 0; i < nodes.length; i++) {
+        var node = nodes[i];
+        var observers = shadow(node).observers;
+        if (!observers) {
+            continue;
+        }
+        // ...and then for each registered observer (with registered 
+        // observer’s options as options) in node’s list of registered 
+        // observers...
+        for (var j = 0; j < observers.length; j++) {
+            var registeredObserver = observers[i];
+            var options = registeredObserver.options;
+            // ...run these substeps:
+            // 1. If none of the following are true:
+            if (node != target && !options.subtree) {
+                continue;
+            }
+            if (type === 'attributes') {
+                if (!options.attributes) {
+                    continue;
+                }
+                // if options' attributeFilter is present, and options' attributeFilter
+                // does not contain name or namespace is non-null
+                if (options.attributeFilter && (options.attributeFilter.indexOf(details.name) === -1 || details.namespace != null)) {
+                    continue;
+                }
+            }
+            if (type === 'characterData' && !options.characterData) {
+                continue;
+            }
+            if (type === 'childList' && !options.childList) {
+                continue;
+            }
+            // ...then run the subsubsteps:
+            // 1. If registered observer’s observer is not in interested observers, 
+            // append registered observer’s observer to interested observers.
+            var observer = registeredObserver.instance;
+            var index = interestedObservers.indexOf(observer);
+            if (index === -1) {
+                index = interestedObservers.length;
+                interestedObservers[index] = observer;
+            }
+            // 2. If either type is "attributes" and options’ attributeOldValue is true, 
+            // or type is "characterData" and options’ characterDataOldValue is true, 
+            // set the paired string of registered observer’s observer in interested observers to oldValue.
+            if (type === 'attributes' && options.attributeOldValue || type === 'characterData' && options.characterDataOldValue) {
+                pairedStrings[index] = details.oldValue;
+            }
+        }
+    }
+
+    // 4. Then, for each observer in interested observers, run these substeps:
+    for (var _i6 = 0; _i6 < interestedObservers.length; _i6++) {
+        var _observer = interestedObservers[_i6];
+        // 1. Let record be a new MutationRecord object with its type set to type and target set to target.
+        var record = {
+            type: type,
+            target: target,
+            attributeName: null,
+            attributeNamespace: null,
+            addedNodes: theEmptyList,
+            removedNodes: theEmptyList,
+            previousSibling: null,
+            nextSibling: null,
+            oldValue: null
+        };
+        // 2. If name and namespace are given, set record’s attributeName to name, and record’s attributeNamespace to namespace.
+        if ('name' in details) {
+            record.attributeName = details.name;
+            record.attributeNamespace = details.namespace;
+        }
+        // 3. If addedNodes is given, set record’s addedNodes to addedNodes.
+        if ('addedNodes' in details) {
+            record.addedNodes = Object.freeze(details.addedNodes);
+        }
+        // 4. If removedNodes is given, set record’s removedNodes to removedNodes.
+        if ('removedNodes' in details) {
+            record.removedNodes = Object.freeze(details.removedNodes);
+        }
+        // 5. If previousSibling is given, set record’s previousSibling to previousSibling.
+        if ('previousSibling' in details) {
+            record.previousSibling = details.previousSibling;
+        }
+        // 6. If nextSibling is given, set record’s nextSibling to nextSibling.
+        if ('nextSibling' in details) {
+            record.nextSibling = details.nextSibling;
+        }
+        // 7. If observer has a paired string, set record’s oldValue to observer’s paired string.
+        var pairedString = pairedStrings[_i6];
+        if (pairedString != null) {
+            record.oldValue = pairedString;
+        }
+        // 8. Append record to observer’s record queue.
+        Object.freeze(record);
+        _observer.queue.push(record);
+
+        // TODO: consider setting prototype to MutationRecord.prototype
+    }
+
+    // 5. Queue a mutation observer compound microtask.
+    queueMutationObserverCompoundMicrotask();
+}
+
+function queueMutationObserverCompoundMicrotask() {
+    if (mutationObserverCompoundMicrotaskQueuedFlag) {
+        return;
+    }
+    mutationObserverCompoundMicrotaskQueuedFlag = true;
+    setTimeout(notifyMutationObservers, 0);
+}
+
+function notifyMutationObservers() {
+    mutationObserverCompoundMicrotaskQueuedFlag = false;
+    var notifyList = mutationObservers.slice();
+    var signalList = signalSlotList.splice(0, signalSlotList.length);
+    for (var i = 0; i < notifyList.length; i++) {
+        var observer = notifyList[i];
+        var queue = observer.queue.splice(0, observer.queue.length);
+        for (var j = mutationObservers.length - 1; j >= 0; j--) {
+            var transientObserver = mutationObservers[j];
+            if (transientObserver.observer === observer) {
+                mutationObservers.splice(j, 1);
+                transientObserver.disconnect();
+            }
+        }
+        if (queue.length) {
+            try {
+                observer.callback.call(observer.interface, queue, observer.interface);
+            } catch (error) {
+                if (console) {
+                    console.error(error);
+                }
+            }
+        }
+    }
+    for (var _i7 = 0; _i7 < signalList.length; _i7++) {
+        var slot = signalList[_i7];
+        var event = slot.ownerDocument.createEvent('event');
+        event.initEvent('slotchange', true, false);
+        slot.dispatchEvent(event);
+    }
+}
+
+},{}]},{},[13]);

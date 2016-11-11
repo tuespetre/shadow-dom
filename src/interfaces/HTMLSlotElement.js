@@ -13,7 +13,7 @@ export default class {
         return this.getAttribute('name');
     }
 
-    // TODO: impl, tests
+    // TODO: tests
     set name(value) {
         if (this.localName !== 'slot') {
             return;

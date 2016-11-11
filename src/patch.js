@@ -9,6 +9,7 @@ import $HTMLSlotElement from './interfaces/HTMLSlotElement.js';
 import $HTMLTableElement from './interfaces/HTMLTableElement.js';
 import $HTMLTableRowElement from './interfaces/HTMLTableRowElement.js';
 import $HTMLTableSectionElement from './interfaces/HTMLTableSectionElement.js';
+import $MutationObserver from './interfaces/MutationObserver.js';
 import $Node from './interfaces/Node.js';
 import $ShadowRoot from './interfaces/ShadowRoot.js';
 
@@ -73,7 +74,7 @@ export default function () {
     }
 
     // HTMLSlotElement interface
-    $.extend(HTMLSlotElement || HTMLUnknownElement, $HTMLSlotElement);
+    $.extend('HTMLSlotElement' in window ? HTMLSlotElement : HTMLUnknownElement, $HTMLSlotElement);
 
     // HTMLTableElement interface
     $.extend(HTMLTableElement, $HTMLTableElement);
@@ -83,6 +84,9 @@ export default function () {
 
     // HTMLTableSectionElement interface
     $.extend(HTMLTableSectionElement, $HTMLTableSectionElement);
+
+    // MutationObserver interface
+    window.MutationObserver = $MutationObserver;
 
     // Node interface
     $.extend(Node, $Node);

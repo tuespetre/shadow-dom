@@ -100,12 +100,12 @@ export default function(base) {
             // 5. If context object’s parent is parent, replace the context object 
             // with node within parent. Rethrow any exceptions.
             if (this.parentNode == parent) {
-                parent.replaceChild(this, node);
+                $.replace(this, node, parent);
             }
             // 6. Otherwise, pre-insert node into parent before viableNextSibling. 
             // Rethrow any exceptions.
             else {
-                parent.insertBefore(node, viableNextSibling);
+                $.preInsert(node, parent, viableNextSibling);
             }
         }
 

@@ -723,11 +723,15 @@ export function signalASlotChange(slot) {
     // https://dom.spec.whatwg.org/#signal-a-slot-change
     // To signal a slot change, for a slot slot, run these steps:
 
-    // Skip (MutationObserver)
     // 1. If slot is not in unit of related similar-origin browsing contexts' 
     // signal slot list, append slot to unit of related similar-origin browsing 
     // contexts' signal slot list.
+    if (signalSlotList.indexOf(slot) === -1) {
+        signalSlotList.push(slot);
+    }
+
     // 2. Queue a mutation observer compound microtask.
+    queueMutationObserverCompoundMicrotask();
 }
 
 // https://dom.spec.whatwg.org/#mutation-algorithms
@@ -801,10 +805,10 @@ export function insert(node, parent, child, suppressObservers) {
         for (let i = 0; i < nodes.length; i++) {
             remove(nodes[i], node, true);
         }
-    }
 
-    // Skip (MutationObserver)
-    // 5. If node is a DocumentFragment node, queue a mutation record of "childList" for node with removedNodes nodes.
+        // 5. If node is a DocumentFragment node, queue a mutation record of "childList" for node with removedNodes nodes.
+        queueMutationRecord('childList', node, { removedNodes: nodes });
+    }
 
     // 6. For each node in nodes, in tree order, run these substeps:
     for (let i = 0; i < nodes.length; i++) {
@@ -835,7 +839,8 @@ export function insert(node, parent, child, suppressObservers) {
             assignASlot(node);
         }
 
-        // 3. If parent is a slot whose assigned nodes is the empty list, then run signal a slot change for parent.
+        // 3. If parent is a slot whose assigned nodes is the empty list, 
+        // then run signal a slot change for parent.
         if (parent.localName === 'slot' && parent.assignedNodes().length === 0) {
             // 3a. Physically append the child into the slot.
             descriptors.Node.appendChild.value.call(parent, node);
@@ -843,7 +848,8 @@ export function insert(node, parent, child, suppressObservers) {
             signalASlotChange(parent);
         }
 
-        // 4. Run assign slotables for a tree with node’s tree and a set containing each inclusive descendant of node that is a slot.
+        // 4. Run assign slotables for a tree with node’s tree and a set containing 
+        // each inclusive descendant of node that is a slot.
         const inclusiveSlotDescendants = [];
         if (node.localName === 'slot') {
             inclusiveSlotDescendants.push(node);
@@ -858,10 +864,16 @@ export function insert(node, parent, child, suppressObservers) {
         // in shadow-including tree order, run these subsubsteps:
     }
 
-    // Skip (MutationObserver)
     // 7. If suppress observers flag is unset, queue a mutation record of "childList" for parent 
     // with addedNodes nodes, nextSibling child, and previousSibling child’s previous sibling or 
     // parent’s last child if child is null.
+    if (!suppressObservers) {
+        queueMutationRecord('childList', parent, { 
+            addedNodes: nodes,
+            nextSibling: child,
+            previousSibling: child ? child.previousSibling : parent.lastChild
+        });
+    }
 }
 
 export function append(node, parent) {
@@ -900,36 +912,38 @@ export function replace(child, node, parent) {
         referenceChild = node.nextSibling;
     }
 
-    // Skip (MutationObserver)
     // 9. Let previousSibling be child’s previous sibling.
-    // const previousSibling = child.previousSibling;
+    const previousSibling = child.previousSibling;
 
     // 10. Adopt node into parent’s node document.
     adopt(node, parent.ownerDocument);
 
-    // Skip (MutationObserver)
     // 11. Let removedNodes be the empty list.
-    // const removedNodes = [];
+    const removedNodes = [];
 
     // 12. If child’s parent is not null, run these substeps:
     const childParent = child.parentNode;
     if (childParent != null) {
-        // Skip (MutationObserver)
         // 1. Set removedNodes to a list solely containing child.
-        // removedNodes.push(child);
+        removedNodes.push(child);
         // 2. Remove child from its parent with the suppress observers flag set.
         remove(child, parent, true);
     }
 
-    // Skip (MutationObserver)
     // 13. Let nodes be node’s children if node is a DocumentFragment node, and a list containing solely node otherwise.
+    const nodes = node instanceof DocumentFragment ? node.childNodes : [node];
 
     // 14. Insert node into parent before reference child with the suppress observers flag set.
     insert(node, parent, referenceChild, true);
 
-    // Skip (MutationObserver)
     // 15. Queue a mutation record of "childList" for target parent with addedNodes nodes, 
     // removedNodes removedNodes, nextSibling reference child, and previousSibling previousSibling.
+    queueMutationRecord('childList', parent, {
+        addedNodes: nodes,
+        removedNodes: removedNodes,
+        nextSibling: referenceChild,
+        previousSibling: previousSibling
+    });
 }
 
 export function replaceAll(node, parent) {
@@ -959,8 +973,8 @@ export function replaceAll(node, parent) {
         insert(node, parent, null, true);
     }
 
-    // Skip (MutationObserver)
     // 6. Queue a mutation record of "childList" for parent with addedNodes addedNodes and removedNodes removedNodes.
+    queueMutationRecord('childList', parent, { addedNodes, removedNodes });
 }
 
 export function preRemove(child, parent) {
@@ -979,7 +993,7 @@ export function preRemove(child, parent) {
     return child;
 }
 
-export function remove(node, parent, suppessObservers) {
+export function remove(node, parent, suppressObservers) {
     // https://dom.spec.whatwg.org/#concept-node-remove
     // To remove a node from a parent, with an optional suppress observers flag, run these steps:
 
@@ -994,9 +1008,11 @@ export function remove(node, parent, suppessObservers) {
     // 6. For each NodeIterator object iterator whose root’s node document is node’s node document, 
     // run the NodeIterator pre-removing steps given node and iterator.
 
-    // Skip (MutationObserver)
     // 7. Let oldPreviousSibling be node’s previous sibling.
+    const oldPreviousSibling = node.previousSibling;
+
     // 8. Let oldNextSibling be node’s next sibling.
+    const oldNextSibling = node.nextSibling;
 
     // 9. Remove node from its parent.
     const childNodes = shadow(parent).childNodes;
@@ -1005,7 +1021,8 @@ export function remove(node, parent, suppessObservers) {
         childNodes.splice(nodeIndex, 1);
     }
     delete shadow(node).parentNode;
-    descriptors.Node.removeChild.value.call(descriptors.Node.parentNode.get.call(node), node);
+    const parentNode = descriptors.Node.parentNode.get.call(node);
+    descriptors.Node.removeChild.value.call(parentNode, node);
 
     // 10. If node is assigned, then run assign slotables for node’s assigned slot.
     const assignedSlot = shadow(node).assignedSlot;
@@ -1014,7 +1031,8 @@ export function remove(node, parent, suppessObservers) {
         shadow(node).assignedSlot = null;
     }
 
-    // 11. If parent is a slot whose assigned nodes is the empty list, then run signal a slot change for parent.
+    // 11. If parent is a slot whose assigned nodes is the empty list,
+    // then run signal a slot change for parent.
     if (parent.localName === 'slot' && parent.assignedNodes().length === 0) {
         signalASlotChange(parent);
     }
@@ -1041,15 +1059,272 @@ export function remove(node, parent, suppessObservers) {
     // Skip (CustomElements)
     // 14. If node is custom, then enqueue a custom element callback reaction 
     // with node, callback name "disconnectedCallback", and an empty argument list.
+
+    // Skip (CustomElements)
     // 15. For each shadow-including descendant descendant of node, in 
     // shadow-including tree order, run these substeps:
 
-    // Skip (MutationObserver)
-    // 16. For each inclusive ancestor inclusiveAncestor of parent, if inclusiveAncestor 
-    // has any registered observers whose options' subtree is true, then for each such registered 
-    // observer registered, append a transient registered observer whose observer and options are 
-    // identical to those of registered and source which is registered to node’s list of registered observers.
-    // 17. If suppress observers flag is unset, queue a mutation record of "childList" for parent 
-    // with removedNodes a list solely containing node, nextSibling oldNextSibling, and previousSibling 
-    // oldPreviousSibling.
+    // 16. For each inclusive ancestor inclusiveAncestor of parent...
+    let inclusiveAncestor = parent;
+    while (inclusiveAncestor) {
+        // ...if inclusiveAncestor has any registered observers whose options' 
+        // subtree is true, then for each such registered observer registered... 
+        const ancestorObservers = shadow(inclusiveAncestor).observers;
+        if (ancestorObservers) {
+            for (let i = 0; i < ancestorObservers.length; i++) {
+                const ancestorObserver = ancestorObservers[i];
+                if (ancestorObserver.options.subtree) {
+                    // ..append a transient registered observer whose observer and options are 
+                    // identical to those of registered and source which is registered to node’s 
+                    // list of registered observers.
+                    const transientObserver = createTransientObserver(ancestorObserver, node);
+                    mutationObservers.push(transientObserver);
+                }
+            }
+        }
+        inclusiveAncestor = inclusiveAncestor.parentNode;
+    }
+
+    // 17. If suppress observers flag is unset, queue a mutation record of "childList" 
+    // for parent with removedNodes a list solely containing node, nextSibling 
+    // oldNextSibling, and previousSibling oldPreviousSibling.
+    if (!suppressObservers) {
+        queueMutationRecord('childList', parent, {
+            removedNodes: [node],
+            nextSibling: oldNextSibling,
+            previousSibling: oldPreviousSibling
+        });
+    }
+}
+
+// https://dom.spec.whatwg.org/#mutation-observers
+
+// TOOD: attribute 'change/append/remove/replace' observers
+// TODO: CharacterData 'replace data' observer (Node.normalize, etc.)
+// TODO: Caveat about garbage collection since we cannot do weak refs
+// TODO: tests
+
+function getOrCreateNodeObservers(node) {
+    const observers = shadow(node).observers;
+    return observers ? observers : shadow(node).observers = [];
+}
+
+export function createMutationObserver(callback) {
+    return { 
+        callback: callback, 
+        queue: [],
+        nodes: [],
+        observe: function(node, options) {
+            if (this.nodes.length === 0) {
+                mutationObservers.push(this);
+            }
+            const nodeObservers = getOrCreateNodeObservers(node);
+            nodeObservers.push({ instance: this, options });
+            this.nodes.push(node);
+        },
+        disconnect: function() {
+            let index = mutationObservers.indexOf(this);
+            mutationObservers.splice(index, 1);
+            for (let i = 0; i < this.nodes.length; i++) {
+                const nodeObservers = getOrCreateNodeObservers(this.nodes[i]);
+                for (let j = 0; j < nodeObservers.length; j++) {
+                    if (nodeObservers[j].instance === this) {
+                        nodeObservers.splice(j, 1);
+                        break;
+                    }
+                }
+            }
+            this.nodes = [];
+        }
+    };
+}
+
+function createTransientObserver(observer, options, node) {
+    const transientObserver = {
+        observer: observer,
+        callback: observer.callback,
+        options: observer.options,
+        queue: [],
+        node: node,
+        disconnect: function() {
+            const nodeObservers = getOrCreateNodeObservers(this.node);
+            for (let j = 0; j < nodeObservers.length; j++) {
+                if (nodeObservers[j].instance === this) {
+                    nodeObservers.splice(j, 1);
+                    break;
+                }
+            }
+        }
+    };
+
+    const nodeObservers = getOrCreateNodeObservers(node);
+    nodeObservers.append({ instance: transientObserver, options });
+
+    return transientObserver;
+}
+
+let mutationObserverCompoundMicrotaskQueuedFlag = false;
+
+const mutationObservers = [];
+const signalSlotList = [];
+const theEmptyList = Object.freeze([]);
+
+function queueMutationRecord(type, target, details) {
+    // https://dom.spec.whatwg.org/#queueing-a-mutation-record
+    // 1. Let interested observers be an initially empty set of 
+    // MutationObserver objects optionally paired with a string.
+    const interestedObservers = [];
+    const pairedStrings = [];
+    // 2. Let nodes be the inclusive ancestors of target.
+    const nodes = [target];
+    let ancestor = target;
+    while (ancestor = ancestor.parentNode) {
+        nodes.push(ancestor)
+    }
+    // 3. Then, for each node in nodes... 
+    for (let i = 0; i < nodes.length; i++) {
+        const node = nodes[i];
+        const observers = shadow(node).observers;
+        if (!observers) {
+            continue;
+        }
+        // ...and then for each registered observer (with registered 
+        // observer’s options as options) in node’s list of registered 
+        // observers...
+        for (let j = 0; j < observers.length; j++) {
+            const registeredObserver = observers[i];
+            const options = registeredObserver.options;
+            // ...run these substeps:
+            // 1. If none of the following are true:
+            if (node != target && !options.subtree) {
+                continue;
+            }
+            if (type === 'attributes') {
+                if (!options.attributes) {
+                    continue;
+                }
+                // if options' attributeFilter is present, and options' attributeFilter
+                // does not contain name or namespace is non-null
+                if (options.attributeFilter &&
+                    (options.attributeFilter.indexOf(details.name) === -1 ||
+                        details.namespace != null)) {
+                    continue;
+                }
+            }
+            if (type === 'characterData' && !options.characterData) {
+                continue;
+            }
+            if (type === 'childList' && !options.childList) {
+                continue;
+            }
+            // ...then run the subsubsteps:
+            // 1. If registered observer’s observer is not in interested observers, 
+            // append registered observer’s observer to interested observers.
+            const observer = registeredObserver.instance;
+            let index = interestedObservers.indexOf(observer);
+            if (index === -1) {
+                index = interestedObservers.length;
+                interestedObservers[index] = observer;
+            }
+            // 2. If either type is "attributes" and options’ attributeOldValue is true, 
+            // or type is "characterData" and options’ characterDataOldValue is true, 
+            // set the paired string of registered observer’s observer in interested observers to oldValue.
+            if ((type === 'attributes' && options.attributeOldValue) ||
+                (type === 'characterData' && options.characterDataOldValue)) {
+                pairedStrings[index] = details.oldValue;
+            }
+        }
+    }
+
+    // 4. Then, for each observer in interested observers, run these substeps:
+    for (let i = 0; i < interestedObservers.length; i++) {
+        const observer = interestedObservers[i];
+        // 1. Let record be a new MutationRecord object with its type set to type and target set to target.
+        const record = { 
+            type, 
+            target,
+            attributeName: null,
+            attributeNamespace: null,
+            addedNodes: theEmptyList,
+            removedNodes: theEmptyList,
+            previousSibling: null,
+            nextSibling: null,
+            oldValue: null
+        };
+        // 2. If name and namespace are given, set record’s attributeName to name, and record’s attributeNamespace to namespace.
+        if ('name' in details) {
+            record.attributeName = details.name;
+            record.attributeNamespace = details.namespace;
+        }
+        // 3. If addedNodes is given, set record’s addedNodes to addedNodes.
+        if ('addedNodes' in details) {
+            record.addedNodes = Object.freeze(details.addedNodes);
+        }
+        // 4. If removedNodes is given, set record’s removedNodes to removedNodes.
+        if ('removedNodes' in details) {
+            record.removedNodes = Object.freeze(details.removedNodes);
+        }
+        // 5. If previousSibling is given, set record’s previousSibling to previousSibling.
+        if ('previousSibling' in details) {
+            record.previousSibling = details.previousSibling;
+        }
+        // 6. If nextSibling is given, set record’s nextSibling to nextSibling.
+        if ('nextSibling' in details) {
+            record.nextSibling = details.nextSibling;
+        }
+        // 7. If observer has a paired string, set record’s oldValue to observer’s paired string.
+        const pairedString = pairedStrings[i];
+        if (pairedString != null) {
+            record.oldValue = pairedString;
+        }
+        // 8. Append record to observer’s record queue.
+        Object.freeze(record);
+        observer.queue.push(record);
+
+        // TODO: consider setting prototype to MutationRecord.prototype
+    }
+
+    // 5. Queue a mutation observer compound microtask.
+    queueMutationObserverCompoundMicrotask();
+}
+
+function queueMutationObserverCompoundMicrotask() {
+    if (mutationObserverCompoundMicrotaskQueuedFlag) {
+        return;
+    }
+    mutationObserverCompoundMicrotaskQueuedFlag = true;
+    setTimeout(notifyMutationObservers, 0);
+}
+
+function notifyMutationObservers() {
+    mutationObserverCompoundMicrotaskQueuedFlag = false;
+    const notifyList = mutationObservers.slice();
+    const signalList = signalSlotList.splice(0, signalSlotList.length);
+    for (let i = 0; i < notifyList.length; i++) {
+        const observer = notifyList[i];
+        const queue = observer.queue.splice(0, observer.queue.length);
+        for (let j = mutationObservers.length - 1; j >= 0; j--) {
+            const transientObserver = mutationObservers[j];
+            if (transientObserver.observer === observer) {
+                mutationObservers.splice(j, 1);
+                transientObserver.disconnect();
+            }
+        }
+        if (queue.length) {
+            try {
+                observer.callback.call(observer.interface, queue, observer.interface);
+            }
+            catch (error) {
+                if (console) {
+                    console.error(error);
+                }
+            }
+        }
+    }
+    for (let i = 0; i < signalList.length; i++) {
+        const slot = signalList[i];
+        const event = slot.ownerDocument.createEvent('event');
+        event.initEvent('slotchange', true, false);
+        slot.dispatchEvent(event);
+    }
 }

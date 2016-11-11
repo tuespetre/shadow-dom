@@ -6,9 +6,10 @@ import $ShadowRoot from '../interfaces/ShadowRoot.js';
 
 export default class {
 
-    // TODO: Consider overriding setAttribute, setAttributeNS, removeAttribute,
+    // TODO: Override setAttribute, setAttributeNS, removeAttribute,
     // removeAttributeNS, setAttributeNode, setAttributeNodeNS, 
-    // and removeAttributeNode to detect slot changes.
+    // and removeAttributeNode to detect slot changes and work with
+    // MutationObservers.
 
     get slot() {
         // The slot attribute must reflect the "slot" content attribute.
