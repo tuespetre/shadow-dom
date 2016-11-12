@@ -1366,9 +1366,7 @@ export function remove(node, parent, suppressObservers) {
 
 // https://dom.spec.whatwg.org/#mutation-observers
 
-// TOOD: attribute 'change/append/remove/replace' observers
-// TODO: CharacterData 'replace data' observer (Node.normalize, etc.)
-// TODO: tests
+// TODO: test everything that queues mutation records
 
 function getOrCreateNodeObservers(node) {
     const nodeState = shadow(node);
