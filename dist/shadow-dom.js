@@ -5,13 +5,126 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // https://dom.spec.whatwg.org/#interface-attr
+
 var _utils = require('../utils.js');
 
 var $ = _interopRequireWildcard(_utils);
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } } // https://dom.spec.whatwg.org/#interface-event
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var _class = function () {
+    function _class() {
+        _classCallCheck(this, _class);
+    }
+
+    _createClass(_class, [{
+        key: 'value',
+        get: function get() {
+            return $.descriptors.Attr.value.get.call(this);
+        }
+
+        // TODO: MutationObserver tests
+        ,
+        set: function set(value) {
+            $.setExistingAttributeValue(this, value);
+        }
+    }]);
+
+    return _class;
+}();
+
+exports.default = _class;
+
+},{"../utils.js":25}],2:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // https://dom.spec.whatwg.org/#interface-characterdata
+
+var _utils = require('../utils.js');
+
+var $ = _interopRequireWildcard(_utils);
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var getData = $.descriptors.CharacterData.data.get;
+
+var _class = function () {
+    function _class() {
+        _classCallCheck(this, _class);
+    }
+
+    _createClass(_class, [{
+        key: 'appendData',
+
+
+        // TODO: MutationObserver tests
+        value: function appendData(data) {
+            var length = getData.call(this).length;
+            $.replaceData(this, length, 0, data);
+        }
+
+        // TODO: MutationObserver tests
+
+    }, {
+        key: 'insertData',
+        value: function insertData(offset, data) {
+            $.replaceData(this, offset, 0, data);
+        }
+
+        // TODO: MutationObserver tests
+
+    }, {
+        key: 'deleteData',
+        value: function deleteData(offset, count) {
+            $.replaceData(this, offset, count, '');
+        }
+
+        // TODO: MutationObserver tests
+
+    }, {
+        key: 'replaceData',
+        value: function replaceData(offset, count, data) {
+            $.replaceData(this, offset, count, data);
+        }
+    }, {
+        key: 'data',
+        get: function get() {
+            return getData.call(this);
+        },
+        set: function set(value) {
+            var length = getData.call(this).length;
+            $.replaceData(this, 0, length, value);
+        }
+    }]);
+
+    return _class;
+}();
+
+exports.default = _class;
+
+},{"../utils.js":25}],3:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _utils = require('../utils.js');
+
+var $ = _interopRequireWildcard(_utils);
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } } // https://dom.spec.whatwg.org/#interface-customevent
 
 var _class = function _class(type, init) {
     _classCallCheck(this, _class);
@@ -34,7 +147,7 @@ var _class = function _class(type, init) {
 
 exports.default = _class;
 
-},{"../utils.js":21}],2:[function(require,module,exports){
+},{"../utils.js":25}],4:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -102,7 +215,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":21}],3:[function(require,module,exports){
+},{"../utils.js":25}],5:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -131,6 +244,74 @@ var _class = function () {
     }
 
     _createClass(_class, [{
+        key: 'setAttribute',
+
+
+        // TODO: tests
+        value: function setAttribute(qualifiedName, value) {
+            var attribute = $.descriptors.Element.attributes.get.call(this).getNamedItem(qualifiedName);
+            if (!attribute) {
+                attribute = this.ownerDocument.createAttribute(qualifiedName);
+                $.descriptors.Attr.value.set.call(attribute, value);
+                $.appendAttribute(attribute, this);
+                return;
+            }
+            $.changeAttribute(attribute, this, value);
+        }
+
+        // TODO: tests
+
+    }, {
+        key: 'setAttributeNS',
+        value: function setAttributeNS(namespace, qualifiedName, value) {
+            var dummy = document.createAttributeNS(namespace, qualifiedName);
+            $.setAttributeValue(this, dummy.localName, value, dummy.prefix, dummy.namespaceURI);
+        }
+
+        // TODO: tests
+
+    }, {
+        key: 'removeAttribute',
+        value: function removeAttribute(qualifiedName) {
+            $.removeAttributeByName(qualifiedName, this);
+        }
+
+        // TODO: tests
+
+    }, {
+        key: 'removeAttributeNS',
+        value: function removeAttributeNS(namespace, localName) {
+            $.removeAttributeByNamespace(namespace, localName, this);
+        }
+
+        // TODO: tests
+
+    }, {
+        key: 'setAttributeNode',
+        value: function setAttributeNode(attr) {
+            return $.setAttribute(attr, this);
+        }
+
+        // TODO: tests
+
+    }, {
+        key: 'setAttributeNodeNS',
+        value: function setAttributeNodeNS(attr) {
+            return $.setAttribute(attr, this);
+        }
+
+        // TODO: tests
+
+    }, {
+        key: 'removeAttributeNode',
+        value: function removeAttributeNode(attr) {
+            if (attr.ownerElement !== this) {
+                throw $.makeError('NotFoundError');
+            }
+            $.removeAttribute(attr, this);
+            return attr;
+        }
+    }, {
         key: 'attachShadow',
         value: function attachShadow(init) {
             // https://dom.spec.whatwg.org/#dom-element-attachshadow
@@ -163,20 +344,24 @@ var _class = function () {
 
             $.extend(shadow, _ShadowRoot2.default);
 
-            $.shadow(shadow).host = this;
-            $.shadow(shadow).mode = init.mode;
-            $.shadow(shadow).childNodes = [];
+            var shadowState = $.shadow(shadow);
+
+            shadowState.host = this;
+            shadowState.mode = init.mode;
+            shadowState.childNodes = [];
 
             var childNodes = $.descriptors.Node.childNodes.get.call(this);
+            var hostState = $.shadow(this);
 
-            $.shadow(this).shadowRoot = shadow;
-            $.shadow(this).childNodes = $.slice(this.childNodes);
+            hostState.shadowRoot = shadow;
+            hostState.childNodes = $.slice(this.childNodes);
 
+            var removeChild = $.descriptors.Node.removeChild.value;
             for (var i = 0; i < childNodes.length; i++) {
-                $.shadow(childNodes[i]).parentNode = this;
+                var childNode = childNodes[i];
+                $.shadow(childNode).parentNode = this;
+                removeChild.call(this, childNode);
             }
-
-            $.descriptors.Element.innerHTML.set.call(this, null);
 
             return shadow;
         }
@@ -244,7 +429,7 @@ var _class = function () {
 
         // https://w3c.github.io/DOM-Parsing/#extensions-to-the-element-interface
 
-        // TODO: tests
+        // TODO: more thorough tests of the serialization
 
     }, {
         key: 'insertAdjacentHTML',
@@ -259,13 +444,6 @@ var _class = function () {
         }
     }, {
         key: 'slot',
-
-
-        // TODO: Override setAttribute, setAttributeNS, removeAttribute,
-        // removeAttributeNS, setAttributeNode, setAttributeNodeNS, 
-        // and removeAttributeNode to detect slot changes and work with
-        // MutationObservers.
-
         get: function get() {
             // The slot attribute must reflect the "slot" content attribute.
             return this.getAttribute('slot');
@@ -274,7 +452,17 @@ var _class = function () {
         // TODO: tests
         ,
         set: function set(value) {
-            updateSlotableName(this, 'slot', this.slot, value, null);
+            $.setAttributeValue(this, 'slot', value);
+        }
+
+        // TODO: tests
+
+    }, {
+        key: 'attributes',
+        get: function get() {
+            var attributes = $.descriptors.Element.attributes.get.call(this);
+            $.shadow(attributes).element = this;
+            return attributes;
         }
     }, {
         key: 'shadowRoot',
@@ -296,7 +484,7 @@ var _class = function () {
             return $.serializeHTMLFragment(this);
         }
 
-        // TODO: tests
+        // TODO: MutationObserver tests
         ,
         set: function set(value) {
             // https://w3c.github.io/DOM-Parsing/#dom-element-innerhtml
@@ -337,33 +525,7 @@ var _class = function () {
 
 exports.default = _class;
 
-
-function updateSlotableName(element, localName, oldValue, value, namespace) {
-    // https://dom.spec.whatwg.org/#slotable-name
-    if (localName === 'slot' && namespace == null) {
-        if (value === oldValue) {
-            return;
-        }
-        if (value == null && oldValue === '') {
-            return;
-        }
-        if (value === '' && oldValue == null) {
-            return;
-        }
-        if (value == null || value === '') {
-            $.descriptors.Element.setAttribute.value.call(element, 'slot', '');
-        } else {
-            $.descriptors.Element.setAttribute.value.call(element, 'slot', value);
-        }
-        var assignedSlot = $.shadow(element).assignedSlot;
-        if (assignedSlot) {
-            $.assignSlotables(assignedSlot);
-        }
-        $.assignASlot(element);
-    }
-}
-
-},{"../interfaces/ShadowRoot.js":12,"../utils.js":21}],4:[function(require,module,exports){
+},{"../interfaces/ShadowRoot.js":15,"../utils.js":25}],6:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -503,7 +665,7 @@ var builtInComposedEvents = [
 // Legacy KeyboardEvent
 'keypress'];
 
-},{"../utils.js":21}],5:[function(require,module,exports){
+},{"../utils.js":25}],7:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -616,10 +778,10 @@ var EventListenerCollection = function () {
         key: 'create',
         value: function create(target, type, capture) {
             var nativeTarget = $.shadow(target).host || target;
-            var collections = $.shadow(nativeTarget).listeners;
+            var nativeTargetState = $.shadow(nativeTarget);
+            var collections = nativeTargetState.listeners;
             if (!(collections instanceof Array)) {
-                collections = [];
-                $.shadow(nativeTarget).listeners = collections;
+                collections = nativeTargetState.listeners = [];
             }
             var collection = new EventListenerCollection(nativeTarget, type, capture);
             collections.push(collection);
@@ -696,10 +858,11 @@ var EventListenerCollection = function () {
     }, {
         key: 'invokeListeners',
         value: function invokeListeners(event, currentTarget, listeners) {
-            var path = $.shadow(event).calculatedPath;
+            var eventState = $.shadow(event);
+            var path = eventState.calculatedPath;
 
             if (!path) {
-                path = $.shadow(event).calculatedPath = calculatePath(event);
+                path = eventState.calculatedPath = calculatePath(event);
             }
 
             var target = calculateTarget(currentTarget, path);
@@ -711,10 +874,10 @@ var EventListenerCollection = function () {
                 var relatedTarget = calculateRelatedTarget(currentTarget, path);
                 var remove = [];
 
-                $.shadow(event).path = path;
-                $.shadow(event).currentTarget = currentTarget;
-                $.shadow(event).target = target;
-                $.shadow(event).relatedTarget = relatedTarget;
+                eventState.path = path;
+                eventState.currentTarget = currentTarget;
+                eventState.target = target;
+                eventState.relatedTarget = relatedTarget;
 
                 for (var i = 0; i < listeners.length; i++) {
                     var listener = listeners[i];
@@ -722,13 +885,13 @@ var EventListenerCollection = function () {
                     if (listener.once) {
                         remove.push(listener);
                     }
-                    if ($.shadow(event).stopImmediatePropagationFlag) {
+                    if (eventState.stopImmediatePropagationFlag) {
                         break;
                     }
                 }
 
-                $.shadow(event).path = null;
-                $.shadow(event).currentTarget = null;
+                eventState.path = null;
+                eventState.currentTarget = null;
 
                 for (var _i = 0; _i < remove.length; _i++) {
                     var index = listeners.indexOf(remove[_i]);
@@ -911,7 +1074,7 @@ function calculateTarget(currentTarget, path) {
     return null;
 }
 
-},{"../utils.js":21}],6:[function(require,module,exports){
+},{"../utils.js":25}],8:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -974,7 +1137,7 @@ var _class = function () {
                 return;
             }
 
-            updateSlotName(this, 'name', this.name, value, null);
+            $.setAttributeValue(this, 'name', value);
         }
     }]);
 
@@ -983,29 +1146,7 @@ var _class = function () {
 
 exports.default = _class;
 
-
-function updateSlotName(element, localName, oldValue, value, namespace) {
-    // https://dom.spec.whatwg.org/#slotable-name
-    if (localName === 'name' && namespace == null) {
-        if (value === oldValue) {
-            return;
-        }
-        if (value == null && oldValue === '') {
-            return;
-        }
-        if (value === '' && oldValue == null) {
-            return;
-        }
-        if (value == null || value === '') {
-            $.descriptors.Element.setAttribute.value.call(element, 'name', '');
-        } else {
-            $.descriptors.Element.setAttribute.value.call(element, 'name', value);
-        }
-        $.assignSlotablesForATree(element);
-    }
-}
-
-},{"../utils.js":21}],7:[function(require,module,exports){
+},{"../utils.js":25}],9:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1082,7 +1223,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":21}],8:[function(require,module,exports){
+},{"../utils.js":25}],10:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1126,7 +1267,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":21}],9:[function(require,module,exports){
+},{"../utils.js":25}],11:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1167,7 +1308,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":21}],10:[function(require,module,exports){
+},{"../utils.js":25}],12:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1216,7 +1357,76 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":21}],11:[function(require,module,exports){
+},{"../utils.js":25}],13:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // https://dom.spec.whatwg.org/#interface-namednodemap
+
+var _utils = require('../utils.js');
+
+var $ = _interopRequireWildcard(_utils);
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var _class = function () {
+    function _class() {
+        _classCallCheck(this, _class);
+    }
+
+    _createClass(_class, [{
+        key: 'setNamedItem',
+
+
+        // todo: tests
+        value: function setNamedItem(attr) {
+            return $.setAttribute(attr, $.shadow(this).element);
+        }
+
+        // todo: tests
+
+    }, {
+        key: 'setNamedItemNS',
+        value: function setNamedItemNS(attr) {
+            return $.setAttribute(attr, $.shadow(this).element);
+        }
+
+        // todo: tests
+
+    }, {
+        key: 'removeNamedItem',
+        value: function removeNamedItem(qualifiedName) {
+            var attr = $.removeAttributeByName(qualifiedName, $.shadow(this).element);
+            if (!attr) {
+                throw $.makeError('NotFoundError');
+            }
+            return attr;
+        }
+
+        // todo: tests
+
+    }, {
+        key: 'removeNamedItemNS',
+        value: function removeNamedItemNS(namespace, localName) {
+            var attr = $.removeAttributeByNamespace(namespace, localName, $.shadow(this).element);
+            if (!attr) {
+                throw $.makeError('NotFoundError');
+            }
+            return attr;
+        }
+    }]);
+
+    return _class;
+}();
+
+exports.default = _class;
+
+},{"../utils.js":25}],14:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1264,32 +1474,35 @@ var _class = function () {
         key: 'normalize',
 
 
-        // TODO: invoke 'replace data', tests
+        // TODO: tests
         value: function normalize() {
             // https://dom.spec.whatwg.org/#dom-node-normalize
             // The normalize() method, when invoked, must run these steps 
             // for each descendant exclusive Text node node of context object:
             var childNodes = this.childNodes;
+            var dataDescriptor = $.descriptors.CharacterData.data;
             for (var i = 0; i < childNodes.length; i++) {
                 var childNode = childNodes[i];
-                if (childNode.hasChildNodes()) {
-                    childNode.normalize();
-                } else if (childNode.nodeType === Node.TEXT_NODE) {
-                    var length = childNode.data.length;
+                if (childNode.nodeType === Node.TEXT_NODE) {
+                    var length = dataDescriptor.get.call(childNode).length;
                     if (length === 0) {
                         $.remove(childNode, this);
                         continue;
                     }
-                    var j = void 0;
-                    for (j = i + 1; j < childNodes.length; j++) {
-                        var nextSibling = childNodes[j];
-                        if (nextSibling.nodeType !== Node.TEXT_NODE) {
-                            break;
-                        }
-                        childNode.data += nextSibling.data;
-                        i++;
-                        continue;
+                    var data = '';
+                    var contiguousTextNodes = [];
+                    var next = childNode;
+                    while (next = next.nextSibling && next.nodeType === Node.TEXT_NODE) {
+                        data += dataDescriptor.get.call(next);
+                        contiguousTextNodes.push(next);
                     }
+                    $.replaceData(childNode, length, 0, data);
+                    // TODO: (Range)
+                    for (var j = 0; j < contiguousTextNodes.length; j++) {
+                        $.remove(contiguousTextNodes[j], this);
+                    }
+                } else {
+                    childNode.normalize();
                 }
             }
         }
@@ -1326,34 +1539,47 @@ var _class = function () {
                 return false;
             }
 
+            var thisAttributes = void 0;
+            var otherAttributes = void 0;
+
             switch (this.nodeType) {
                 case Node.DOCUMENT_TYPE_NODE:
                     if (this.name !== other.name || this.publicId !== other.publicId || this.systemId !== other.systemId) {
                         return false;
                     }
+                    break;
                 case Node.ELEMENT_NODE:
-                    if (this.namespaceURI !== other.namespaceURI || this.prefix !== other.prefix || this.localName !== other.localName || this.attributes.length !== other.attributes.length) {
+                    if (this.namespaceURI !== other.namespaceURI || this.prefix !== other.prefix || this.localName !== other.localName) {
                         return false;
                     }
+                    thisAttributes = $.descriptors.Element.attributes.get.call(this);
+                    otherAttributes = $.descriptors.Element.attributes.get.call(other);
+                    if (thisAttributes.length != otherAttributes.length) {
+                        return false;
+                    }
+                    break;
                 case Node.ATTRIBUTE_NODE:
                     if (this.namespaceURI !== other.namespaceURI || this.localName !== other.localName || this.value !== other.value) {
                         return false;
                     }
+                    break;
                 case Node.PROCESSING_INSTRUCTION_NODE:
                     if (this.target !== other.target || this.data !== other.data) {
                         return false;
                     }
+                    break;
                 case Node.TEXT_NODE:
                 case Node.COMMENT_NODE:
                     if (this.data !== other.data) {
                         return false;
                     }
+                    break;
             }
 
             if (this.nodeType == Node.ELEMENT_NODE) {
-                for (var i = 0; i < this.attributes.length; i++) {
-                    var attr1 = this.attributes[i];
-                    var attr2 = other.attributes[attr1.name];
+                for (var i = 0; i < thisAttributes.length; i++) {
+                    var attr1 = thisAttributes[i];
+                    var attr2 = otherAttributes[attr1.name];
                     if (attr1.value !== attr2.value) {
                         return false;
                     }
@@ -1590,34 +1816,49 @@ var _class = function () {
             return $.descriptors.Node.nextSibling.get.call(this);
         }
 
-        // TODO: implement nodeValue
+        // TODO: consider creating a raw property descriptor
+        // that uses the native get instead of a pass-through function
 
-        // TODO: tests
+    }, {
+        key: 'nodeValue',
+        get: function get() {
+            return $.descriptors.Node.nodeValue.get.call(this);
+        }
 
+        // TODO: MutationObserver tests
+        ,
+        set: function set(value) {
+            switch (this.nodeType) {
+                case Node.ATTRIBUTE_NODE:
+                    $.setExistingAttributeValue(this, value);
+                    break;
+                case Node.TEXT_NODE:
+                case Node.PROCESSING_INSTRUCTION_NODE:
+                case Node.COMMENT_NODE:
+                    var length = $.descriptors.CharacterData.data.get.call(this).length;
+                    $.replaceData(this, 0, length, value);
+                    break;
+            }
+        }
     }, {
         key: 'textContent',
         get: function get() {
             switch (this.nodeType) {
                 case Node.DOCUMENT_FRAGMENT_NODE:
                 case Node.ELEMENT_NODE:
-                    var result = '';
-                    var childNodes = this.childNodes;
-                    for (var i = 0; i < childNodes.length; i++) {
-                        result += childNodes[i].textContent;
-                    }
-                    return result;
+                    return elementTextContent(this);
                 case Node.ATTRIBUTE_NODE:
-                    return this.value;
+                    return $.descriptors.Attr.value.get.call(this);
                 case Node.TEXT_NODE:
                 case Node.PROCESSING_INSTRUCTION_NODE:
                 case Node.COMMENT_NODE:
-                    return this.data;
+                    return $.descriptors.CharacterData.data.get.call(this);
                 default:
                     return null;
             }
         }
 
-        // TODO: invoke 'replace data', tests
+        // TODO: MutationObserver tests
         ,
         set: function set(value) {
             switch (this.nodeType) {
@@ -1628,10 +1869,16 @@ var _class = function () {
                         node = this.ownerDocument.createTextNode(value);
                     }
                     $.replaceAll(node, this);
-                    return;
+                    break;
+                case Node.ATTRIBUTE_NODE:
+                    $.setExistingAttributeValue(this, value);
+                    break;
+                case Node.TEXT_NODE:
+                case Node.PROCESSING_INSTRUCTION_NODE:
+                case Node.COMMENT_NODE:
+                    $.replaceData(this, 0, this.data.length, value);
+                    break;
             }
-
-            return $.descriptors.Node.textContent.set.call(this, value);
         }
     }]);
 
@@ -1700,7 +1947,24 @@ function preceding(element1, element2) {
     return precedingSiblings(ancestors1[i - 1], ancestors1[i], ancestors2[i]);
 }
 
-},{"../utils.js":21}],12:[function(require,module,exports){
+function elementTextContent(element) {
+    var result = '';
+    var childNodes = element.childNodes;
+    for (var i = 0; i < childNodes.length; i++) {
+        var childNode = childNodes[i];
+        switch (childNode.nodeType) {
+            case Node.ELEMENT_NODE:
+                result += elementTextContent(childNode);
+                break;
+            case Node.TEXT_NODE:
+                result += $.descriptors.CharacterData.data.get.call(childNode);
+                break;
+        }
+    }
+    return result;
+}
+
+},{"../utils.js":25}],15:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1760,7 +2024,60 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":21}],13:[function(require,module,exports){
+},{"../utils.js":25}],16:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // https://dom.spec.whatwg.org/#interface-text
+
+var _utils = require('../utils.js');
+
+var $ = _interopRequireWildcard(_utils);
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var _class = function () {
+    function _class() {
+        _classCallCheck(this, _class);
+    }
+
+    _createClass(_class, [{
+        key: 'splitText',
+
+
+        // TODO: tests
+        value: function splitText(offset) {
+            var length = this.length;
+            if (offset > length) {
+                throw $.makeError('IndexSizeError');
+            }
+            var count = length - offset;
+            var newData = this.data.slice(offset, count);
+            var newNode = this.ownerDocument.createTextNode(newData);
+            var parent = this.parentNode;
+            if (parent) {
+                $.insert(newNode, parent, this.nextSibling);
+                // TODO: (Range)
+            }
+            $.replaceData(this, offset, count, '');
+            if (!parent) {
+                // TODO: (Range)
+            }
+            return newNode;
+        }
+    }]);
+
+    return _class;
+}();
+
+exports.default = _class;
+
+},{"../utils.js":25}],17:[function(require,module,exports){
 'use strict';
 
 var _patch = require('./patch.js');
@@ -1775,7 +2092,7 @@ if (!nativeShadowDom || window.forceShadowDomPolyfill) {
     (0, _patch2.default)();
 }
 
-},{"./patch.js":20}],14:[function(require,module,exports){
+},{"./patch.js":24}],18:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1950,7 +2267,7 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-},{"../utils.js":21}],15:[function(require,module,exports){
+},{"../utils.js":25}],19:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2000,7 +2317,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":21}],16:[function(require,module,exports){
+},{"../utils.js":25}],20:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2099,8 +2416,8 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-},{"../utils.js":21}],17:[function(require,module,exports){
-"use strict";
+},{"../utils.js":25}],21:[function(require,module,exports){
+'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
@@ -2110,40 +2427,38 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 exports.default = function (base) {
 
+    var native = {
+        querySelectorAll: $.descriptor(base, 'querySelectorAll')
+    };
+
     return function () {
         function _class() {
             _classCallCheck(this, _class);
         }
 
         _createClass(_class, [{
-            key: "getElementById",
+            key: 'getElementById',
             value: function getElementById(id) {
                 // https://dom.spec.whatwg.org/#dom-nonelementparentnode-getelementbyid
 
-                var firstChild = this.firstChild;
-
-                if (!firstChild) {
+                if (id === '' || /\s/.test(id)) {
                     return null;
                 }
 
-                var stack = [{ node: firstChild, recursed: false }];
+                var selector = '#' + serializeIdentifier(id);
+                var results = void 0;
 
-                while (stack.length) {
-                    var frame = stack.pop();
+                if ($.isShadowRoot(this)) {
+                    results = $.descriptors.Element.querySelectorAll.value.call($.shadow(this).host, selector);
+                } else {
+                    results = native.querySelectorAll.value.call(this, selector);
+                }
 
-                    if (frame.recursed) {
-                        if (frame.node.nextSibling) {
-                            stack.push({ node: frame.node.nextSibling, recursed: false });
-                        }
-                    } else {
-                        if (frame.node.id === id) {
-                            return frame.node;
-                        }
-
-                        stack.push({ node: frame.node, recursed: true });
-
-                        if (firstChild = frame.node.firstChild) {
-                            stack.push({ node: firstChild, recursed: false });
+                if (results.length) {
+                    for (var i = 0; i < results.length; i++) {
+                        var item = results[i];
+                        if ($.root(item) === this) {
+                            return item;
                         }
                     }
                 }
@@ -2156,9 +2471,42 @@ exports.default = function (base) {
     }();
 };
 
+var _utils = require('../utils.js');
+
+var $ = _interopRequireWildcard(_utils);
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-},{}],18:[function(require,module,exports){
+var serializeIdentifier = 'CSS' in window && 'escape' in window.CSS ? window.CSS.escape : function (string) {
+    // https://drafts.csswg.org/cssom/#serialize-an-identifier
+    var result = '';
+    for (var i = 0; i < string.length; i++) {
+        var charCode = string.charCodeAt(i);
+        if (charCode === 0x0000) {
+            result += '\uFFFD';
+            continue;
+        }
+        if (charCode >= 0x0001 && charCode <= 0x001F || charCode === 0x007F || i === 0 && charCode >= 0x0030 && charCode <= 0x00039 || i === 1 && string[0] === '-' && charCode >= 0x0030 && charCode <= 0x00039) {
+            result += '\\' + charCode.toString(16) + ' ';
+            continue;
+        }
+        if (i === 0 && charCode === 0x002D && string.length === 1) {
+            result += '\\' + string.charAt(i);
+            continue;
+        }
+        if (charCode >= 0x0080 || charCode === 0x002D || charCode === 0x005F || charCode >= 0x0030 && charCode <= 0x0039 || charCode >= 0x0041 && charCode <= 0x005A || charCode >= 0x0061 && charCode <= 0x007A) {
+            result += string.charAt(i);
+            continue;
+        }
+        result += '\\' + string.charAt(i);
+        continue;
+    }
+    return result;
+};
+
+},{"../utils.js":25}],22:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2381,7 +2729,7 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-},{"../utils.js":21}],19:[function(require,module,exports){
+},{"../utils.js":25}],23:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2400,8 +2748,14 @@ exports.default = function (base) {
         _createClass(_class, [{
             key: 'assignedSlot',
             get: function get() {
-                // TODO: efficiency (https://github.com/whatwg/dom/issues/369)
-                return $.findASlot(this, true);
+                // spec implementation is:
+                // return $.findASlot(this, true);
+                // this uses an alternative (see https://github.com/whatwg/dom/issues/369)
+                var slot = $.shadow(this).assignedSlot;
+                if (slot && $.closedShadowHidden(slot, this)) {
+                    slot = null;
+                }
+                return slot;
             }
         }]);
 
@@ -2417,7 +2771,7 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-},{"../utils.js":21}],20:[function(require,module,exports){
+},{"../utils.js":25}],24:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2433,7 +2787,11 @@ exports.default = function () {
         Element.prototype.matches = Element.prototype.matchesSelector || Element.prototype.mozMatchesSelector || Element.prototype.msMatchesSelector || Element.prototype.oMatchesSelector || Element.prototype.webkitMatchesSelector;
     }
 
-    // TODO: CharacterData interface (get data(), set data(value), data mutation methods)
+    // Attr interface
+    $.extend(Attr, _Attr2.default);
+
+    // CharacterData interface
+    $.extend(CharacterData, _CharacterData2.default);
 
     // CustomEvent interface
     $.extend(CustomEvent, _CustomEvent2.default);
@@ -2443,18 +2801,10 @@ exports.default = function () {
     // Document interface
     $.extend(Document, _Document2.default);
 
+    // TODO: implement DOMTokenList
+
     // Element interface
     $.extend(Element, _Element2.default);
-    {
-        // For IE, Edge
-        delete HTMLElement.prototype.children;
-        delete HTMLElement.prototype.parentElement;
-        delete HTMLElement.prototype.innerHTML;
-        delete HTMLElement.prototype.outerHTML;
-        delete HTMLElement.prototype.insertAdjacentText;
-        delete HTMLElement.prototype.insertAdjacentElement;
-        delete HTMLElement.prototype.insertAdjacentHTML;
-    }
 
     // Event interface
     $.extend(Event, _Event2.default);
@@ -2488,12 +2838,16 @@ exports.default = function () {
     // MutationObserver interface
     window.MutationObserver = _MutationObserver2.default;
 
+    // NamedNodeMap interface
+    $.extend(NamedNodeMap, _NamedNodeMap2.default);
+
     // Node interface
     $.extend(Node, _Node2.default);
 
     // TODO: implement Range interface
 
-    // TODO: implement Text interface (splitText(offset))
+    // Text interface
+    $.extend(Text, _Text2.default);
 
     // ChildNode mixin
     $.extend(DocumentType, (0, _ChildNode2.default)(DocumentType));
@@ -2520,11 +2874,29 @@ exports.default = function () {
     // Slotable mixin
     $.extend(Element, (0, _Slotable2.default)(Element));
     $.extend(Text, (0, _Slotable2.default)(Text));
+
+    // Cleanup for IE, Edge
+    delete Node.prototype.attributes;
+    delete HTMLElement.prototype.children;
+    delete HTMLElement.prototype.parentElement;
+    delete HTMLElement.prototype.innerHTML;
+    delete HTMLElement.prototype.outerHTML;
+    delete HTMLElement.prototype.insertAdjacentText;
+    delete HTMLElement.prototype.insertAdjacentElement;
+    delete HTMLElement.prototype.insertAdjacentHTML;
 };
 
 var _utils = require('./utils.js');
 
 var $ = _interopRequireWildcard(_utils);
+
+var _Attr = require('./interfaces/Attr.js');
+
+var _Attr2 = _interopRequireDefault(_Attr);
+
+var _CharacterData = require('./interfaces/CharacterData.js');
+
+var _CharacterData2 = _interopRequireDefault(_CharacterData);
 
 var _CustomEvent = require('./interfaces/CustomEvent.js');
 
@@ -2566,6 +2938,10 @@ var _MutationObserver = require('./interfaces/MutationObserver.js');
 
 var _MutationObserver2 = _interopRequireDefault(_MutationObserver);
 
+var _NamedNodeMap = require('./interfaces/NamedNodeMap.js');
+
+var _NamedNodeMap2 = _interopRequireDefault(_NamedNodeMap);
+
 var _Node = require('./interfaces/Node.js');
 
 var _Node2 = _interopRequireDefault(_Node);
@@ -2573,6 +2949,10 @@ var _Node2 = _interopRequireDefault(_Node);
 var _ShadowRoot = require('./interfaces/ShadowRoot.js');
 
 var _ShadowRoot2 = _interopRequireDefault(_ShadowRoot);
+
+var _Text = require('./interfaces/Text.js');
+
+var _Text2 = _interopRequireDefault(_Text);
 
 var _ChildNode = require('./mixins/ChildNode.js');
 
@@ -2602,13 +2982,14 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-},{"./interfaces/CustomEvent.js":1,"./interfaces/Document.js":2,"./interfaces/Element.js":3,"./interfaces/Event.js":4,"./interfaces/EventTarget.js":5,"./interfaces/HTMLSlotElement.js":6,"./interfaces/HTMLTableElement.js":7,"./interfaces/HTMLTableRowElement.js":8,"./interfaces/HTMLTableSectionElement.js":9,"./interfaces/MutationObserver.js":10,"./interfaces/Node.js":11,"./interfaces/ShadowRoot.js":12,"./mixins/ChildNode.js":14,"./mixins/DocumentOrShadowRoot.js":15,"./mixins/NonDocumentTypeChildNode.js":16,"./mixins/NonElementParentNode.js":17,"./mixins/ParentNode.js":18,"./mixins/Slotable.js":19,"./utils.js":21}],21:[function(require,module,exports){
+},{"./interfaces/Attr.js":1,"./interfaces/CharacterData.js":2,"./interfaces/CustomEvent.js":3,"./interfaces/Document.js":4,"./interfaces/Element.js":5,"./interfaces/Event.js":6,"./interfaces/EventTarget.js":7,"./interfaces/HTMLSlotElement.js":8,"./interfaces/HTMLTableElement.js":9,"./interfaces/HTMLTableRowElement.js":10,"./interfaces/HTMLTableSectionElement.js":11,"./interfaces/MutationObserver.js":12,"./interfaces/NamedNodeMap.js":13,"./interfaces/Node.js":14,"./interfaces/ShadowRoot.js":15,"./interfaces/Text.js":16,"./mixins/ChildNode.js":18,"./mixins/DocumentOrShadowRoot.js":19,"./mixins/NonDocumentTypeChildNode.js":20,"./mixins/NonElementParentNode.js":21,"./mixins/ParentNode.js":22,"./mixins/Slotable.js":23,"./utils.js":25}],25:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.makeError = makeError;
+exports.reportError = reportError;
 exports.extend = extend;
 exports.shadow = shadow;
 exports.filterByRoot = filterByRoot;
@@ -2632,7 +3013,17 @@ exports.shadowIncludingAncestor = shadowIncludingAncestor;
 exports.shadowIncludingInclusiveAncestor = shadowIncludingInclusiveAncestor;
 exports.closedShadowHidden = closedShadowHidden;
 exports.retarget = retarget;
+exports.changeAttribute = changeAttribute;
+exports.appendAttribute = appendAttribute;
+exports.removeAttribute = removeAttribute;
+exports.replaceAttribute = replaceAttribute;
+exports.setAttribute = setAttribute;
+exports.setAttributeValue = setAttributeValue;
+exports.removeAttributeByName = removeAttributeByName;
+exports.removeAttributeByNamespace = removeAttributeByNamespace;
 exports.insertAdjacent = insertAdjacent;
+exports.setExistingAttributeValue = setExistingAttributeValue;
+exports.replaceData = replaceData;
 exports.findASlot = findASlot;
 exports.findSlotables = findSlotables;
 exports.findFlattenedSlotables = findFlattenedSlotables;
@@ -2661,6 +3052,12 @@ var descriptor = exports.descriptor = function descriptor(type, name) {
 };
 
 var descriptors = exports.descriptors = {
+    Attr: {
+        value: descriptor(Attr, 'value')
+    },
+    CharacterData: {
+        data: descriptor(CharacterData, 'data')
+    },
     Document: {
         activeElement: descriptor(Document, 'activeElement'),
         getElementsByTagName: descriptor(Document, 'getElementsByTagName'),
@@ -2668,11 +3065,15 @@ var descriptors = exports.descriptors = {
         getElementsByClassName: descriptor(Document, 'getElementsByClassName')
     },
     Element: {
+        attributes: descriptor(Element, 'attributes') || descriptor(Node, 'attributes'),
         getElementsByTagName: descriptor(Element, 'getElementsByTagName'),
         getElementsByTagNameNS: descriptor(Element, 'getElementsByTagNameNS'),
         getElementsByClassName: descriptor(Element, 'getElementsByClassName'),
         innerHTML: descriptor(Element, 'innerHTML') || descriptor(HTMLElement, 'innerHTML'),
-        setAttribute: descriptor(Element, 'setAttribute')
+        querySelectorAll: descriptor(Element, 'querySelectorAll'),
+        setAttribute: descriptor(Element, 'setAttribute'),
+        setAttributeNodeNS: descriptor(Element, 'setAttributeNodeNS'),
+        removeAttributeNode: descriptor(Element, 'removeAttributeNode')
     },
     Event: {
         currentTarget: descriptor(Event, 'currentTarget'),
@@ -2692,6 +3093,7 @@ var descriptors = exports.descriptors = {
         lastChild: descriptor(Node, 'lastChild'),
         previousSibling: descriptor(Node, 'previousSibling'),
         nextSibling: descriptor(Node, 'nextSibling'),
+        nodeValue: descriptor(Node, 'nodeValue'),
         textContent: descriptor(Node, 'textContent'),
         cloneNode: descriptor(Node, 'cloneNode'),
         insertBefore: descriptor(Node, 'insertBefore'),
@@ -2700,10 +3102,23 @@ var descriptors = exports.descriptors = {
     }
 };
 
+// TODO: add a note about importing YuzuJS/setImmediate before 
+// this polyfill if better performance is desired.
+var setImmediate = exports.setImmediate = 'setImmediate' in window ? window.setImmediate : function (callback) {
+    return setTimeout(callback, 0);
+};
+
+// TODO: analyze usages and provide brief but descriptive messages
 function makeError(name, message) {
     var error = new Error(message || name);
     error.name = name;
     return error;
+}
+
+function reportError(error) {
+    if ('console' in window && 'error' in window.console) {
+        window.console.error(error);
+    }
 }
 
 function extend(object) {
@@ -2773,12 +3188,15 @@ function isValidCustomElementName(localName) {
 // https://www.w3.org/TR/DOM-Parsing/
 
 function parseHTMLFragment(markup, context) {
-    var temp = context.ownerDocument.createElement('body');
+    var temp = context.ownerDocument.createElement('div');
     descriptors.Element.innerHTML.set.call(temp, markup);
     var childNodes = descriptors.Node.childNodes.get.call(temp);
     var fragment = context.ownerDocument.createDocumentFragment();
-    for (var i = 0; i < childNodes.length; i++) {
-        descriptors.Node.appendChild.value.call(fragment, childNodes[i]);
+    var getFirstChild = descriptors.Node.firstChild.get;
+    var appendChild = descriptors.Node.appendChild.value;
+    var firstChild = void 0;
+    while (firstChild = getFirstChild.call(temp)) {
+        appendChild.call(fragment, firstChild);
     }
     return fragment;
 }
@@ -2818,11 +3236,11 @@ function serializeHTMLFragment(node) {
                         break;
                 }
                 s += '<' + tagName;
-                var attributes = currentNode.attributes;
+                var attributes = descriptors.Element.attributes.get.call(currentNode);
                 for (var j = 0; j < attributes.length; j++) {
-                    var attribute = attributes[j];
-                    s += ' ' + serializeAttributeName(attribute);
-                    s += '="' + escapeString(attribute.value) + '"';
+                    var _attribute = attributes[j];
+                    s += ' ' + serializeAttributeName(_attribute);
+                    s += '="' + escapeString(_attribute.value) + '"';
                 }
                 s += '>';
                 switch (currentNode.localName) {
@@ -3121,6 +3539,199 @@ function retarget(nodeA, nodeB) {
 
 // https://dom.spec.whatwg.org/#interface-element
 
+function updateSlotName(element, localName, oldValue, value, namespace) {
+    // https://dom.spec.whatwg.org/#slot-name
+    if (element.localName === 'slot') {
+        if (localName === 'name' && namespace == null) {
+            if (value === oldValue) {
+                return;
+            }
+            if (value == null && oldValue === '') {
+                return;
+            }
+            if (value === '' && oldValue == null) {
+                return;
+            }
+            if (value == null || value === '') {
+                descriptors.Element.setAttribute.value.call(element, 'name', '');
+            } else {
+                descriptors.Element.setAttribute.value.call(element, 'name', value);
+            }
+            assignSlotablesForATree(element);
+        }
+    }
+}
+
+function updateSlotableName(element, localName, oldValue, value, namespace) {
+    // https://dom.spec.whatwg.org/#slotable-name
+    if (localName === 'slot' && namespace == null) {
+        if (value === oldValue) {
+            return;
+        }
+        if (value == null && oldValue === '') {
+            return;
+        }
+        if (value === '' && oldValue == null) {
+            return;
+        }
+        if (value == null || value === '') {
+            descriptors.Element.setAttribute.value.call(element, 'slot', '');
+        } else {
+            descriptors.Element.setAttribute.value.call(element, 'slot', value);
+        }
+        var assignedSlot = shadow(element).assignedSlot;
+        if (assignedSlot) {
+            assignSlotables(assignedSlot);
+        }
+        assignASlot(element);
+    }
+}
+
+function attributeChangeSteps(element, localName, oldValue, value, namespace) {
+    updateSlotName(element, localName, oldValue, value, namespace);
+    updateSlotableName(element, localName, oldValue, value, namespace);
+}
+
+function changeAttribute(attribute, element, value) {
+    // https://dom.spec.whatwg.org/#concept-element-attributes-change
+
+    var name = attribute.localName;
+    var namespace = attribute.namespaceURI;
+    var oldValue = descriptors.Attr.value.get.call(attribute);
+
+    // 1. Queue a mutation record...
+    queueMutationRecord('attributes', element, { name: name, namespace: namespace, oldValue: oldValue });
+
+    // Skip (CustomElements)
+    // 2. If element is custom...
+
+    // 3. Run the attribute change steps...
+    attributeChangeSteps(element, name, oldValue, value, namespace);
+
+    // 4. Set attribute's value...
+    descriptors.Attr.value.set.call(attribute, value);
+}
+
+function appendAttribute(attribute, element) {
+    // https://dom.spec.whatwg.org/#concept-element-attributes-append
+
+    var name = attribute.localName;
+    var namespace = attribute.namespaceURI;
+    var oldValue = null;
+
+    // 1. Queue a mutation record...
+    queueMutationRecord('attributes', element, { name: name, namespace: namespace, oldValue: oldValue });
+
+    // Skip (CustomElements)
+    // 2. If element is custom...
+
+    // 3. Run the attribute change steps...
+    attributeChangeSteps(element, name, oldValue, attribute.value, namespace);
+
+    // 4. Append the attribute to the element’s attribute list.
+    descriptors.Element.setAttributeNodeNS.value.call(element, attribute);
+
+    // Skip (native)
+    // 5. Set attribute’s element to element.
+}
+
+function removeAttribute(attribute, element) {
+    // https://dom.spec.whatwg.org/#concept-element-attributes-remove
+
+    var name = attribute.localName;
+    var namespace = attribute.namespaceURI;
+    var oldValue = descriptors.Attr.value.get.call(attribute);
+
+    // 1. Queue a mutation record...
+    queueMutationRecord('attributes', element, { name: name, namespace: namespace, oldValue: oldValue });
+
+    // Skip (CustomElements)
+    // 2. If element is custom...
+
+    // 3. Run the attribute change steps...
+    attributeChangeSteps(element, name, oldValue, value, namespace);
+
+    // 4. Remove attribute from the element’s attribute list.
+    descriptors.Element.removeAttributeNode.value.call(element, attribute);
+
+    // Skip (native)
+    // 5. Set attribute’s element to null.
+}
+
+function replaceAttribute(oldAttr, newAttr, element) {
+    // Used by 'set an attribute'
+    // https://dom.spec.whatwg.org/#concept-element-attributes-replace
+
+    var name = attribute.localName;
+    var namespace = attribute.namespaceURI;
+    var oldValue = descriptors.Attr.value.get.call(attribute);
+
+    // 1. Queue a mutation record...
+    queueMutationRecord('attributes', element, { name: name, namespace: namespace, oldValue: oldValue });
+
+    // Skip (CustomElements)
+    // 2. If element is custom...
+
+    // 3. Run the attribute change steps...
+    attributeChangeSteps(element, name, oldValue, value, namespace);
+
+    // 4. Replace oldAttr by newAttr in the element’s attribute list.
+    descriptors.Element.setAttributeNodeNS.value.call(element, newAttr);
+
+    // Skip (native)
+    // 5. Set oldAttr’s element to null.
+    // 6. Set newAttr’s element to element.
+}
+
+function setAttribute(attr, element) {
+    if (attr.ownerElement != null || attr.ownerElement !== element) {
+        throw makeError('InUseAttributeError');
+    }
+    var attributes = descriptors.Element.attributes.get.call(element);
+    var oldAttr = attributes.getNamedItemNS(attr.namespaceURI, attr.localName);
+    if (oldAttr === attr) {
+        return attr;
+    }
+    if (oldAttr) {
+        replaceAttribute(oldAttr, attr, element);
+    } else {
+        appendAttribute(attr, element);
+    }
+    return oldAttr;
+}
+
+function setAttributeValue(element, localName, value, prefix, ns) {
+    prefix = prefix || null;
+    ns = ns || null;
+    var attributes = descriptors.Element.attributes.get.call(element);
+    var attribute = attributes.getNamedItemNS(ns, localName);
+    if (!attribute) {
+        attribute = element.ownerDocument.createAttributeNS(ns, localName);
+        descriptors.Attr.value.set.call(attribute, value);
+        appendAttribute(attribute, element);
+        return;
+    }
+    changeAttribute(attribute, element, value);
+}
+
+function removeAttributeByName(qualifiedName, element) {
+    var attributes = descriptors.Element.attributes.get.call(element);
+    var attr = attributes.getNamedItem(qualifiedName);
+    if (attr) {
+        removeAttribute(attr, element);
+    }
+    return attr;
+}
+
+function removeAttributeByNamespace(namespace, localName, element) {
+    var attributes = descriptors.Element.attributes.get.call(element);
+    var attr = attributes.getNamedItemNS(namespace, localName);
+    if (attr) {
+        removeAttribute(attr, element);
+    }
+    return attr;
+}
+
 function insertAdjacent(element, where, node) {
     if (!(node instanceof Node)) {
         throw makeError('TypeError');
@@ -3145,6 +3756,37 @@ function insertAdjacent(element, where, node) {
         default:
             throw makeError('SyntaxError');
     }
+}
+
+// https://dom.spec.whatwg.org/#attr
+
+function setExistingAttributeValue(attribute, value) {
+    if (attribute.ownerElement == null) {
+        descriptors.Attr.value.set.call(attribute, value);
+    } else {
+        changeAttribute(attribute, attribute.ownerElement, value);
+    }
+}
+
+// https://dom.spec.whatwg.org/#interface-characterdata
+
+function replaceData(node, offset, count, data) {
+    // https://dom.spec.whatwg.org/#concept-cd-replace
+    if (data == null) {
+        data = '';
+    }
+    var dataDescriptor = descriptors.CharacterData.data;
+    var oldValue = dataDescriptor.get.call(node);
+    var length = oldValue.length;
+    if (offset > length) {
+        throw makeError('IndexSizeError');
+    }
+    if (offset + count > length) {
+        count = length - offset;
+    }
+    queueMutationRecord('characterData', node, { oldValue: oldValue });
+    dataDescriptor.set.call(node, oldValue.slice(0, offset) + data + oldValue.slice(offset + count));
+    // TODO: (Range)
 }
 
 // https://dom.spec.whatwg.org/#finding-slots-and-slotables
@@ -3288,51 +3930,58 @@ function assignSlotables(slot, suppressSignaling) {
 
     // 2. If suppress signaling flag is unset, and slotables and slot’s assigned 
     // nodes are not identical, then run signal a slot change for slot.
-    if (!suppressSignaling) {
-        var assignedNodes = slot.assignedNodes();
-        if (slotables.length !== assignedNodes.length) {
-            signalASlotChange(slot);
-        } else {
-            for (var i = 0; i < slotables.length; i++) {
-                if (slotables[i] !== assignedNodes[i]) {
-                    signalASlotChange(slot);
-                    break;
-                }
-            }
+    var identical = true;
+    var slotState = shadow(slot);
+    var assignedNodes = slotState.assignedNodes || [];
+    for (var i = 0; i < slotables.length; i++) {
+        if (slotables[i] !== assignedNodes[i]) {
+            identical = false;
+            break;
         }
+    }
+    if (!suppressSignaling && !identical) {
+        signalASlotChange(slot);
     }
 
     // 3. Set slot’s assigned nodes to slotables.
-    shadow(slot).assignedNodes = slotables;
+    slotState.assignedNodes = slotables;
 
     // 4. For each slotable in slotables, set slotable’s assigned slot to slot.
-
-    // 4a. If we haven't tracked them yet, track the slot's logical children
-    if (!shadow(slot).childNodes) {
-        var childNodes = descriptors.Node.childNodes.get.call(slot);
-        shadow(slot).childNodes = slice(childNodes);
-    }
-
-    // 4b. We need to clean out the slot
-    var firstChild = void 0;
-    while (firstChild = descriptors.Node.firstChild.get.call(slot)) {
-        descriptors.Node.removeChild.value.call(slot, firstChild);
-    }
-
-    // 4c. do what the spec said
     for (var _i3 = 0; _i3 < slotables.length; _i3++) {
         var slotable = slotables[_i3];
         shadow(slotable).assignedSlot = slot;
-        descriptors.Node.appendChild.value.call(slot, slotable);
     }
 
-    // 4d. if there were no slotables we need to insert its fallback content
-    if (!slotables.length) {
-        var _childNodes = shadow(slot).childNodes;
-        for (var _i4 = 0; _i4 < _childNodes.length; _i4++) {
-            descriptors.Node.appendChild.value.call(slot, _childNodes[_i4]);
+    !identical && setImmediate(function () {
+        // 4a. If we haven't tracked them yet, track the slot's logical children
+        if (!slotState.childNodes) {
+            var childNodes = descriptors.Node.childNodes.get.call(slot);
+            slotState.childNodes = slice(childNodes);
         }
-    }
+
+        // 4b. Clean out the slot
+        var firstChild = void 0;
+        while (firstChild = descriptors.Node.firstChild.get.call(slot)) {
+            descriptors.Node.removeChild.value.call(slot, firstChild);
+        }
+
+        // 4c. Append the slotables, if any
+        for (var _i4 = 0; _i4 < slotables.length; _i4++) {
+            var _slotable = slotables[_i4];
+            slotState.assignedSlot = slot;
+            // if we break out the physical portion to go async, we still
+            // need to set the assignedSlot property sync
+            descriptors.Node.appendChild.value.call(slot, _slotable);
+        }
+
+        // 4d. Append the fallback content, if no slots
+        if (!slotables.length) {
+            var _childNodes = slotState.childNodes;
+            for (var _i5 = 0; _i5 < _childNodes.length; _i5++) {
+                descriptors.Node.appendChild.value.call(slot, _childNodes[_i5]);
+            }
+        }
+    });
 }
 
 function assignSlotablesForATree(tree, noSignalSlots) {
@@ -3448,23 +4097,27 @@ function insert(node, parent, child, suppressObservers) {
 
     // 3. Let nodes be node’s children if node is a DocumentFragment node, 
     // and a list containing solely node otherwise.
-    var nodes = node.nodeType === Node.DOCUMENT_FRAGMENT_NODE ? slice(node.childNodes) : [node];
+    var nodes = void 0;
 
     // 4. If node is a DocumentFragment node, remove its children with the suppress observers flag set.
     if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+        nodes = slice(node.childNodes);
         for (var i = 0; i < nodes.length; i++) {
             remove(nodes[i], node, true);
         }
-
         // 5. If node is a DocumentFragment node, queue a mutation record of "childList" for node with removedNodes nodes.
         queueMutationRecord('childList', node, { removedNodes: nodes });
+    } else {
+        nodes = [node];
     }
 
     // 6. For each node in nodes, in tree order, run these substeps:
-    for (var _i5 = 0; _i5 < nodes.length; _i5++) {
-        var _node = nodes[_i5];
+    var parentState = shadow(parent);
+    var parentIsShadow = isShadowRoot(parent);
+    for (var _i6 = 0; _i6 < nodes.length; _i6++) {
+        var _node = nodes[_i6];
         // 1. Insert node into parent before child or at the end of parent if child is null.
-        var childNodes = shadow(parent).childNodes;
+        var childNodes = parentState.childNodes;
         if (childNodes) {
             if (child) {
                 var childIndex = childNodes.indexOf(child);
@@ -3474,16 +4127,15 @@ function insert(node, parent, child, suppressObservers) {
             }
             shadow(_node).parentNode = parent;
             // If it's a shadow root, perform physical insert on the host.
-            var shadowHost = shadow(parent).host;
-            if (shadowHost) {
-                descriptors.Node.insertBefore.value.call(shadowHost, _node, child);
+            if (parentIsShadow) {
+                descriptors.Node.insertBefore.value.call(parentState.host, _node, child);
             }
         } else {
             descriptors.Node.insertBefore.value.call(parent, _node, child);
         }
 
         // 2. If parent is a shadow host and node is a slotable, then assign a slot for node.
-        if (shadow(parent).shadowRoot && 'assignedSlot' in _node) {
+        if (parentState.shadowRoot && 'assignedSlot' in _node) {
             assignASlot(_node);
         }
 
@@ -3661,20 +4313,22 @@ function remove(node, parent, suppressObservers) {
     var oldNextSibling = node.nextSibling;
 
     // 9. Remove node from its parent.
+    var nodeState = shadow(node);
     var childNodes = shadow(parent).childNodes;
     if (childNodes) {
         var nodeIndex = childNodes.indexOf(node);
         childNodes.splice(nodeIndex, 1);
+        delete nodeState.parentNode;
+        var parentNode = descriptors.Node.parentNode.get.call(node);
+        descriptors.Node.removeChild.value.call(parentNode, node);
+    } else {
+        descriptors.Node.removeChild.value.call(parent, node);
     }
-    delete shadow(node).parentNode;
-    var parentNode = descriptors.Node.parentNode.get.call(node);
-    descriptors.Node.removeChild.value.call(parentNode, node);
 
     // 10. If node is assigned, then run assign slotables for node’s assigned slot.
-    var assignedSlot = shadow(node).assignedSlot;
-    if (assignedSlot) {
-        assignSlotables(assignedSlot);
-        shadow(node).assignedSlot = null;
+    if (nodeState.assignedSlot) {
+        assignSlotables(nodeState.assignedSlot);
+        nodeState.assignedSlot = null;
     }
 
     // 11. If parent is a slot whose assigned nodes is the empty list,
@@ -3750,8 +4404,9 @@ function remove(node, parent, suppressObservers) {
 // TODO: tests
 
 function getOrCreateNodeObservers(node) {
-    var observers = shadow(node).observers;
-    return observers ? observers : shadow(node).observers = [];
+    var nodeState = shadow(node);
+    var observers = nodeState.observers;
+    return observers ? observers : nodeState.observers = [];
 }
 
 function createMutationObserver(callback) {
@@ -3879,8 +4534,8 @@ function queueMutationRecord(type, target, details) {
     }
 
     // 4. Then, for each observer in interested observers, run these substeps:
-    for (var _i6 = 0; _i6 < interestedObservers.length; _i6++) {
-        var _observer = interestedObservers[_i6];
+    for (var _i7 = 0; _i7 < interestedObservers.length; _i7++) {
+        var _observer = interestedObservers[_i7];
         // 1. Let record be a new MutationRecord object with its type set to type and target set to target.
         var record = {
             type: type,
@@ -3915,7 +4570,7 @@ function queueMutationRecord(type, target, details) {
             record.nextSibling = details.nextSibling;
         }
         // 7. If observer has a paired string, set record’s oldValue to observer’s paired string.
-        var pairedString = pairedStrings[_i6];
+        var pairedString = pairedStrings[_i7];
         if (pairedString != null) {
             record.oldValue = pairedString;
         }
@@ -3935,7 +4590,7 @@ function queueMutationObserverCompoundMicrotask() {
         return;
     }
     mutationObserverCompoundMicrotaskQueuedFlag = true;
-    setTimeout(notifyMutationObservers, 0);
+    setImmediate(notifyMutationObservers);
 }
 
 function notifyMutationObservers() {
@@ -3956,18 +4611,20 @@ function notifyMutationObservers() {
             try {
                 observer.callback.call(observer.interface, queue, observer.interface);
             } catch (error) {
-                if (console) {
-                    console.error(error);
-                }
+                reportError(error);
             }
         }
     }
-    for (var _i7 = 0; _i7 < signalList.length; _i7++) {
-        var slot = signalList[_i7];
+    for (var _i8 = 0; _i8 < signalList.length; _i8++) {
+        var slot = signalList[_i8];
         var event = slot.ownerDocument.createEvent('event');
         event.initEvent('slotchange', true, false);
-        slot.dispatchEvent(event);
+        try {
+            slot.dispatchEvent(event);
+        } catch (error) {
+            reportError(error);
+        }
     }
 }
 
-},{}]},{},[13]);
+},{}]},{},[17]);

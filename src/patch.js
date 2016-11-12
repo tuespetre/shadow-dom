@@ -1,5 +1,7 @@
 import * as $ from './utils.js';
 
+import $Attr from './interfaces/Attr.js';
+import $CharacterData from './interfaces/CharacterData.js';
 import $CustomEvent from './interfaces/CustomEvent.js';
 import $Document from './interfaces/Document.js';
 import $Element from './interfaces/Element.js';
@@ -10,8 +12,10 @@ import $HTMLTableElement from './interfaces/HTMLTableElement.js';
 import $HTMLTableRowElement from './interfaces/HTMLTableRowElement.js';
 import $HTMLTableSectionElement from './interfaces/HTMLTableSectionElement.js';
 import $MutationObserver from './interfaces/MutationObserver.js';
+import $NamedNodeMap from './interfaces/NamedNodeMap.js';
 import $Node from './interfaces/Node.js';
 import $ShadowRoot from './interfaces/ShadowRoot.js';
+import $Text from './interfaces/Text.js';
 
 import $ChildNode from './mixins/ChildNode.js';
 import $DocumentOrShadowRoot from './mixins/DocumentOrShadowRoot.js';
@@ -33,8 +37,12 @@ export default function () {
             Element.prototype.oMatchesSelector ||
             Element.prototype.webkitMatchesSelector;
     }
-    
-    // TODO: CharacterData interface (get data(), set data(value), data mutation methods)
+
+    // Attr interface
+    $.extend(Attr, $Attr);
+
+    // CharacterData interface
+    $.extend(CharacterData, $CharacterData);
 
     // CustomEvent interface
     $.extend(CustomEvent, $CustomEvent);
@@ -44,18 +52,10 @@ export default function () {
     // Document interface
     $.extend(Document, $Document);
 
+    // TODO: implement DOMTokenList
+
     // Element interface
     $.extend(Element, $Element);
-    {
-        // For IE, Edge
-        delete HTMLElement.prototype.children;
-        delete HTMLElement.prototype.parentElement;
-        delete HTMLElement.prototype.innerHTML;
-        delete HTMLElement.prototype.outerHTML;
-        delete HTMLElement.prototype.insertAdjacentText;
-        delete HTMLElement.prototype.insertAdjacentElement;
-        delete HTMLElement.prototype.insertAdjacentHTML;
-    }
 
     // Event interface
     $.extend(Event, $Event);
@@ -90,12 +90,16 @@ export default function () {
     // MutationObserver interface
     window.MutationObserver = $MutationObserver;
 
+    // NamedNodeMap interface
+    $.extend(NamedNodeMap, $NamedNodeMap);
+
     // Node interface
     $.extend(Node, $Node);
 
     // TODO: implement Range interface
 
-    // TODO: implement Text interface (splitText(offset))
+    // Text interface
+    $.extend(Text, $Text);
 
     // ChildNode mixin
     $.extend(DocumentType, $ChildNode(DocumentType));
@@ -122,5 +126,15 @@ export default function () {
     // Slotable mixin
     $.extend(Element, $Slotable(Element));
     $.extend(Text, $Slotable(Text));
+    
+    // Cleanup for IE, Edge
+    delete Node.prototype.attributes;
+    delete HTMLElement.prototype.children;
+    delete HTMLElement.prototype.parentElement;
+    delete HTMLElement.prototype.innerHTML;
+    delete HTMLElement.prototype.outerHTML;
+    delete HTMLElement.prototype.insertAdjacentText;
+    delete HTMLElement.prototype.insertAdjacentElement;
+    delete HTMLElement.prototype.insertAdjacentHTML;
 
 }

@@ -3,6 +3,12 @@ export const slice = array => Array.prototype.slice.call(array);
 export const descriptor = (type, name) => Object.getOwnPropertyDescriptor(type.prototype, name);
 
 export const descriptors = {
+    Attr: {
+        value: descriptor(Attr, 'value')
+    },
+    CharacterData: {
+        data: descriptor(CharacterData, 'data')
+    },
     Document: {
         activeElement: descriptor(Document, 'activeElement'),
         getElementsByTagName: descriptor(Document, 'getElementsByTagName'),
@@ -10,11 +16,15 @@ export const descriptors = {
         getElementsByClassName: descriptor(Document, 'getElementsByClassName')
     },
     Element: {
+        attributes: descriptor(Element, 'attributes') || descriptor(Node, 'attributes'),
         getElementsByTagName: descriptor(Element, 'getElementsByTagName'),
         getElementsByTagNameNS: descriptor(Element, 'getElementsByTagNameNS'),
         getElementsByClassName: descriptor(Element, 'getElementsByClassName'),
         innerHTML: descriptor(Element, 'innerHTML') || descriptor(HTMLElement, 'innerHTML'),
-        setAttribute: descriptor(Element, 'setAttribute')
+        querySelectorAll: descriptor(Element, 'querySelectorAll'),
+        setAttribute: descriptor(Element, 'setAttribute'),
+        setAttributeNodeNS: descriptor(Element, 'setAttributeNodeNS'),
+        removeAttributeNode: descriptor(Element, 'removeAttributeNode')
     },
     Event: {
         currentTarget: descriptor(Event, 'currentTarget'),
@@ -34,6 +44,7 @@ export const descriptors = {
         lastChild: descriptor(Node, 'lastChild'),
         previousSibling: descriptor(Node, 'previousSibling'),
         nextSibling: descriptor(Node, 'nextSibling'),
+        nodeValue: descriptor(Node, 'nodeValue'),
         textContent: descriptor(Node, 'textContent'),
         cloneNode: descriptor(Node, 'cloneNode'),
         insertBefore: descriptor(Node, 'insertBefore'),
@@ -42,10 +53,23 @@ export const descriptors = {
     }
 };
 
+// TODO: add a note about importing YuzuJS/setImmediate before 
+// this polyfill if better performance is desired.
+export const setImmediate = 'setImmediate' in window ? window.setImmediate : function (callback) {
+    return setTimeout(callback, 0);
+};
+
+// TODO: analyze usages and provide brief but descriptive messages
 export function makeError(name, message) {
     const error = new Error(message || name);
     error.name = name;
     return error;
+}
+
+export function reportError(error) {
+    if ('console' in window && 'error' in window.console) {
+        window.console.error(error);
+    }
 }
 
 export function extend(object, ...mixins) {
@@ -111,12 +135,15 @@ export function isValidCustomElementName(localName) {
 // https://www.w3.org/TR/DOM-Parsing/
 
 export function parseHTMLFragment(markup, context) {
-    let temp = context.ownerDocument.createElement('body');
+    let temp = context.ownerDocument.createElement('div');
     descriptors.Element.innerHTML.set.call(temp, markup);
     const childNodes = descriptors.Node.childNodes.get.call(temp);
     const fragment = context.ownerDocument.createDocumentFragment();
-    for (let i = 0; i < childNodes.length; i++) {
-        descriptors.Node.appendChild.value.call(fragment, childNodes[i]);
+    const getFirstChild = descriptors.Node.firstChild.get;
+    const appendChild = descriptors.Node.appendChild.value;
+    let firstChild;
+    while (firstChild = getFirstChild.call(temp)) {
+        appendChild.call(fragment, firstChild);
     }
     return fragment;
 }
@@ -156,7 +183,7 @@ export function serializeHTMLFragment(node) {
                         break;
                 }
                 s += '<' + tagName;
-                const attributes = currentNode.attributes;
+                const attributes = descriptors.Element.attributes.get.call(currentNode);
                 for (let j = 0; j < attributes.length; j++) {
                     const attribute = attributes[j];
                     s += ' ' + serializeAttributeName(attribute);
@@ -465,6 +492,202 @@ export function retarget(nodeA, nodeB) {
 
 // https://dom.spec.whatwg.org/#interface-element
 
+function updateSlotName(element, localName, oldValue, value, namespace) {
+    // https://dom.spec.whatwg.org/#slot-name
+    if (element.localName === 'slot') {
+        if (localName === 'name' && namespace == null) {
+            if (value === oldValue) {
+                return;
+            }
+            if (value == null && oldValue === '') {
+                return;
+            }
+            if (value === '' && oldValue == null) {
+                return;
+            }
+            if (value == null || value === '') {
+                descriptors.Element.setAttribute.value.call(element, 'name', '');
+            }
+            else {
+                descriptors.Element.setAttribute.value.call(element, 'name', value);
+            }
+            assignSlotablesForATree(element);
+        }
+    }
+}
+
+function updateSlotableName(element, localName, oldValue, value, namespace) {
+    // https://dom.spec.whatwg.org/#slotable-name
+    if (localName === 'slot' && namespace == null) {
+        if (value === oldValue) {
+            return;
+        }
+        if (value == null && oldValue === '') {
+            return;
+        }
+        if (value === '' && oldValue == null) {
+            return;
+        }
+        if (value == null || value === '') {
+            descriptors.Element.setAttribute.value.call(element, 'slot', '');
+        }
+        else {
+            descriptors.Element.setAttribute.value.call(element, 'slot', value);
+        }
+        const assignedSlot = shadow(element).assignedSlot;
+        if (assignedSlot) {
+            assignSlotables(assignedSlot);
+        }
+        assignASlot(element);
+    }
+}
+
+function attributeChangeSteps(element, localName, oldValue, value, namespace) {
+    updateSlotName(element, localName, oldValue, value, namespace);
+    updateSlotableName(element, localName, oldValue, value, namespace);
+}
+
+export function changeAttribute(attribute, element, value) {
+    // https://dom.spec.whatwg.org/#concept-element-attributes-change
+
+    const name = attribute.localName;
+    const namespace = attribute.namespaceURI;
+    const oldValue = descriptors.Attr.value.get.call(attribute);
+
+    // 1. Queue a mutation record...
+    queueMutationRecord('attributes', element, { name, namespace, oldValue });
+
+    // Skip (CustomElements)
+    // 2. If element is custom...
+
+    // 3. Run the attribute change steps...
+    attributeChangeSteps(element, name, oldValue, value, namespace);
+
+    // 4. Set attribute's value...
+    descriptors.Attr.value.set.call(attribute, value);
+}
+
+export function appendAttribute(attribute, element) {
+    // https://dom.spec.whatwg.org/#concept-element-attributes-append
+
+    const name = attribute.localName;
+    const namespace = attribute.namespaceURI;
+    const oldValue = null;
+
+    // 1. Queue a mutation record...
+    queueMutationRecord('attributes', element, { name, namespace, oldValue });
+
+    // Skip (CustomElements)
+    // 2. If element is custom...
+
+    // 3. Run the attribute change steps...
+    attributeChangeSteps(element, name, oldValue, attribute.value, namespace);
+
+    // 4. Append the attribute to the element’s attribute list.
+    descriptors.Element.setAttributeNodeNS.value.call(element, attribute);
+
+    // Skip (native)
+    // 5. Set attribute’s element to element.
+}
+
+export function removeAttribute(attribute, element) {
+    // https://dom.spec.whatwg.org/#concept-element-attributes-remove
+
+    const name = attribute.localName;
+    const namespace = attribute.namespaceURI;
+    const oldValue = descriptors.Attr.value.get.call(attribute);
+
+    // 1. Queue a mutation record...
+    queueMutationRecord('attributes', element, { name, namespace, oldValue });
+
+    // Skip (CustomElements)
+    // 2. If element is custom...
+
+    // 3. Run the attribute change steps...
+    attributeChangeSteps(element, name, oldValue, value, namespace);
+
+    // 4. Remove attribute from the element’s attribute list.
+    descriptors.Element.removeAttributeNode.value.call(element, attribute);
+
+    // Skip (native)
+    // 5. Set attribute’s element to null.
+}
+
+export function replaceAttribute(oldAttr, newAttr, element) {
+    // Used by 'set an attribute'
+    // https://dom.spec.whatwg.org/#concept-element-attributes-replace
+
+    const name = attribute.localName;
+    const namespace = attribute.namespaceURI;
+    const oldValue = descriptors.Attr.value.get.call(attribute);
+
+    // 1. Queue a mutation record...
+    queueMutationRecord('attributes', element, { name, namespace, oldValue });
+
+    // Skip (CustomElements)
+    // 2. If element is custom...
+
+    // 3. Run the attribute change steps...
+    attributeChangeSteps(element, name, oldValue, value, namespace);
+
+    // 4. Replace oldAttr by newAttr in the element’s attribute list.
+    descriptors.Element.setAttributeNodeNS.value.call(element, newAttr);
+
+    // Skip (native)
+    // 5. Set oldAttr’s element to null.
+    // 6. Set newAttr’s element to element.
+}
+
+export function setAttribute(attr, element) {
+    if (attr.ownerElement != null || attr.ownerElement !== element) {
+        throw makeError('InUseAttributeError');
+    }
+    const attributes = descriptors.Element.attributes.get.call(element);
+    const oldAttr = attributes.getNamedItemNS(attr.namespaceURI, attr.localName);
+    if (oldAttr === attr) {
+        return attr;
+    }
+    if (oldAttr) {
+        replaceAttribute(oldAttr, attr, element);
+    }
+    else {
+        appendAttribute(attr, element);
+    }
+    return oldAttr;
+}
+
+export function setAttributeValue(element, localName, value, prefix, ns) {
+    prefix = prefix || null;
+    ns = ns || null;
+    const attributes = descriptors.Element.attributes.get.call(element);
+    let attribute = attributes.getNamedItemNS(ns, localName);
+    if (!attribute) {
+        attribute = element.ownerDocument.createAttributeNS(ns, localName);
+        descriptors.Attr.value.set.call(attribute, value);
+        appendAttribute(attribute, element);
+        return;
+    }
+    changeAttribute(attribute, element, value);
+}
+
+export function removeAttributeByName(qualifiedName, element) {
+    const attributes = descriptors.Element.attributes.get.call(element);
+    const attr = attributes.getNamedItem(qualifiedName);
+    if (attr) {
+        removeAttribute(attr, element);
+    }
+    return attr;
+}
+
+export function removeAttributeByNamespace(namespace, localName, element) {
+    const attributes = descriptors.Element.attributes.get.call(element);
+    const attr = attributes.getNamedItemNS(namespace, localName);
+    if (attr) {
+        removeAttribute(attr, element);
+    }
+    return attr;
+}
+
 export function insertAdjacent(element, where, node) {
     if (!(node instanceof Node)) {
         throw makeError('TypeError');
@@ -489,6 +712,38 @@ export function insertAdjacent(element, where, node) {
         default:
             throw makeError('SyntaxError');
     }
+}
+
+// https://dom.spec.whatwg.org/#attr
+
+export function setExistingAttributeValue(attribute, value) {
+    if (attribute.ownerElement == null) {
+        descriptors.Attr.value.set.call(attribute, value);
+    }
+    else {
+        changeAttribute(attribute, attribute.ownerElement, value);
+    }
+}
+
+// https://dom.spec.whatwg.org/#interface-characterdata
+
+export function replaceData(node, offset, count, data) {
+    // https://dom.spec.whatwg.org/#concept-cd-replace
+    if (data == null) {
+        data = '';
+    }
+    const dataDescriptor = descriptors.CharacterData.data;
+    const oldValue = dataDescriptor.get.call(node);
+    const length = oldValue.length;
+    if (offset > length) {
+        throw makeError('IndexSizeError');
+    }
+    if (offset + count > length) {
+        count = length - offset;
+    }
+    queueMutationRecord('characterData', node, { oldValue });
+    dataDescriptor.set.call(node, oldValue.slice(0, offset) + data + oldValue.slice(offset + count));
+    // TODO: (Range)
 }
 
 // https://dom.spec.whatwg.org/#finding-slots-and-slotables
@@ -636,52 +891,58 @@ export function assignSlotables(slot, suppressSignaling) {
 
     // 2. If suppress signaling flag is unset, and slotables and slot’s assigned 
     // nodes are not identical, then run signal a slot change for slot.
-    if (!suppressSignaling) {
-        const assignedNodes = slot.assignedNodes();
-        if (slotables.length !== assignedNodes.length) {
-            signalASlotChange(slot);
+    let identical = true;
+    const slotState = shadow(slot);
+    const assignedNodes = slotState.assignedNodes || [];
+    for (let i = 0; i < slotables.length; i++) {
+        if (slotables[i] !== assignedNodes[i]) {
+            identical = false;
+            break;
         }
-        else {
-            for (let i = 0; i < slotables.length; i++) {
-                if (slotables[i] !== assignedNodes[i]) {
-                    signalASlotChange(slot);
-                    break;
-                }
-            }
-        }
+    }
+    if (!suppressSignaling && !identical) {
+        signalASlotChange(slot);
     }
 
     // 3. Set slot’s assigned nodes to slotables.
-    shadow(slot).assignedNodes = slotables;
+    slotState.assignedNodes = slotables;
 
     // 4. For each slotable in slotables, set slotable’s assigned slot to slot.
-
-    // 4a. If we haven't tracked them yet, track the slot's logical children
-    if (!shadow(slot).childNodes) {
-        const childNodes = descriptors.Node.childNodes.get.call(slot);
-        shadow(slot).childNodes = slice(childNodes);
-    }
-
-    // 4b. We need to clean out the slot
-    let firstChild;
-    while (firstChild = descriptors.Node.firstChild.get.call(slot)) {
-        descriptors.Node.removeChild.value.call(slot, firstChild);
-    }
-
-    // 4c. do what the spec said
     for (let i = 0; i < slotables.length; i++) {
         const slotable = slotables[i];
         shadow(slotable).assignedSlot = slot;
-        descriptors.Node.appendChild.value.call(slot, slotable);
     }
 
-    // 4d. if there were no slotables we need to insert its fallback content
-    if (!slotables.length) {
-        const childNodes = shadow(slot).childNodes;
-        for (let i = 0; i < childNodes.length; i++) {
-            descriptors.Node.appendChild.value.call(slot, childNodes[i]);
+    !identical && setImmediate(function () {
+        // 4a. If we haven't tracked them yet, track the slot's logical children
+        if (!slotState.childNodes) {
+            const childNodes = descriptors.Node.childNodes.get.call(slot);
+            slotState.childNodes = slice(childNodes);
         }
-    }
+
+        // 4b. Clean out the slot
+        let firstChild;
+        while (firstChild = descriptors.Node.firstChild.get.call(slot)) {
+            descriptors.Node.removeChild.value.call(slot, firstChild);
+        }
+
+        // 4c. Append the slotables, if any
+        for (let i = 0; i < slotables.length; i++) {
+            const slotable = slotables[i];
+            slotState.assignedSlot = slot;
+            // if we break out the physical portion to go async, we still
+            // need to set the assignedSlot property sync
+            descriptors.Node.appendChild.value.call(slot, slotable);
+        }
+
+        // 4d. Append the fallback content, if no slots
+        if (!slotables.length) {
+            const childNodes = slotState.childNodes;
+            for (let i = 0; i < childNodes.length; i++) {
+                descriptors.Node.appendChild.value.call(slot, childNodes[i]);
+            }
+        }
+    });
 }
 
 export function assignSlotablesForATree(tree, noSignalSlots) {
@@ -797,24 +1058,28 @@ export function insert(node, parent, child, suppressObservers) {
 
     // 3. Let nodes be node’s children if node is a DocumentFragment node, 
     // and a list containing solely node otherwise.
-    let nodes = (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE)
-        ? slice(node.childNodes) : [node];
+    let nodes;
 
     // 4. If node is a DocumentFragment node, remove its children with the suppress observers flag set.
     if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+        nodes = slice(node.childNodes);
         for (let i = 0; i < nodes.length; i++) {
             remove(nodes[i], node, true);
         }
-
         // 5. If node is a DocumentFragment node, queue a mutation record of "childList" for node with removedNodes nodes.
         queueMutationRecord('childList', node, { removedNodes: nodes });
     }
+    else {
+        nodes = [node];
+    }
 
     // 6. For each node in nodes, in tree order, run these substeps:
+    const parentState = shadow(parent);
+    const parentIsShadow = isShadowRoot(parent);
     for (let i = 0; i < nodes.length; i++) {
         const node = nodes[i];
         // 1. Insert node into parent before child or at the end of parent if child is null.
-        const childNodes = shadow(parent).childNodes;
+        const childNodes = parentState.childNodes;
         if (childNodes) {
             if (child) {
                 const childIndex = childNodes.indexOf(child);
@@ -825,9 +1090,8 @@ export function insert(node, parent, child, suppressObservers) {
             }
             shadow(node).parentNode = parent;
             // If it's a shadow root, perform physical insert on the host.
-            const shadowHost = shadow(parent).host;
-            if (shadowHost) {
-                descriptors.Node.insertBefore.value.call(shadowHost, node, child);
+            if (parentIsShadow) {
+                descriptors.Node.insertBefore.value.call(parentState.host, node, child);
             }
         }
         else {
@@ -835,7 +1099,7 @@ export function insert(node, parent, child, suppressObservers) {
         }
 
         // 2. If parent is a shadow host and node is a slotable, then assign a slot for node.
-        if (shadow(parent).shadowRoot && 'assignedSlot' in node) {
+        if (parentState.shadowRoot && 'assignedSlot' in node) {
             assignASlot(node);
         }
 
@@ -868,7 +1132,7 @@ export function insert(node, parent, child, suppressObservers) {
     // with addedNodes nodes, nextSibling child, and previousSibling child’s previous sibling or 
     // parent’s last child if child is null.
     if (!suppressObservers) {
-        queueMutationRecord('childList', parent, { 
+        queueMutationRecord('childList', parent, {
             addedNodes: nodes,
             nextSibling: child,
             previousSibling: child ? child.previousSibling : parent.lastChild
@@ -1015,20 +1279,23 @@ export function remove(node, parent, suppressObservers) {
     const oldNextSibling = node.nextSibling;
 
     // 9. Remove node from its parent.
+    const nodeState = shadow(node);
     const childNodes = shadow(parent).childNodes;
     if (childNodes) {
         const nodeIndex = childNodes.indexOf(node);
         childNodes.splice(nodeIndex, 1);
+        delete nodeState.parentNode;
+        const parentNode = descriptors.Node.parentNode.get.call(node);
+        descriptors.Node.removeChild.value.call(parentNode, node);
     }
-    delete shadow(node).parentNode;
-    const parentNode = descriptors.Node.parentNode.get.call(node);
-    descriptors.Node.removeChild.value.call(parentNode, node);
+    else {
+        descriptors.Node.removeChild.value.call(parent, node);
+    }
 
     // 10. If node is assigned, then run assign slotables for node’s assigned slot.
-    const assignedSlot = shadow(node).assignedSlot;
-    if (assignedSlot) {
-        assignSlotables(assignedSlot);
-        shadow(node).assignedSlot = null;
+    if (nodeState.assignedSlot) {
+        assignSlotables(nodeState.assignedSlot);
+        nodeState.assignedSlot = null;
     }
 
     // 11. If parent is a slot whose assigned nodes is the empty list,
@@ -1104,16 +1371,17 @@ export function remove(node, parent, suppressObservers) {
 // TODO: tests
 
 function getOrCreateNodeObservers(node) {
-    const observers = shadow(node).observers;
-    return observers ? observers : shadow(node).observers = [];
+    const nodeState = shadow(node);
+    const observers = nodeState.observers;
+    return observers ? observers : nodeState.observers = [];
 }
 
 export function createMutationObserver(callback) {
-    return { 
-        callback: callback, 
+    return {
+        callback: callback,
         queue: [],
         nodes: [],
-        observe: function(node, options) {
+        observe: function (node, options) {
             if (this.nodes.length === 0) {
                 mutationObservers.push(this);
             }
@@ -1121,7 +1389,7 @@ export function createMutationObserver(callback) {
             nodeObservers.push({ instance: this, options });
             this.nodes.push(node);
         },
-        disconnect: function() {
+        disconnect: function () {
             let index = mutationObservers.indexOf(this);
             mutationObservers.splice(index, 1);
             for (let i = 0; i < this.nodes.length; i++) {
@@ -1145,7 +1413,7 @@ function createTransientObserver(observer, options, node) {
         options: observer.options,
         queue: [],
         node: node,
-        disconnect: function() {
+        disconnect: function () {
             const nodeObservers = getOrCreateNodeObservers(this.node);
             for (let j = 0; j < nodeObservers.length; j++) {
                 if (nodeObservers[j].instance === this) {
@@ -1239,8 +1507,8 @@ function queueMutationRecord(type, target, details) {
     for (let i = 0; i < interestedObservers.length; i++) {
         const observer = interestedObservers[i];
         // 1. Let record be a new MutationRecord object with its type set to type and target set to target.
-        const record = { 
-            type, 
+        const record = {
+            type,
             target,
             attributeName: null,
             attributeNamespace: null,
@@ -1292,7 +1560,7 @@ function queueMutationObserverCompoundMicrotask() {
         return;
     }
     mutationObserverCompoundMicrotaskQueuedFlag = true;
-    setTimeout(notifyMutationObservers, 0);
+    setImmediate(notifyMutationObservers);
 }
 
 function notifyMutationObservers() {
@@ -1314,9 +1582,7 @@ function notifyMutationObservers() {
                 observer.callback.call(observer.interface, queue, observer.interface);
             }
             catch (error) {
-                if (console) {
-                    console.error(error);
-                }
+                reportError(error);
             }
         }
     }
@@ -1324,6 +1590,11 @@ function notifyMutationObservers() {
         const slot = signalList[i];
         const event = slot.ownerDocument.createEvent('event');
         event.initEvent('slotchange', true, false);
-        slot.dispatchEvent(event);
+        try {
+            slot.dispatchEvent(event);
+        }
+        catch (error) {
+            reportError(error);
+        }
     }
 }

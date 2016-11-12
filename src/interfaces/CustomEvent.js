@@ -1,4 +1,4 @@
-// https://dom.spec.whatwg.org/#interface-event
+// https://dom.spec.whatwg.org/#interface-customevent
 
 import * as $ from '../utils.js';
 

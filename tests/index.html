@@ -18,6 +18,8 @@
   <script>
     mocha.setup('tdd');
   </script>
+  <script src="./interfaces/Attr.js"></script>
+  <script src="./interfaces/CharacterData.js"></script>
   <script src="./interfaces/CustomEvent.js"></script>
   <script src="./interfaces/Element.js"></script>
   <script src="./interfaces/Event.js"></script>
@@ -30,7 +32,7 @@
   <script>
     mocha.checkLeaks();
     mocha.globals([
-      '$0', '$1', '$2', '$3', '$4', '$_' // IE/Edge developer tools
+      '$0', '$1', '$2', '$3', '$4', '$_', '__BROWSERTOOLS_DOMEXPLORER_ADDED' // IE/Edge developer tools
     ]);
     mocha.run();
   </script>

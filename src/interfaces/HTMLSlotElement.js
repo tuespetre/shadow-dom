@@ -19,7 +19,7 @@ export default class {
             return;
         }
 
-        updateSlotName(this, 'name', this.name, value, null);
+        $.setAttributeValue(this, 'name', value);
     }
 
     // TODO: tests
@@ -40,26 +40,4 @@ export default class {
         return $.findFlattenedSlotables(this);
     }
 
-}
-
-function updateSlotName(element, localName, oldValue, value, namespace) {
-    // https://dom.spec.whatwg.org/#slotable-name
-    if (localName === 'name' && namespace == null) {
-        if (value === oldValue) {
-            return;
-        }
-        if (value == null && oldValue === '') {
-            return;
-        }
-        if (value === '' && oldValue == null) {
-            return;
-        }
-        if (value == null || value === '') {
-            $.descriptors.Element.setAttribute.value.call(element, 'name', '');
-        }
-        else {
-            $.descriptors.Element.setAttribute.value.call(element, 'name', value);
-        }
-        $.assignSlotablesForATree(element);
-    }
 }

@@ -7,8 +7,14 @@ export default function (base) {
     return class {
 
         get assignedSlot() {
-            // TODO: efficiency (https://github.com/whatwg/dom/issues/369)
-            return $.findASlot(this, true);
+            // spec implementation is:
+            // return $.findASlot(this, true);
+            // this uses an alternative (see https://github.com/whatwg/dom/issues/369)
+            let slot = $.shadow(this).assignedSlot;
+            if (slot && $.closedShadowHidden(slot, this)) {
+                slot = null;
+            }
+            return slot;            
         }
 
     };

@@ -6,11 +6,6 @@ import $ShadowRoot from '../interfaces/ShadowRoot.js';
 
 export default class {
 
-    // TODO: Override setAttribute, setAttributeNS, removeAttribute,
-    // removeAttributeNS, setAttributeNode, setAttributeNodeNS, 
-    // and removeAttributeNode to detect slot changes and work with
-    // MutationObservers.
-
     get slot() {
         // The slot attribute must reflect the "slot" content attribute.
         return this.getAttribute('slot');
@@ -18,7 +13,61 @@ export default class {
 
     // TODO: tests
     set slot(value) {
-        updateSlotableName(this, 'slot', this.slot, value, null);
+        $.setAttributeValue(this, 'slot', value);
+    }
+
+    // TODO: tests
+    get attributes() {
+        const attributes = $.descriptors.Element.attributes.get.call(this);
+        $.shadow(attributes).element = this;
+        return attributes;
+    }
+
+    // TODO: tests
+    setAttribute(qualifiedName, value) {
+        let attribute = $.descriptors.Element.attributes.get.call(this).getNamedItem(qualifiedName);
+        if (!attribute) {
+            attribute = this.ownerDocument.createAttribute(qualifiedName);
+            $.descriptors.Attr.value.set.call(attribute, value);
+            $.appendAttribute(attribute, this);
+            return;
+        }
+        $.changeAttribute(attribute, this, value);
+    }
+
+    // TODO: tests
+    setAttributeNS(namespace, qualifiedName, value) {
+        const dummy = document.createAttributeNS(namespace, qualifiedName);
+        $.setAttributeValue(this, dummy.localName, value, dummy.prefix, dummy.namespaceURI);
+    }
+
+    // TODO: tests
+    removeAttribute(qualifiedName) {
+        $.removeAttributeByName(qualifiedName, this);
+    }
+
+    // TODO: tests
+    removeAttributeNS(namespace, localName) {
+        $.removeAttributeByNamespace(namespace, localName, this);
+    }
+
+    // TODO: tests
+    setAttributeNode(attr) {
+        return $.setAttribute(attr, this);
+    }
+
+    // TODO: tests
+    setAttributeNodeNS(attr) {
+        return $.setAttribute(attr, this);
+    }
+
+    // TODO: tests
+    removeAttributeNode(attr) {
+        if (attr.ownerElement !== this) {
+            throw $.makeError('NotFoundError');
+        }
+        $.removeAttribute(attr, this);
+        return attr;
     }
 
     attachShadow(init) {
@@ -52,20 +101,24 @@ export default class {
 
         $.extend(shadow, $ShadowRoot);
 
-        $.shadow(shadow).host = this;
-        $.shadow(shadow).mode = init.mode;
-        $.shadow(shadow).childNodes = [];
+        const shadowState = $.shadow(shadow);
+
+        shadowState.host = this;
+        shadowState.mode = init.mode;
+        shadowState.childNodes = [];
 
         const childNodes = $.descriptors.Node.childNodes.get.call(this);
+        const hostState = $.shadow(this);
 
-        $.shadow(this).shadowRoot = shadow;
-        $.shadow(this).childNodes = $.slice(this.childNodes);
-        
+        hostState.shadowRoot = shadow;
+        hostState.childNodes = $.slice(this.childNodes);
+
+        const removeChild = $.descriptors.Node.removeChild.value;
         for (let i = 0; i < childNodes.length; i++) {
-            $.shadow(childNodes[i]).parentNode = this;
+            const childNode = childNodes[i];
+            $.shadow(childNode).parentNode = this;
+            removeChild.call(this, childNode);
         }
-
-        $.descriptors.Element.innerHTML.set.call(this, null);
 
         return shadow;
     }
@@ -128,13 +181,13 @@ export default class {
 
     // https://w3c.github.io/DOM-Parsing/#extensions-to-the-element-interface
 
-    // TODO: tests
+    // TODO: more thorough tests of the serialization
     get innerHTML() {
         // https://w3c.github.io/DOM-Parsing/#dom-element-innerhtml
         return $.serializeHTMLFragment(this);
     }
 
-    // TODO: tests
+    // TODO: MutationObserver tests
     set innerHTML(value) {
         // https://w3c.github.io/DOM-Parsing/#dom-element-innerhtml
         const fragment = $.parseHTMLFragment(value, this);
@@ -172,30 +225,4 @@ export default class {
         $.insertAdjacent(this, position, fragment);
     }
 
-}
-
-function updateSlotableName(element, localName, oldValue, value, namespace) {
-    // https://dom.spec.whatwg.org/#slotable-name
-    if (localName === 'slot' && namespace == null) {
-        if (value === oldValue) {
-            return;
-        }
-        if (value == null && oldValue === '') {
-            return;
-        }
-        if (value === '' && oldValue == null) {
-            return;
-        }
-        if (value == null || value === '') {
-            $.descriptors.Element.setAttribute.value.call(element, 'slot', '');
-        }
-        else {
-            $.descriptors.Element.setAttribute.value.call(element, 'slot', value);
-        }
-        const assignedSlot = $.shadow(element).assignedSlot;
-        if (assignedSlot) {
-            $.assignSlotables(assignedSlot);
-        }
-        $.assignASlot(element);
-    }
 }

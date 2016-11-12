@@ -1,37 +1,37 @@
 // https://dom.spec.whatwg.org/#interface-nonelementparentnode
 
-export default function(base) {
+import * as $ from '../utils.js';
+
+export default function (base) {
+
+    const native = {
+        querySelectorAll: $.descriptor(base, 'querySelectorAll')
+    };
 
     return class {
 
         getElementById(id) {
             // https://dom.spec.whatwg.org/#dom-nonelementparentnode-getelementbyid
 
-            let firstChild = this.firstChild;
-
-            if (!firstChild) {
+            if (id === '' || /\s/.test(id)) {
                 return null;
             }
 
-            const stack = [{ node: firstChild, recursed: false }];
+            const selector = '#' + serializeIdentifier(id);
+            let results;
 
-            while (stack.length) {
-                const frame = stack.pop();
+            if ($.isShadowRoot(this)) {
+                results = $.descriptors.Element.querySelectorAll.value.call($.shadow(this).host, selector);
+            }
+            else {
+                results = native.querySelectorAll.value.call(this, selector);
+            }
 
-                if (frame.recursed) {
-                    if (frame.node.nextSibling) {
-                        stack.push({ node: frame.node.nextSibling, recursed: false });
-                    }
-                }
-                else {
-                    if (frame.node.id === id) {
-                        return frame.node;
-                    }
-
-                    stack.push({ node: frame.node, recursed: true });
-
-                    if (firstChild = frame.node.firstChild) {
-                        stack.push({ node: firstChild, recursed: false });
+            if (results.length) {
+                for (let i = 0; i < results.length; i++) {
+                    const item = results[i];
+                    if ($.root(item) === this) {
+                        return item;
                     }
                 }
             }
@@ -42,3 +42,37 @@ export default function(base) {
     };
 
 }
+
+const serializeIdentifier = 'CSS' in window && 'escape' in window.CSS ? window.CSS.escape : function(string) {
+    // https://drafts.csswg.org/cssom/#serialize-an-identifier
+    let result = '';
+    for (let i = 0; i < string.length; i++) {
+        const charCode = string.charCodeAt(i);
+        if (charCode === 0x0000) {
+            result += '\uFFFD';
+            continue;
+        }
+        if (((charCode >= 0x0001 && charCode <= 0x001F) || charCode === 0x007F) ||
+            (i === 0 && charCode >= 0x0030 && charCode <= 0x00039) ||
+            (i === 1 && string[0] === '\u002D' && charCode >= 0x0030 && charCode <= 0x00039)) {
+            result += '\u005C' + charCode.toString(16) + '\u0020';
+            continue;
+        }
+        if (i === 0 && charCode === 0x002D && string.length === 1) {
+            result += '\u005C' + string.charAt(i);
+            continue;
+        }
+        if (charCode >= 0x0080 || 
+            charCode === 0x002D || 
+            charCode === 0x005F ||
+            (charCode >= 0x0030 && charCode <= 0x0039) ||
+            (charCode >= 0x0041 && charCode <= 0x005A) ||
+            (charCode >= 0x0061 && charCode <= 0x007A)) {
+            result += string.charAt(i);
+            continue;
+        }
+        result += '\u005C' + string.charAt(i);
+        continue;
+    }
+    return result;
+};

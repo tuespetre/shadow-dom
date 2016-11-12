@@ -97,31 +97,44 @@ export default class {
         return $.descriptors.Node.nextSibling.get.call(this);
     }
 
-    // TODO: implement nodeValue
+    // TODO: consider creating a raw property descriptor
+    // that uses the native get instead of a pass-through function
+    get nodeValue() {
+        return $.descriptors.Node.nodeValue.get.call(this);
+    }
 
-    // TODO: tests
+    // TODO: MutationObserver tests
+    set nodeValue(value) {
+        switch (this.nodeType) {
+            case Node.ATTRIBUTE_NODE:
+                $.setExistingAttributeValue(this, value);
+                break;
+            case Node.TEXT_NODE:
+            case Node.PROCESSING_INSTRUCTION_NODE:
+            case Node.COMMENT_NODE:
+                const length = $.descriptors.CharacterData.data.get.call(this).length;
+                $.replaceData(this, 0, length, value);
+                break;
+        }
+    }
+
     get textContent() {
         switch (this.nodeType) {
             case Node.DOCUMENT_FRAGMENT_NODE:
             case Node.ELEMENT_NODE:
-                let result = '';
-                const childNodes = this.childNodes;
-                for (let i = 0; i < childNodes.length; i++) {
-                    result += childNodes[i].textContent;
-                }
-                return result;
+                return elementTextContent(this);
             case Node.ATTRIBUTE_NODE:
-                return this.value;
+                return $.descriptors.Attr.value.get.call(this);
             case Node.TEXT_NODE:
             case Node.PROCESSING_INSTRUCTION_NODE:
             case Node.COMMENT_NODE:
-                return this.data;
+                return $.descriptors.CharacterData.data.get.call(this);
             default:
                 return null;
         }
     }
 
-    // TODO: invoke 'replace data', tests
+    // TODO: MutationObserver tests
     set textContent(value) {
         switch (this.nodeType) {
             case Node.DOCUMENT_FRAGMENT_NODE:
@@ -131,39 +144,48 @@ export default class {
                     node = this.ownerDocument.createTextNode(value);
                 }
                 $.replaceAll(node, this);
-                return;
+                break;
+            case Node.ATTRIBUTE_NODE:
+                $.setExistingAttributeValue(this, value);
+                break;
+            case Node.TEXT_NODE:
+            case Node.PROCESSING_INSTRUCTION_NODE:
+            case Node.COMMENT_NODE:
+                $.replaceData(this, 0, this.data.length, value);
+                break;
         }
-
-        return $.descriptors.Node.textContent.set.call(this, value);
     }
 
-    // TODO: invoke 'replace data', tests
+    // TODO: tests
     normalize() {
         // https://dom.spec.whatwg.org/#dom-node-normalize
         // The normalize() method, when invoked, must run these steps 
         // for each descendant exclusive Text node node of context object:
         const childNodes = this.childNodes;
+        const dataDescriptor = $.descriptors.CharacterData.data;
         for (let i = 0; i < childNodes.length; i++) {
             let childNode = childNodes[i];
-            if (childNode.hasChildNodes()) {
-                childNode.normalize();
-            }
-            else if (childNode.nodeType === Node.TEXT_NODE) {
-                let length = childNode.data.length;
+            if (childNode.nodeType === Node.TEXT_NODE) {
+                let length = dataDescriptor.get.call(childNode).length;
                 if (length === 0) {
                     $.remove(childNode, this);
                     continue;
                 }
-                let j;
-                for (j = i + 1; j < childNodes.length; j++) {
-                    let nextSibling = childNodes[j];
-                    if (nextSibling.nodeType !== Node.TEXT_NODE) {
-                        break;
-                    }
-                    childNode.data += nextSibling.data;
-                    i++;
-                    continue;
+                let data = '';
+                let contiguousTextNodes = [];
+                let next = childNode;
+                while (next = next.nextSibling && next.nodeType === Node.TEXT_NODE) {
+                    data += dataDescriptor.get.call(next);
+                    contiguousTextNodes.push(next);
                 }
+                $.replaceData(childNode, length, 0, data);
+                // TODO: (Range)
+                for (let j = 0; j < contiguousTextNodes.length; j++) {
+                    $.remove(contiguousTextNodes[j], this);
+                }
+            }
+            else {
+                childNode.normalize();
             }
         }
     }
@@ -194,6 +216,9 @@ export default class {
             return false;
         }
 
+        let thisAttributes;
+        let otherAttributes;
+
         switch (this.nodeType) {
             case Node.DOCUMENT_TYPE_NODE:
                 if (this.name !== other.name ||
@@ -201,35 +226,44 @@ export default class {
                     this.systemId !== other.systemId) {
                     return false;
                 }
+                break;
             case Node.ELEMENT_NODE:
                 if (this.namespaceURI !== other.namespaceURI ||
                     this.prefix !== other.prefix ||
-                    this.localName !== other.localName ||
-                    this.attributes.length !== other.attributes.length) {
+                    this.localName !== other.localName) {
                     return false;
                 }
+                thisAttributes = $.descriptors.Element.attributes.get.call(this);
+                otherAttributes = $.descriptors.Element.attributes.get.call(other);
+                if (thisAttributes.length != otherAttributes.length) {
+                    return false;
+                }
+                break;
             case Node.ATTRIBUTE_NODE:
                 if (this.namespaceURI !== other.namespaceURI ||
                     this.localName !== other.localName ||
                     this.value !== other.value) {
                     return false;
                 }
+                break;
             case Node.PROCESSING_INSTRUCTION_NODE:
                 if (this.target !== other.target ||
                     this.data !== other.data) {
                     return false;
                 }
+                break;
             case Node.TEXT_NODE:
             case Node.COMMENT_NODE:
                 if (this.data !== other.data) {
                     return false;
                 }
+                break;
         }
 
         if (this.nodeType == Node.ELEMENT_NODE) {
-            for (let i = 0; i < this.attributes.length; i++) {
-                let attr1 = this.attributes[i];
-                let attr2 = other.attributes[attr1.name];
+            for (let i = 0; i < thisAttributes.length; i++) {
+                let attr1 = thisAttributes[i];
+                let attr2 = otherAttributes[attr1.name];
                 if (attr1.value !== attr2.value) {
                     return false;
                 }
@@ -425,4 +459,21 @@ function preceding(element1, element2) {
     }
 
     return precedingSiblings(ancestors1[i - 1], ancestors1[i], ancestors2[i]);
+}
+
+function elementTextContent(element) {
+    let result = '';
+    const childNodes = element.childNodes;                
+    for (let i = 0; i < childNodes.length; i++) {
+        const childNode = childNodes[i];
+        switch (childNode.nodeType) {
+            case Node.ELEMENT_NODE:
+                result += elementTextContent(childNode);
+                break;
+            case Node.TEXT_NODE:
+                result += $.descriptors.CharacterData.data.get.call(childNode);
+                break;
+        }
+    }
+    return result;
 }

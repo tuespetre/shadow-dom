@@ -2,7 +2,7 @@
 
 import * as $ from '../utils.js';
 
-export default function(base) {
+export default function (base) {
 
     const native = {
         addEventListener: base.prototype.addEventListener,
@@ -30,8 +30,8 @@ export default function(base) {
                 listener.passive = options.passive === true;
             }
 
-            let collection = 
-                EventListenerCollection.get(this, type, capture) || 
+            let collection =
+                EventListenerCollection.get(this, type, capture) ||
                 EventListenerCollection.create(this, type, capture);
 
             collection.addListener(this, listener);
@@ -91,10 +91,10 @@ class EventListenerCollection {
 
     static create(target, type, capture) {
         const nativeTarget = $.shadow(target).host || target;
-        let collections = $.shadow(nativeTarget).listeners;
+        const nativeTargetState = $.shadow(nativeTarget);
+        let collections = nativeTargetState.listeners;
         if (!(collections instanceof Array)) {
-            collections = [];
-            $.shadow(nativeTarget).listeners = collections;
+            collections = nativeTargetState.listeners = [];
         }
         const collection = new EventListenerCollection(nativeTarget, type, capture);
         collections.push(collection);
@@ -166,10 +166,11 @@ class EventListenerCollection {
     }
 
     invokeListeners(event, currentTarget, listeners) {
-        let path = $.shadow(event).calculatedPath;
+        const eventState = $.shadow(event);
+        let path = eventState.calculatedPath;
 
         if (!path) {
-            path = $.shadow(event).calculatedPath = calculatePath(event);
+            path = eventState.calculatedPath = calculatePath(event);
         }
 
         const target = calculateTarget(currentTarget, path);
@@ -182,10 +183,10 @@ class EventListenerCollection {
             const relatedTarget = calculateRelatedTarget(currentTarget, path);
             const remove = [];
 
-            $.shadow(event).path = path;
-            $.shadow(event).currentTarget = currentTarget;
-            $.shadow(event).target = target;
-            $.shadow(event).relatedTarget = relatedTarget;
+            eventState.path = path;
+            eventState.currentTarget = currentTarget;
+            eventState.target = target;
+            eventState.relatedTarget = relatedTarget;
 
             for (let i = 0; i < listeners.length; i++) {
                 const listener = listeners[i];
@@ -193,13 +194,13 @@ class EventListenerCollection {
                 if (listener.once) {
                     remove.push(listener);
                 }
-                if ($.shadow(event).stopImmediatePropagationFlag) {
+                if (eventState.stopImmediatePropagationFlag) {
                     break;
                 }
             }
 
-            $.shadow(event).path = null;
-            $.shadow(event).currentTarget = null;
+            eventState.path = null;
+            eventState.currentTarget = null;
 
             for (let i = 0; i < remove.length; i++) {
                 let index = listeners.indexOf(remove[i]);
@@ -339,7 +340,7 @@ function getTheParent(node, event) {
     return null;
 }
 
-function calculateRelatedTarget(currentTarget, path) {    
+function calculateRelatedTarget(currentTarget, path) {
     for (let i = 0; i < path.length; i++) {
         const [item, , relatedTarget] = path[i];
         if (item === currentTarget) {
@@ -349,7 +350,7 @@ function calculateRelatedTarget(currentTarget, path) {
     return null;
 }
 
-function calculateTarget(currentTarget, path) {    
+function calculateTarget(currentTarget, path) {
     for (let i = 0; i < path.length; i++) {
         const [item] = path[i];
         if (item === currentTarget) {

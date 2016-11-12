@@ -127,4 +127,34 @@ suite('Element', function () {
 
     });
 
+    suite('get innerHTML()', function () {
+
+        test('does not include shadow tree', function () {
+            var div = document.createElement('div');
+            div.attachShadow({ mode: 'open'}).append(document.createTextNode('you always leave me out'));
+            div.append('well maybe if you didnt complain all the time');
+            assert.equal(div.innerHTML, 'well maybe if you didnt complain all the time');
+        });
+
+    });
+
+    suite('set innerHTML()', function () {
+
+        test('results in expected children', function () {
+            var div = document.createElement('div');
+            div.innerHTML = '<!--comment--><span>element</span>text';
+            assert.isTrue(div.firstChild instanceof Comment);
+            assert.isTrue(div.childNodes[1] instanceof HTMLSpanElement);
+            assert.isTrue(div.lastChild instanceof Text);
+        });
+
+        test('preserves shadow root and its contents', function () {
+            var div = document.createElement('div');
+            div.attachShadow({ mode: 'open'}).append(document.createTextNode('uh, yeah it is'));
+            div.innerHTML = 'this div aint big enough for the two of us';
+            assert.equal(div.shadowRoot.firstChild.data, 'uh, yeah it is');
+        });
+
+    });
+
 });

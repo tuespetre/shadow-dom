@@ -21,7 +21,7 @@ suite('NonElementParentNode', function () {
             var div2 = document.createElement('div');
             div2.id = 'test';
             document.body.append(div1, div2);
-            assert.equal(div1, document.getElementById('test'));
+            assert.equal(document.getElementById('test'), div1);
         });
 
         test('does not look down into shadow roots for the element', function () {
@@ -34,7 +34,7 @@ suite('NonElementParentNode', function () {
             div3.attachShadow({ mode: 'open' });
             div3.shadowRoot.append(div1);
             document.body.append(div3, div2);
-            assert.equal(div2, document.getElementById('test'));
+            assert.equal(document.getElementById('test'), div2);
         });
 
         test('works properly with document fragments and shadow roots', function () {
@@ -49,7 +49,7 @@ suite('NonElementParentNode', function () {
             div4.id = 'test';
             div2.shadowRoot.append(div4);
             div1.shadowRoot.append(div2, div3);
-            assert.equal(div3, div1.shadowRoot.getElementById('test'));
+            assert.equal(div1.shadowRoot.getElementById('test'), div3);
         });
 
     });
