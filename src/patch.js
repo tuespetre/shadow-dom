@@ -1,9 +1,12 @@
 import * as $ from './utils.js';
 
+import * as reflect from './reflect.js';
+
 import $Attr from './interfaces/Attr.js';
 import $CharacterData from './interfaces/CharacterData.js';
 import $CustomEvent from './interfaces/CustomEvent.js';
 import $Document from './interfaces/Document.js';
+import $DOMTokenList from './interfaces/DOMTokenList.js';
 import $Element from './interfaces/Element.js';
 import { default as $Event, hasRelatedTarget } from './interfaces/Event.js';
 import $EventTarget from './interfaces/EventTarget.js';
@@ -25,6 +28,9 @@ import $ParentNode from './mixins/ParentNode.js';
 import $Slotable from './mixins/Slotable.js';
 
 export default function () {
+
+    // Reflected attributes
+    reflect.patchAll();
 
     // Element.matches(selectors) polyfill from MDN
     // https://developer.mozilla.org/en-US/docs/Web/API/Element/matches#Polyfill
@@ -52,7 +58,10 @@ export default function () {
     // Document interface
     $.extend(Document, $Document);
 
-    // TODO: implement DOMTokenList
+    // DOMTokenList interface
+    if ('DOMTokenList' in window) {
+        $.extend(DOMTokenList, $DOMTokenList);
+    }
 
     // Element interface
     $.extend(Element, $Element);

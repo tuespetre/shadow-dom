@@ -8,7 +8,7 @@ suite('Element', function () {
 
         test('gets the value of the \'slot\' attribute', function () {
             var div = document.createElement('div');
-            assert.equal(div.slot, null);
+            assert.equal(div.slot, '');
             div.setAttribute('slot', 'test');
             assert.equal(div.slot, 'test');
         });

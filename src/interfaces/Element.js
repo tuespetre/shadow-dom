@@ -6,16 +6,6 @@ import $ShadowRoot from '../interfaces/ShadowRoot.js';
 
 export default class {
 
-    get slot() {
-        // The slot attribute must reflect the "slot" content attribute.
-        return this.getAttribute('slot');
-    }
-
-    // TODO: tests
-    set slot(value) {
-        $.setAttributeValue(this, 'slot', value);
-    }
-
     // TODO: tests
     get attributes() {
         const attributes = $.descriptors.Element.attributes.get.call(this);

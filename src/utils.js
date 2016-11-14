@@ -61,9 +61,15 @@ export const setImmediate = 'setImmediate' in window ? window.setImmediate : fun
 
 // TODO: analyze usages and provide brief but descriptive messages
 export function makeError(name, message) {
-    const error = new Error(message || name);
-    error.name = name;
-    return error;
+    try {
+        const sacrifice = document.createElement('div');
+        descriptors.Node.appendChild.call(sacrifice, sacrifice);
+    }
+    catch (error) {
+        error.message = message;
+        error.name = name;
+        return error;
+    }
 }
 
 export function reportError(error) {
@@ -85,6 +91,14 @@ export function extend(object, ...mixins) {
             Object.defineProperty(object.prototype || object, name, descriptor);
         }
     }
+}
+
+export function hasShadowState(object) {
+    return '_shadow' in object;
+}
+
+export function setShadowState(object, state) {
+    object._shadow = state;
 }
 
 export function shadow(object) {

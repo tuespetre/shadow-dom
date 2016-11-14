@@ -38,7 +38,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":25}],2:[function(require,module,exports){
+},{"../utils.js":27}],2:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -111,7 +111,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":25}],3:[function(require,module,exports){
+},{"../utils.js":27}],3:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -147,7 +147,160 @@ var _class = function _class(type, init) {
 
 exports.default = _class;
 
-},{"../utils.js":25}],4:[function(require,module,exports){
+},{"../utils.js":27}],4:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // https://dom.spec.whatwg.org/#interface-domtokenlist
+
+var _utils = require('../utils.js');
+
+var $ = _interopRequireWildcard(_utils);
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var _class = function () {
+    function _class() {
+        _classCallCheck(this, _class);
+    }
+
+    _createClass(_class, [{
+        key: 'item',
+
+
+        // TODO: Caveat about indexer expressions?
+        value: function item(index) {
+            var state = $.shadow(this);
+            return index >= state.tokens.length ? null : state.tokens[index];
+        }
+    }, {
+        key: 'contains',
+        value: function contains(token) {
+            var state = $.shadow(this);
+            return state.tokens.indexOf(token) !== -1;
+        }
+    }, {
+        key: 'add',
+        value: function add() {
+            for (var _len = arguments.length, tokens = Array(_len), _key = 0; _key < _len; _key++) {
+                tokens[_key] = arguments[_key];
+            }
+
+            validateTokens(tokens);
+            var state = $.shadow(this);
+            for (var i = 0; i < tokens.length; i++) {
+                var token = tokens[i];
+                var index = state.tokens.indexOf(token);
+                if (index === -1) {
+                    state.tokens.push(token);
+                }
+            }
+            state.tokens.sort();
+            $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
+        }
+    }, {
+        key: 'remove',
+        value: function remove() {
+            for (var _len2 = arguments.length, tokens = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+                tokens[_key2] = arguments[_key2];
+            }
+
+            validateTokens(tokens);
+            var state = $.shadow(this);
+            for (var i = 0; i < tokens.length; i++) {
+                var token = tokens[i];
+                var index = state.tokens.indexOf(token);
+                if (index !== -1) {
+                    state.tokens.splice(index, 1);
+                }
+            }
+            $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
+        }
+    }, {
+        key: 'toggle',
+        value: function toggle(token, force) {
+            validateToken(token);
+            var state = $.shadow(this);
+            var index = state.tokens.indexOf(token);
+            if (index !== -1) {
+                if (arguments.length === 1 || force === false) {
+                    state.tokens.splice(index, 1);
+                    $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
+                    return false;
+                } else {
+                    return true;
+                }
+            } else {
+                if (force === false) {
+                    return false;
+                } else {
+                    state.tokens.push(token);
+                    state.tokens.sort();
+                    $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
+                    return true;
+                }
+            }
+        }
+    }, {
+        key: 'replace',
+        value: function replace(token, newToken) {
+            validateToken(token);
+            validateToken(newToken);
+            var state = $.shadow(this);
+            var index = state.tokens.indexOf(token);
+            if (index === -1) {
+                return;
+            }
+            state.tokens[index] = newToken;
+            state.tokens.sort();
+            $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
+        }
+    }, {
+        key: 'length',
+        get: function get() {
+            var state = $.shadow(this);
+            return state.tokens.length;
+        }
+    }, {
+        key: 'value',
+        get: function get() {
+            var state = $.shadow(this);
+            return state.element.getAttribute(state.localName) || '';
+        },
+        set: function set(value) {
+            var state = $.shadow(this);
+            $.setAttributeValue(state.element, state.localName, value);
+            state.tokens = $.slice(this);
+        }
+    }]);
+
+    return _class;
+}();
+
+exports.default = _class;
+
+
+function validateTokens(tokens) {
+    for (var i = 0; i < tokens.length; i++) {
+        validateToken(tokens[i]);
+    }
+}
+
+function validateToken(token) {
+    if (token == '') {
+        throw $.makeError('SyntaxError');
+    }
+    if (/\s/.test(token)) {
+        throw $.makeError('InvalidCharacterError');
+    }
+}
+
+},{"../utils.js":27}],5:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -215,7 +368,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":25}],5:[function(require,module,exports){
+},{"../utils.js":27}],6:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -443,22 +596,10 @@ var _class = function () {
             $.insertAdjacent(this, position, fragment);
         }
     }, {
-        key: 'slot',
-        get: function get() {
-            // The slot attribute must reflect the "slot" content attribute.
-            return this.getAttribute('slot');
-        }
-
-        // TODO: tests
-        ,
-        set: function set(value) {
-            $.setAttributeValue(this, 'slot', value);
-        }
-
-        // TODO: tests
-
-    }, {
         key: 'attributes',
+
+
+        // TODO: tests
         get: function get() {
             var attributes = $.descriptors.Element.attributes.get.call(this);
             $.shadow(attributes).element = this;
@@ -525,7 +666,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../interfaces/ShadowRoot.js":15,"../utils.js":25}],6:[function(require,module,exports){
+},{"../interfaces/ShadowRoot.js":16,"../utils.js":27}],7:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -665,7 +806,7 @@ var builtInComposedEvents = [
 // Legacy KeyboardEvent
 'keypress'];
 
-},{"../utils.js":25}],7:[function(require,module,exports){
+},{"../utils.js":27}],8:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1074,7 +1215,7 @@ function calculateTarget(currentTarget, path) {
     return null;
 }
 
-},{"../utils.js":25}],8:[function(require,module,exports){
+},{"../utils.js":27}],9:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1146,7 +1287,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":25}],9:[function(require,module,exports){
+},{"../utils.js":27}],10:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1223,7 +1364,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":25}],10:[function(require,module,exports){
+},{"../utils.js":27}],11:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1267,7 +1408,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":25}],11:[function(require,module,exports){
+},{"../utils.js":27}],12:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1308,7 +1449,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":25}],12:[function(require,module,exports){
+},{"../utils.js":27}],13:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1357,7 +1498,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":25}],13:[function(require,module,exports){
+},{"../utils.js":27}],14:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1426,7 +1567,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":25}],14:[function(require,module,exports){
+},{"../utils.js":27}],15:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1964,7 +2105,7 @@ function elementTextContent(element) {
     return result;
 }
 
-},{"../utils.js":25}],15:[function(require,module,exports){
+},{"../utils.js":27}],16:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2024,7 +2165,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":25}],16:[function(require,module,exports){
+},{"../utils.js":27}],17:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2077,7 +2218,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":25}],17:[function(require,module,exports){
+},{"../utils.js":27}],18:[function(require,module,exports){
 'use strict';
 
 var _patch = require('./patch.js');
@@ -2092,7 +2233,7 @@ if (!nativeShadowDom || window.forceShadowDomPolyfill) {
     (0, _patch2.default)();
 }
 
-},{"./patch.js":24}],18:[function(require,module,exports){
+},{"./patch.js":25}],19:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2267,7 +2408,7 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-},{"../utils.js":25}],19:[function(require,module,exports){
+},{"../utils.js":27}],20:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2317,7 +2458,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":25}],20:[function(require,module,exports){
+},{"../utils.js":27}],21:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2416,7 +2557,7 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-},{"../utils.js":25}],21:[function(require,module,exports){
+},{"../utils.js":27}],22:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2506,7 +2647,7 @@ var serializeIdentifier = 'CSS' in window && 'escape' in window.CSS ? window.CSS
     return result;
 };
 
-},{"../utils.js":25}],22:[function(require,module,exports){
+},{"../utils.js":27}],23:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2729,7 +2870,7 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-},{"../utils.js":25}],23:[function(require,module,exports){
+},{"../utils.js":27}],24:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2771,7 +2912,7 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-},{"../utils.js":25}],24:[function(require,module,exports){
+},{"../utils.js":27}],25:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2779,6 +2920,9 @@ Object.defineProperty(exports, "__esModule", {
 });
 
 exports.default = function () {
+
+    // Reflected attributes
+    reflect.patchAll();
 
     // Element.matches(selectors) polyfill from MDN
     // https://developer.mozilla.org/en-US/docs/Web/API/Element/matches#Polyfill
@@ -2801,7 +2945,10 @@ exports.default = function () {
     // Document interface
     $.extend(Document, _Document2.default);
 
-    // TODO: implement DOMTokenList
+    // DOMTokenList interface
+    if ('DOMTokenList' in window) {
+        $.extend(DOMTokenList, _DOMTokenList2.default);
+    }
 
     // Element interface
     $.extend(Element, _Element2.default);
@@ -2890,6 +3037,10 @@ var _utils = require('./utils.js');
 
 var $ = _interopRequireWildcard(_utils);
 
+var _reflect = require('./reflect.js');
+
+var reflect = _interopRequireWildcard(_reflect);
+
 var _Attr = require('./interfaces/Attr.js');
 
 var _Attr2 = _interopRequireDefault(_Attr);
@@ -2905,6 +3056,10 @@ var _CustomEvent2 = _interopRequireDefault(_CustomEvent);
 var _Document = require('./interfaces/Document.js');
 
 var _Document2 = _interopRequireDefault(_Document);
+
+var _DOMTokenList = require('./interfaces/DOMTokenList.js');
+
+var _DOMTokenList2 = _interopRequireDefault(_DOMTokenList);
 
 var _Element = require('./interfaces/Element.js');
 
@@ -2982,7 +3137,563 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-},{"./interfaces/Attr.js":1,"./interfaces/CharacterData.js":2,"./interfaces/CustomEvent.js":3,"./interfaces/Document.js":4,"./interfaces/Element.js":5,"./interfaces/Event.js":6,"./interfaces/EventTarget.js":7,"./interfaces/HTMLSlotElement.js":8,"./interfaces/HTMLTableElement.js":9,"./interfaces/HTMLTableRowElement.js":10,"./interfaces/HTMLTableSectionElement.js":11,"./interfaces/MutationObserver.js":12,"./interfaces/NamedNodeMap.js":13,"./interfaces/Node.js":14,"./interfaces/ShadowRoot.js":15,"./interfaces/Text.js":16,"./mixins/ChildNode.js":18,"./mixins/DocumentOrShadowRoot.js":19,"./mixins/NonDocumentTypeChildNode.js":20,"./mixins/NonElementParentNode.js":21,"./mixins/ParentNode.js":22,"./mixins/Slotable.js":23,"./utils.js":25}],25:[function(require,module,exports){
+},{"./interfaces/Attr.js":1,"./interfaces/CharacterData.js":2,"./interfaces/CustomEvent.js":3,"./interfaces/DOMTokenList.js":4,"./interfaces/Document.js":5,"./interfaces/Element.js":6,"./interfaces/Event.js":7,"./interfaces/EventTarget.js":8,"./interfaces/HTMLSlotElement.js":9,"./interfaces/HTMLTableElement.js":10,"./interfaces/HTMLTableRowElement.js":11,"./interfaces/HTMLTableSectionElement.js":12,"./interfaces/MutationObserver.js":13,"./interfaces/NamedNodeMap.js":14,"./interfaces/Node.js":15,"./interfaces/ShadowRoot.js":16,"./interfaces/Text.js":17,"./mixins/ChildNode.js":19,"./mixins/DocumentOrShadowRoot.js":20,"./mixins/NonDocumentTypeChildNode.js":21,"./mixins/NonElementParentNode.js":22,"./mixins/ParentNode.js":23,"./mixins/Slotable.js":24,"./reflect.js":26,"./utils.js":27}],26:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.patchAll = patchAll;
+
+var _utils = require('./utils.js');
+
+var $ = _interopRequireWildcard(_utils);
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
+// Fear not the single page
+// https://www.w3.org/TR/html/single-page.html
+
+// TODO: implement on demand
+// These might be a bit much considering we can't do anything about inline script handlers
+// GlobalEventHandlers
+// DocumentAndElementEventHandlers
+
+// TODO: implement on demand
+// This would be useful to polyfill considering most current browsers don't implement it yet
+// HTMLHyperlinkElementUtils (Anchor, Area)
+
+var interfaces = {
+    Element: {
+        'id': reflectString(),
+        'className': reflectString('class'),
+        'classList': reflectDOMTokenList('class'),
+        'slot': reflectString()
+    },
+    HTMLElement: {
+        'title': reflectString(),
+        'lang': reflectString(),
+        'translate': reflectString(),
+        'dir': reflectString(),
+        // TODO: implement on demand
+        //'dataset': reflect.DOMStringMap('data'),
+        'hidden': reflectBoolean(),
+        'tabIndex': reflectInteger(null, 0),
+        'accessKey': reflectString(),
+        'draggable': reflectString(),
+        'contextMenu': reflectHTMLElement(window.HTMLMenuElement),
+        'spellcheck': reflectString(),
+        // ElementContentEditable
+        'contentEditable': reflectString()
+    },
+    HTMLAnchorElement: {
+        'target': reflectString(),
+        'download': reflectString(),
+        'rel': reflectString(),
+        'rev': reflectString(),
+        'relList': reflectDOMTokenList('rel'),
+        'hreflang': reflectString(),
+        'type': reflectString(),
+        'text': reflectTextContent()
+    },
+    HTMLAreaElement: {
+        'alt': reflectString(),
+        'coords': reflectString(),
+        'shape': reflectString(),
+        'target': reflectString(),
+        'download': reflectString(),
+        'rel': reflectString(),
+        'relList': reflectDOMTokenList('rel'),
+        'hreflang': reflectString(),
+        'type': reflectString()
+    },
+    HTMLBaseElement: {
+        'href': reflectString(),
+        'target': reflectString()
+    },
+    HTMLButtonElement: {
+        'autofocus': reflectBoolean(),
+        'disabled': reflectBoolean(),
+        'form': reflectHTMLElement(HTMLFormElement, true),
+        'formAction': reflectString(),
+        'formEnctype': reflectString(),
+        'formMethod': reflectString(),
+        'formNoValidate': reflectBoolean(),
+        'formTarget': reflectString(),
+        'name': reflectString(),
+        'type': reflectString(),
+        'value': reflectString(),
+        'menu': reflectHTMLElement(window.HTMLMenuElement)
+    },
+    HTMLCanvasElement: {
+        'width': reflectInteger(null, 0),
+        'height': reflectInteger(null, 0)
+    },
+    HTMLDataElement: {
+        'value': reflectString()
+    },
+    HTMLDetailsElement: {
+        'open': reflectBoolean()
+    },
+    HTMLEmbedElement: {
+        'src': reflectString(),
+        'type': reflectString(),
+        'width': reflectInteger(null, 0),
+        'height': reflectInteger(null, 0)
+    },
+    HTMLFieldSetElement: {
+        'disabled': reflectBoolean(),
+        'form': reflectHTMLElement(HTMLFormElement, true),
+        'name': reflectString()
+    },
+    HTMLFormElement: {
+        'acceptCharset': reflectString('accept-charset'),
+        'action': reflectString(),
+        'autocomplete': reflectString(),
+        'enctype': reflectString(),
+        'encoding': reflectString('enctype'),
+        'method': reflectString(),
+        'name': reflectString(),
+        'noValidate': reflectBoolean(),
+        'target': reflectString()
+    },
+    HTMLIFrameElement: {
+        'src': reflectString(),
+        'srcdoc': reflectString(),
+        'name': reflectString(),
+        'sandbox': reflectDOMTokenList('sandbox'),
+        'allowFullscreen': reflectBoolean(),
+        'width': reflectInteger(null, 0),
+        'height': reflectInteger(null, 0)
+    },
+    HTMLImageElement: {
+        'alt': reflectString(),
+        'src': reflectString(),
+        'srcset': reflectString(),
+        'crossOrigin': reflectString(),
+        'useMap': reflectString(),
+        'isMap': reflectBoolean(),
+        'width': reflectInteger(null, 0),
+        'height': reflectInteger(null, 0)
+    },
+    // TODO: caveat about feature testing input elements using anything besides 'type'
+    HTMLInputElement: {
+        'accept': reflectString(),
+        'alt': reflectString(),
+        'autocomplete': reflectString(),
+        'autofocus': reflectBoolean(),
+        'defaultChecked': reflectBoolean('checked'),
+        'dirName': reflectString(),
+        'disabled': reflectBoolean(),
+        'form': reflectHTMLElement(HTMLFormElement, true),
+        'formAction': reflectString(),
+        'formEnctype': reflectString(),
+        'formMethod': reflectString(),
+        'formNoValidate': reflectBoolean(),
+        'formTarget': reflectString(),
+        'height': reflectInteger(null, 0),
+        'inputMode': reflectString(),
+        // TODO: investigate whether we should bother with 'list'.
+        // Browsers without native Shadow DOM could end up not
+        // pulling suggestions from the correct list anyways.
+        // Possibly needs to be a caveat about this.
+        //'list': reflectSuggestionSourceElement(),
+        'max': reflectString(),
+        'maxLength': reflectInteger(0, 0),
+        'min': reflectString(),
+        'minLength': reflectInteger(0, 0),
+        'multiple': reflectBoolean(),
+        'name': reflectString(),
+        'pattern': reflectString(),
+        'placeholder': reflectString(),
+        'readOnly': reflectBoolean(),
+        'required': reflectBoolean(),
+        'size': reflectInteger(1, 1),
+        'src': reflectString(),
+        'step': reflectString(),
+        'type': reflectString(),
+        'defaultValue': reflectString('value'),
+        'width': reflectInteger(null, 0)
+    },
+    HTMLKeygenElement: {
+        'autofocus': reflectBoolean(),
+        'challenge': reflectString(),
+        'disabled': reflectBoolean(),
+        'form': reflectHTMLElement(HTMLFormElement, true),
+        'keytype': reflectString(),
+        'name': reflectString()
+    },
+    HTMLLabelElement: {
+        'form': reflectHTMLElement(HTMLFormElement, true),
+        'htmlFor': reflectString('for')
+    },
+    HTMLLegendElement: {
+        'form': reflectHTMLElement(HTMLFormElement, true)
+    },
+    HTMLLIElement: {
+        'value': reflectString()
+    },
+    HTMLLinkElement: {
+        'href': reflectString(),
+        'crossOrigin': reflectString(),
+        'rel': reflectString(),
+        'rev': reflectString(),
+        'relList': reflectDOMTokenList('rel'),
+        'media': reflectString(),
+        'hreflang': reflectString(),
+        'type': reflectString(),
+        'sizes': reflectDOMTokenList('sizes')
+    },
+    HTMLMapElement: {
+        'name': reflectString()
+    },
+    HTMLMediaElement: {
+        'src': reflectString(),
+        'crossOrigin': reflectString(),
+        'preload': reflectString(),
+        'loop': reflectBoolean(),
+        'autoplay': reflectBoolean(),
+        'mediaGroup': reflectString(),
+        'controls': reflectBoolean(),
+        'defaultMuted': reflectBoolean('muted')
+    },
+    HTMLMenuElement: {
+        'type': reflectString(),
+        'label': reflectString()
+    },
+    HTMLMenuItemElement: {
+        'type': reflectString(),
+        'label': reflectString(),
+        'icon': reflectString(),
+        'disabled': reflectBoolean(),
+        'checked': reflectBoolean('checked'),
+        'radiogroup': reflectString(),
+        'default': reflectBoolean()
+    },
+    HTMLMetaElement: {
+        'name': reflectString(),
+        'httpEquiv': reflectString('http-equiv'),
+        'content': reflectString()
+    },
+    HTMLMeterElement: {
+        'value': reflectFloat(null, 0),
+        'min': reflectFloat(null, 0),
+        'max': reflectFloat(null, 0),
+        'low': reflectFloat(null, 0),
+        'high': reflectFloat(null, 0),
+        'optimum': reflectFloat(null, 0)
+    },
+    HTMLModElement: {
+        'cite': reflectString(),
+        'dateTime': reflectString()
+    },
+    HTMLObjectElement: {
+        'data': reflectString(),
+        'type': reflectString(),
+        'typeMustMatch': reflectBoolean(),
+        'name': reflectString(),
+        'form': reflectHTMLElement(HTMLFormElement, true),
+        'width': reflectInteger(null, 0),
+        'height': reflectInteger(null, 0)
+    },
+    HTMLOListElement: {
+        'reversed': reflectBoolean(),
+        'start': reflectInteger(null, 0),
+        'type': reflectString()
+    },
+    HTMLOptGroupElement: {
+        'disabled': reflectBoolean(),
+        'label': reflectString()
+    },
+    HTMLOptionElement: {
+        'disabled': reflectBoolean(),
+        'form': reflectHTMLElement(HTMLFormElement, true),
+        'label': reflectString(),
+        'defaultSelected': reflectBoolean('selected'),
+        'value': reflectString()
+    },
+    HTMLOutputElement: {
+        'htmlFor': reflectDOMTokenList('for'),
+        'form': reflectHTMLElement(HTMLFormElement, true),
+        'name': reflectString(),
+        'defaultValue': reflectString('value')
+    },
+    HTMLParamElement: {
+        'name': reflectString(),
+        'value': reflectString()
+    },
+    HTMLProgressElement: {
+        'value': reflectFloat(null, 0),
+        'max': reflectFloat(null, 0)
+    },
+    HTMLQuoteElement: {
+        'cite': reflectString()
+    },
+    HTMLScriptElement: {
+        'src': reflectString(),
+        'type': reflectString(),
+        'charset': reflectString(),
+        'async': reflectBoolean(),
+        'defer': reflectBoolean(),
+        'crossOrigin': reflectString(),
+        // TODO: implement on demand
+        // 'text': reflectScriptText(),
+        'nonce': reflectString()
+    },
+    HTMLSelectElement: {
+        'autocomplete': reflectString(),
+        'autofocus': reflectBoolean(),
+        'disabled': reflectBoolean(),
+        'form': reflectHTMLElement(HTMLFormElement, true),
+        'multiple': reflectBoolean(),
+        'name': reflectString(),
+        'required': reflectBoolean(),
+        'size': reflectInteger(1, 1)
+    },
+    HTMLSourceElement: {
+        'src': reflectString(),
+        'type': reflectString(),
+        'media': reflectString()
+    },
+    HTMLStyleElement: {
+        'media': reflectString(),
+        'nonce': reflectString(),
+        'type': reflectString()
+    },
+    HTMLTableCellElement: {
+        'colSpan': reflectInteger(0, -1),
+        'rowSpan': reflectInteger(0, -1),
+        'headers': reflectDOMTokenList('headers')
+    },
+    HTMLTableColElement: {
+        'span': reflectInteger(1, 1)
+    },
+    HTMLTableHeaderCellElement: {
+        'scope': reflectString(),
+        'abbr': reflectString()
+    },
+    HTMLTextAreaElement: {
+        'autocomplete': reflectString(),
+        'autofocus': reflectBoolean(),
+        'cols': reflectString(),
+        'dirName': reflectString(),
+        'disabled': reflectBoolean(),
+        'form': reflectHTMLElement(HTMLFormElement, true),
+        'inputMode': reflectString(),
+        'maxLength': reflectInteger(0, 0),
+        'minLength': reflectInteger(0, 0),
+        'name': reflectString(),
+        'placeholder': reflectString(),
+        'readOnly': reflectBoolean(),
+        'required': reflectBoolean(),
+        'rows': reflectInteger(1, 1),
+        'wrap': reflectString(),
+        'defaultValue': reflectTextContent()
+    },
+    HTMLTimeElement: {
+        'dateTime': reflectString()
+    },
+    HTMLTrackElement: {
+        'kind': reflectString(),
+        'src': reflectString(),
+        'srclang': reflectString(),
+        'label': reflectString(),
+        'default': reflectBoolean()
+    },
+    HTMLVideoElement: {
+        'width': reflectInteger(null, 0),
+        'height': reflectInteger(null, 0),
+        'poster': reflectString()
+    }
+};
+
+// https://www.w3.org/TR/html/single-page.html#reflection
+
+// An index of IDL attributes that should reflect a corresponding content attribute.
+
+function reflectString(attributeName) {
+    return function (type, name) {
+        attributeName = attributeName || name.toLowerCase();
+        var descriptor = $.descriptor(type, name);
+        Object.defineProperty(type.prototype, name, {
+            configurable: true,
+            enumerable: true,
+            get: descriptor ? descriptor.get : function () {
+                return this.getAttribute(attributeName) || '';
+            },
+            set: function set(value) {
+                $.setAttributeValue(this, attributeName, value);
+            }
+        });
+    };
+}
+
+function reflectBoolean(attributeName) {
+    return function (type, name) {
+        attributeName = attributeName || name.toLowerCase();
+        Object.defineProperty(type.prototype, name, {
+            configurable: true,
+            enumerable: true,
+            get: function get() {
+                return this.hasAttribute(attributeName);
+            },
+            set: function set(value) {
+                if (value == null) {
+                    $.removeAttributeByName(attributeName, this);
+                } else {
+                    $.setAttributeValue(this, attributeName, value);
+                }
+            }
+        });
+    };
+}
+
+// TODO: minValue, errors
+function reflectInteger(minValue, defaultValue) {
+    return function (type, name) {
+        var attributeName = name.toLowerCase();
+        defaultValue = defaultValue || 0;
+        Object.defineProperty(type.prototype, name, {
+            configurable: true,
+            enumerable: true,
+            get: function get() {
+                var value = this.getAttribute(attributeName);
+                return parseInt(value) || defaultValue;
+            },
+            set: function set(value) {
+                if (typeof value !== 'number') {
+                    throw $.makeError('TypeError');
+                }
+                $.setAttributeValue(this, attributeName, value.toString());
+            }
+        });
+    };
+}
+
+// TODO: minValue, errors
+function reflectFloat(minValue, defaultValue) {
+    return function (type, name) {
+        var attributeName = name.toLowerCase();
+        defaultValue = defaultValue || 0;
+        Object.defineProperty(type.prototype, name, {
+            configurable: true,
+            enumerable: true,
+            get: function get() {
+                var value = this.getAttribute(attributeName);
+                return parseFloat(value) || defaultValue;
+            },
+            set: function set(value) {
+                if (typeof value !== 'number') {
+                    throw $.makeError('TypeError');
+                }
+                $.setAttributeValue(this, attributeName, value.toString());
+            }
+        });
+    };
+}
+
+function reflectDOMTokenList(localName) {
+    return function (type, name) {
+        var descriptor = $.descriptor(type, name);
+        if (!descriptor) {
+            return;
+        }
+        Object.defineProperty(type.prototype, name, {
+            configurable: true,
+            enumerable: true,
+            get: function get() {
+                var state = $.shadow(this);
+                if (!state.tokenList) {
+                    var element = this;
+                    var original = this.getAttribute(localName);
+                    var tokens = original ? original.split(/\s/).sort() : [];
+                    var tokenList = Object.create(DOMTokenList.prototype);
+                    $.setShadowState(tokenList, { element: element, localName: localName, tokens: tokens });
+                    state.tokenList = tokenList;
+                }
+                return state.tokenList;
+            },
+            set: function set(value) {
+                var state = $.shadow(this);
+                if (!state.tokenList) {
+                    var element = this;
+                    var original = this.getAttribute(localName);
+                    var tokens = original ? original.split(/\s/).sort() : [];
+                    var tokenList = Object.create(DOMTokenList.prototype);
+                    $.setShadowState(tokenList, { element: element, localName: localName, tokens: tokens });
+                    state.tokenList = tokenList;
+                }
+                state.tokenList.value = value;
+            }
+        });
+    };
+}
+
+function reflectHTMLElement(candidateType, readOnly) {
+    return function (type, name) {
+        var attributeName = name.toLowerCase();
+        Object.defineProperty(type.prototype, name, {
+            configurable: true,
+            enumerable: true,
+            get: function get() {
+                if (!this.hasAttribute(attributeName)) {
+                    return null;
+                }
+                var id = this.getAttribute(attributeName);
+                var candidate = this.ownerDocument.getElementById(id);
+                if (candidate == null || !(candidate instanceof candidateType)) {
+                    return null;
+                }
+                return candidate;
+            },
+            set: readOnly ? undefined : function (value) {
+                if (!(value instanceof candidateType)) {
+                    throw $.makeError('TypeError');
+                }
+                if (value.hasAttribute('id')) {
+                    var found = this.ownerDocument.getElementById(value.id);
+                    if (value === found) {
+                        this.setAttribute(attributeName, value.id);
+                        return;
+                    }
+                }
+                this.setAttribute(attributeName, '');
+            }
+        });
+    };
+}
+
+function reflectTextContent() {
+    return function (type, name) {
+        Object.defineProperty(type.prototype, name, {
+            configurable: true,
+            enumerable: true,
+            get: function get() {
+                return this.textContent;
+            },
+            set: function set(value) {
+                this.textContent = value;
+            }
+        });
+    };
+}
+
+function patchAll() {
+    var identifiers = Object.getOwnPropertyNames(interfaces);
+    for (var i = 0; i < identifiers.length; i++) {
+        var identifier = identifiers[i];
+        if (identifier in window) {
+            var type = window[identifier];
+            var attributes = Object.getOwnPropertyNames(interfaces[identifier]);
+            for (var j = 0; j < attributes.length; j++) {
+                var attribute = attributes[j];
+                interfaces[identifier][attribute](type, attribute);
+            }
+        }
+    }
+}
+
+},{"./utils.js":27}],27:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2991,6 +3702,8 @@ Object.defineProperty(exports, "__esModule", {
 exports.makeError = makeError;
 exports.reportError = reportError;
 exports.extend = extend;
+exports.hasShadowState = hasShadowState;
+exports.setShadowState = setShadowState;
 exports.shadow = shadow;
 exports.filterByRoot = filterByRoot;
 exports.isShadowRoot = isShadowRoot;
@@ -3110,9 +3823,14 @@ var setImmediate = exports.setImmediate = 'setImmediate' in window ? window.setI
 
 // TODO: analyze usages and provide brief but descriptive messages
 function makeError(name, message) {
-    var error = new Error(message || name);
-    error.name = name;
-    return error;
+    try {
+        var sacrifice = document.createElement('div');
+        descriptors.Node.appendChild.call(sacrifice, sacrifice);
+    } catch (error) {
+        error.message = message;
+        error.name = name;
+        return error;
+    }
 }
 
 function reportError(error) {
@@ -3138,6 +3856,14 @@ function extend(object) {
             Object.defineProperty(object.prototype || object, name, _descriptor);
         }
     }
+}
+
+function hasShadowState(object) {
+    return '_shadow' in object;
+}
+
+function setShadowState(object, state) {
+    object._shadow = state;
 }
 
 function shadow(object) {
@@ -4625,4 +5351,4 @@ function notifyMutationObservers() {
     }
 }
 
-},{}]},{},[17]);
+},{}]},{},[18]);
