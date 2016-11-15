@@ -8,7 +8,6 @@ export default class {
         return $.descriptors.Attr.value.get.call(this);
     }
 
-    // TODO: MutationObserver tests
     set value(value) {
         $.setExistingAttributeValue(this, value);
     }

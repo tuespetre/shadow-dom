@@ -10,11 +10,11 @@ export default class {
     }
 
     get mode() {
-        return $.shadow(this).mode;
+        return $.getShadowState(this).mode;
     }
 
     get host() {
-        return $.shadow(this).host;
+        return $.getShadowState(this).host;
     }
 
     // TODO: tests

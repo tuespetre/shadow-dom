@@ -4,28 +4,32 @@ import * as $ from '../utils.js';
 
 export default class {
 
-    // todo: tests
+    // TODO: tests
     setNamedItem(attr) {
-        return $.setAttribute(attr, $.shadow(this).element);
+        const shadowState = $.getShadowState(this);
+        return $.setAttribute(attr, shadowState.element);
     }
     
-    // todo: tests
+    // TODO: tests
     setNamedItemNS(attr) {
-        return $.setAttribute(attr, $.shadow(this).element);
+        const shadowState = $.getShadowState(this);
+        return $.setAttribute(attr, shadowState.element);
     }
 
-    // todo: tests
+    // TODO: tests
     removeNamedItem(qualifiedName) {
-        const attr = $.removeAttributeByName(qualifiedName, $.shadow(this).element);
+        const shadowState = $.getShadowState(this);
+        const attr = $.removeAttributeByName(qualifiedName, shadowState.element);
         if (!attr) {
             throw $.makeError('NotFoundError');
         }
         return attr;
     }
 
-    // todo: tests
+    // TODO: tests
     removeNamedItemNS(namespace, localName) {
-        const attr = $.removeAttributeByNamespace(namespace, localName, $.shadow(this).element);
+        const shadowState = $.getShadowState(this);
+        const attr = $.removeAttributeByNamespace(namespace, localName, shadowState.element);
         if (!attr) {
             throw $.makeError('NotFoundError');
         }

@@ -5,14 +5,37 @@
   <meta charset="utf-8">
   <title>Mocha Tests</title>
   <link href="https://cdn.rawgit.com/mochajs/mocha/2.2.5/mocha.css" rel="stylesheet" />
+  <style>
+    #tests-nav {
+      padding: 30px;
+      background-color: whitesmoke;
+      border-bottom: 1px solid silver;
+    }
+
+    #tests-nav > a.active {
+      font-weight: bold;      
+    }
+  </style>
 </head>
 
 <body>
+  <nav id="tests-nav">
+    <a id="all-tests-link" href="./index.html">Run all tests</a>
+    <span>&bull;</span>
+    <a id="sync-tests-only-link" href="./index.html?skipAsyncTests">Run only synchronous tests</a>
+  </nav>
   <div id="mocha"></div>
   <script src="https://cdn.rawgit.com/mochajs/mocha/2.2.5/mocha.js"></script>
   <script src="http://chaijs.com/chai.js"></script>
   <script>
     window.forceShadowDomPolyfill = true;
+    if (location.href.indexOf('?skipAsyncTests') !== -1) {
+      window.skipAsyncTests = true;
+      document.getElementById('sync-tests-only-link').className = 'active';
+    }
+    else {
+      document.getElementById('all-tests-link').className = 'active';
+    }
   </script>
   <script src="../dist/shadow-dom.js"></script>
   <script>

@@ -9,7 +9,10 @@ export default class {
     // TODO: tests
     get attributes() {
         const attributes = $.descriptors.Element.attributes.get.call(this);
-        $.shadow(attributes).element = this;
+        const shadowState = $.getShadowState(attributes);
+        if (!shadowState) {
+            $.setShadowState(attributes, { element: this });
+        }
         return attributes;
     }
 
@@ -91,37 +94,45 @@ export default class {
 
         $.extend(shadow, $ShadowRoot);
 
-        const shadowState = $.shadow(shadow);
+        $.setShadowState(shadow, {
+            host: this,
+            mode: init.mode,
+            childNodes: []
+        });
 
-        shadowState.host = this;
-        shadowState.mode = init.mode;
-        shadowState.childNodes = [];
-
-        const childNodes = $.descriptors.Node.childNodes.get.call(this);
-        const hostState = $.shadow(this);
-
-        hostState.shadowRoot = shadow;
-        hostState.childNodes = $.slice(this.childNodes);
-
+        const originalChildNodes = $.descriptors.Node.childNodes.get.call(this);
         const removeChild = $.descriptors.Node.removeChild.value;
-        for (let i = 0; i < childNodes.length; i++) {
-            const childNode = childNodes[i];
-            $.shadow(childNode).parentNode = this;
-            removeChild.call(this, childNode);
+        const savedChildNodes = new Array(originalChildNodes.length);
+        let firstChild;
+        let i = 0;
+        while (firstChild = originalChildNodes[0]) {
+            const childState = $.getShadowState(firstChild) || $.setShadowState(firstChild, {});
+            childState.parentNode = this;
+            savedChildNodes[i++] = firstChild;
+            removeChild.call(this, firstChild);
         }
+
+        let hostState = $.getShadowState(this);
+        if (!hostState) {
+            hostState = {};
+            $.setShadowState(this, hostState);
+        }
+        hostState.shadowRoot = shadow;
+        hostState.childNodes = savedChildNodes;
 
         return shadow;
     }
 
     get shadowRoot() {
         // https://dom.spec.whatwg.org/#dom-element-shadowroot
-
-        let shadowRoot = $.shadow(this).shadowRoot;
-
-        if (!shadowRoot || shadowRoot.mode === 'closed') {
-            return null;
+        let shadowRoot = null;
+        let shadowState = $.getShadowState(this);
+        if (shadowState) {
+            shadowRoot = shadowState.shadowRoot;
+            if (!shadowRoot || shadowRoot.mode === 'closed') {
+                return null;
+            }
         }
-
         return shadowRoot;
     }
 

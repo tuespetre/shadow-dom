@@ -13,20 +13,25 @@ suite('DOMTokenList', function () {
             assert.equal(div.className, 'class1 class2 class3');
         });
 
-        test('triggers MutationObserver', function (done) {
-            var div = document.createElement('div');
-            div.className = 'class1 class2';
-            var observer = new MutationObserver(function (records) {
-                assert.equal(records.length, 1);
-                assert.equal(records[0].oldValue, 'class1 class2');
-                done();
+        if (!window.skipAsyncTests) {
+
+            test('triggers MutationObserver', function (done) {
+                var div = document.createElement('div');
+                div.className = 'class1 class2';
+                var observer = new MutationObserver(function (records) {
+                    assert.equal(records.length, 1);
+                    assert.equal(records[0].oldValue, 'class1 class2');
+                    observer.disconnect();
+                    done();
+                });
+                observer.observe(div, {
+                    attributes: true,
+                    attributeOldValue: true
+                });
+                div.classList.add('class3');
             });
-            observer.observe(div, { 
-                attributes: true,
-                attributeOldValue: true
-            });
-            div.classList.add('class3');
-        });
+
+        }
 
     });
 
@@ -40,20 +45,25 @@ suite('DOMTokenList', function () {
             assert.equal(div.className, 'class3');
         });
 
-        test('triggers MutationObserver', function (done) {
-            var div = document.createElement('div');
-            div.className = 'class1 class2';
-            var observer = new MutationObserver(function (records) {
-                assert.equal(records.length, 1);
-                assert.equal(records[0].oldValue, 'class1 class2');
-                done();
+        if (!window.skipAsyncTests) {
+
+            test('triggers MutationObserver', function (done) {
+                var div = document.createElement('div');
+                div.className = 'class1 class2';
+                var observer = new MutationObserver(function (records) {
+                    assert.equal(records.length, 1);
+                    assert.equal(records[0].oldValue, 'class1 class2');
+                    observer.disconnect();
+                    done();
+                });
+                observer.observe(div, {
+                    attributes: true,
+                    attributeOldValue: true
+                });
+                div.classList.remove('class2');
             });
-            observer.observe(div, { 
-                attributes: true,
-                attributeOldValue: true
-            });
-            div.classList.remove('class2');
-        });
+
+        }
 
     });
 
@@ -80,20 +90,25 @@ suite('DOMTokenList', function () {
             assert.equal(div.className, 'class1 class2');
         });
 
-        test('triggers MutationObserver', function (done) {
-            var div = document.createElement('div');
-            div.className = 'class1 class2';
-            var observer = new MutationObserver(function (records) {
-                assert.equal(records.length, 1);
-                assert.equal(records[0].oldValue, 'class1 class2');
-                done();
+        if (!window.skipAsyncTests) {
+
+            test('triggers MutationObserver', function (done) {
+                var div = document.createElement('div');
+                div.className = 'class1 class2';
+                var observer = new MutationObserver(function (records) {
+                    assert.equal(records.length, 1);
+                    assert.equal(records[0].oldValue, 'class1 class2');
+                    observer.disconnect();
+                    done();
+                });
+                observer.observe(div, {
+                    attributes: true,
+                    attributeOldValue: true
+                });
+                div.classList.toggle('class3');
             });
-            observer.observe(div, { 
-                attributes: true,
-                attributeOldValue: true
-            });
-            div.classList.toggle('class3');
-        });
+
+        }
 
     });
 

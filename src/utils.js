@@ -55,8 +55,8 @@ export const descriptors = {
 
 // TODO: add a note about importing YuzuJS/setImmediate before 
 // this polyfill if better performance is desired.
-export const setImmediate = 'setImmediate' in window ? window.setImmediate : function (callback) {
-    return setTimeout(callback, 0);
+export const setImmediate = 'setImmediate' in window ? window.setImmediate : function (callback, ...args) {
+    return setTimeout(callback, 0, ...args);
 };
 
 // TODO: analyze usages and provide brief but descriptive messages
@@ -93,30 +93,57 @@ export function extend(object, ...mixins) {
     }
 }
 
-export function hasShadowState(object) {
-    return '_shadow' in object;
+export function getShadowState(object) {
+    return object._shadow;
 }
 
 export function setShadowState(object, state) {
-    object._shadow = state;
+    return object._shadow = state;
 }
 
-export function shadow(object) {
-    const shadow = object._shadow || {};
-    return object._shadow = shadow;
+export function treeOrderRecursiveSelectAll(node, results, match) {
+    if (match(node)) {
+        results.push(node);
+    }
+    const firstChild = node.firstChild;
+    if (firstChild) {
+        treeOrderRecursiveSelectAll(firstChild, results, match);
+    }
+    const firstSibling = node.firstSibling;
+    if (firstSibling) {
+        treeOrderRecursiveSelectAll(firstSibling, results, match);
+    }
+}
+
+export function treeOrderRecursiveSelectFirst(node, match) {
+    if (match(node)) {
+        return node;
+    }
+    const firstChild = node.firstChild;
+    if (firstChild) {
+        let result = treeOrderRecursiveSelectFirst(firstChild, match);
+        if (result) {
+            return result;
+        }
+    }
+    const firstSibling = node.firstSibling;
+    if (firstSibling) {
+        return treeOrderRecursiveSelectFirst(firstSibling, match);
+    }
+    return null;
 }
 
 export function filterByRoot(node, descendants) {
     const contextRoot = root(node);
-    const filtered = [];
-
+    const filtered = new Array(descendants.length);
+    let filteredCount = 0;
     for (let i = 0; i < descendants.length; i++) {
         const item = descendants[i];
         if (root(item) === contextRoot) {
-            filtered.push(item)
+            filtered[filteredCount++] = item;
         }
     }
-
+    filtered.length = filteredCount;
     return filtered;
 }
 
@@ -148,18 +175,29 @@ export function isValidCustomElementName(localName) {
 
 // https://www.w3.org/TR/DOM-Parsing/
 
+// PERF: This function uses a recycled div element
+// and a recycled document fragment stored in the passed 
+// element's owner document so it can avoid allocation.
+// Callers must empty the returned fragment.
 export function parseHTMLFragment(markup, context) {
-    let temp = context.ownerDocument.createElement('div');
-    descriptors.Element.innerHTML.set.call(temp, markup);
-    const childNodes = descriptors.Node.childNodes.get.call(temp);
-    const fragment = context.ownerDocument.createDocumentFragment();
-    const getFirstChild = descriptors.Node.firstChild.get;
-    const appendChild = descriptors.Node.appendChild.value;
-    let firstChild;
-    while (firstChild = getFirstChild.call(temp)) {
-        appendChild.call(fragment, firstChild);
+    const document = context.ownerDocument;
+    let documentState = getShadowState(document);
+    if (!documentState) {
+        documentState = setShadowState(document, {
+            parsingElement: document.createElement('div'),
+            parsingFragment: document.createDocumentFragment()
+        });
     }
-    return fragment;
+    const parsingElement = documentState.parsingElement;
+    const parsingFragment = documentState.parsingFragment;
+    descriptors.Element.innerHTML.set.call(parsingElement, markup);
+    const nodeFirstChildGet = descriptors.Node.firstChild.get;
+    const nodeAppendChildValue = descriptors.Node.appendChild.value;
+    let firstChild;
+    while (firstChild = nodeFirstChildGet.call(parsingElement)) {
+        nodeAppendChildValue.call(parsingFragment, firstChild);
+    }
+    return parsingFragment;
 }
 
 export function serializeHTMLFragment(node) {
@@ -548,9 +586,9 @@ function updateSlotableName(element, localName, oldValue, value, namespace) {
         else {
             descriptors.Element.setAttribute.value.call(element, 'slot', value);
         }
-        const assignedSlot = shadow(element).assignedSlot;
-        if (assignedSlot) {
-            assignSlotables(assignedSlot);
+        const elementState = getShadowState(element);
+        if (elementState && elementState.assignedSlot) {
+            assignSlotables(elementState.assignedSlot);
         }
         assignASlot(element);
     }
@@ -653,7 +691,7 @@ export function replaceAttribute(oldAttr, newAttr, element) {
 }
 
 export function setAttribute(attr, element) {
-    if (attr.ownerElement != null || attr.ownerElement !== element) {
+    if (attr.ownerElement != null && attr.ownerElement !== element) {
         throw makeError('InUseAttributeError');
     }
     const attributes = descriptors.Element.attributes.get.call(element);
@@ -774,49 +812,28 @@ export function findASlot(slotable, open) {
     }
 
     // 2. Let shadow be slotable’s parent’s shadow root.
-    const shadowRoot = shadow(parent).shadowRoot;
+    const parentState = getShadowState(parent);
 
     // 3. If shadow is null, then return null.
-    if (!shadowRoot) {
+    if (!parentState || !parentState.shadowRoot) {
         return null;
     }
 
     // 4. If the open flag is set and shadow’s mode is not "open", then return null.
-    if (open === true && shadowRoot.mode !== 'open') {
+    if (open === true && parentState.shadowRoot.mode !== 'open') {
         return null;
     }
 
     // 5. Return the first slot in shadow’s tree whose name is slotable’s name, if any, and null otherwise.
-    if (!shadowRoot.firstChild) {
+    if (!parentState.shadowRoot.firstChild) {
         return null;
     }
 
     const name = slotable instanceof Element ? slotable.slot : null;
-    const stack = [{ node: shadowRoot.firstChild, recursed: false }];
 
-    while (stack.length) {
-        const frame = stack.pop();
-        const node = frame.node;
-
-        if (frame.recursed) {
-            if (node.nextSibling) {
-                stack.push({ node: node.nextSibling, recursed: false });
-            }
-        }
-        else {
-            if (node.localName === 'slot' && node.getAttribute('name') === name) {
-                return node;
-            }
-
-            stack.push({ node: frame.node, recursed: true });
-
-            if (node.firstChild) {
-                stack.push({ node: node.firstChild, recursed: false });
-            }
-        }
-    }
-
-    return null;
+    return treeOrderRecursiveSelectFirst(parentState.shadowRoot.firstChild, function (node) {
+        return node.localName === 'slot' && node.name === name;
+    });
 }
 
 export function findSlotables(slot) {
@@ -906,7 +923,7 @@ export function assignSlotables(slot, suppressSignaling) {
     // 2. If suppress signaling flag is unset, and slotables and slot’s assigned 
     // nodes are not identical, then run signal a slot change for slot.
     let identical = true;
-    const slotState = shadow(slot);
+    const slotState = getShadowState(slot) || setShadowState(slot, {});
     const assignedNodes = slotState.assignedNodes || [];
     for (let i = 0; i < slotables.length; i++) {
         if (slotables[i] !== assignedNodes[i]) {
@@ -924,39 +941,44 @@ export function assignSlotables(slot, suppressSignaling) {
     // 4. For each slotable in slotables, set slotable’s assigned slot to slot.
     for (let i = 0; i < slotables.length; i++) {
         const slotable = slotables[i];
-        shadow(slotable).assignedSlot = slot;
+        // If it's a slotable it should already have an associated state object.
+        getShadowState(slotable).assignedSlot = slot;
     }
 
-    !identical && setImmediate(function () {
-        // 4a. If we haven't tracked them yet, track the slot's logical children
-        if (!slotState.childNodes) {
-            const childNodes = descriptors.Node.childNodes.get.call(slot);
-            slotState.childNodes = slice(childNodes);
-        }
+    // 4a. If we haven't tracked them yet, track the slot's logical children
+    if (!slotState.childNodes) {
+        slotState.childNodes = slice(descriptors.Node.childNodes.get.call(slot));
+    }
 
-        // 4b. Clean out the slot
-        let firstChild;
-        while (firstChild = descriptors.Node.firstChild.get.call(slot)) {
-            descriptors.Node.removeChild.value.call(slot, firstChild);
-        }
+    // function call avoiding closure for performance.
+    if (!identical) {
+        setImmediate(renderSlotablesAsync, slot);
+    }
+}
 
-        // 4c. Append the slotables, if any
-        for (let i = 0; i < slotables.length; i++) {
-            const slotable = slotables[i];
-            slotState.assignedSlot = slot;
-            // if we break out the physical portion to go async, we still
-            // need to set the assignedSlot property sync
-            descriptors.Node.appendChild.value.call(slot, slotable);
-        }
+function renderSlotablesAsync(slot) {
+    const slotState = getShadowState(slot);
+    const slotables = slotState.assignedNodes;
 
-        // 4d. Append the fallback content, if no slots
-        if (!slotables.length) {
-            const childNodes = slotState.childNodes;
-            for (let i = 0; i < childNodes.length; i++) {
-                descriptors.Node.appendChild.value.call(slot, childNodes[i]);
-            }
+    // 4b. Clean out the slot
+    let firstChild;
+    while (firstChild = descriptors.Node.firstChild.get.call(slot)) {
+        descriptors.Node.removeChild.value.call(slot, firstChild);
+    }
+
+    // 4c. Append the slotables, if any
+    for (let i = 0; i < slotables.length; i++) {
+        const slotable = slotables[i];
+        descriptors.Node.appendChild.value.call(slot, slotable);
+    }
+
+    // 4d. Append the fallback content, if no slots
+    if (!slotables.length) {
+        const childNodes = slotState.childNodes;
+        for (let i = 0; i < childNodes.length; i++) {
+            descriptors.Node.appendChild.value.call(slot, childNodes[i]);
         }
-    });
+    }
 }
 
 export function assignSlotablesForATree(tree, noSignalSlots) {
@@ -1066,43 +1088,53 @@ export function insert(node, parent, child, suppressObservers) {
     // https://dom.spec.whatwg.org/#concept-node-insert
     // To insert a node into a parent before a child, with an optional suppress observers flag, run these steps:
 
-    // Skip (Range)
     // 1. Let count be the number of children of node if it is a DocumentFragment node, and one otherwise.
+    let count = 1;
+    let nodeChildNodes;
+    if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+        nodeChildNodes = node.childNodes;
+        count = nodeChildNodes.length;
+    }
+
+    // Skip (Range)
     // 2. If child is non-null, run these substeps:
 
     // 3. Let nodes be node’s children if node is a DocumentFragment node, 
     // and a list containing solely node otherwise.
-    let nodes;
+    let nodes = new Array(count);
 
     // 4. If node is a DocumentFragment node, remove its children with the suppress observers flag set.
     if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
-        nodes = slice(node.childNodes);
-        for (let i = 0; i < nodes.length; i++) {
+        for (let i = 0; i < count; i++) {
+            nodes[i] = nodeChildNodes[i];
+        }
+        for (let i = 0; i < count; i++) {
             remove(nodes[i], node, true);
         }
         // 5. If node is a DocumentFragment node, queue a mutation record of "childList" for node with removedNodes nodes.
         queueMutationRecord('childList', node, { removedNodes: nodes });
     }
     else {
-        nodes = [node];
+        nodes[0] = node;
     }
 
     // 6. For each node in nodes, in tree order, run these substeps:
-    const parentState = shadow(parent);
+    const parentState = getShadowState(parent);
     const parentIsShadow = isShadowRoot(parent);
+    const hasShadowStateChildNodes = parentState && parentState.childNodes;
     for (let i = 0; i < nodes.length; i++) {
         const node = nodes[i];
         // 1. Insert node into parent before child or at the end of parent if child is null.
-        const childNodes = parentState.childNodes;
-        if (childNodes) {
+        if (hasShadowStateChildNodes) {
             if (child) {
-                const childIndex = childNodes.indexOf(child);
-                childNodes.splice(childIndex, 0, node);
+                const childIndex = parentState.childNodes.indexOf(child);
+                parentState.childNodes.splice(childIndex, 0, node);
             }
             else {
-                childNodes.push(node);
+                parentState.childNodes.push(node);
             }
-            shadow(node).parentNode = parent;
+            const nodeState = getShadowState(node) || setShadowState(node, {});
+            nodeState.parentNode = parent;
             // If it's a shadow root, perform physical insert on the host.
             if (parentIsShadow) {
                 descriptors.Node.insertBefore.value.call(parentState.host, node, child);
@@ -1113,7 +1145,7 @@ export function insert(node, parent, child, suppressObservers) {
         }
 
         // 2. If parent is a shadow host and node is a slotable, then assign a slot for node.
-        if (parentState.shadowRoot && 'assignedSlot' in node) {
+        if (parentState && parentState.shadowRoot && 'assignedSlot' in node) {
             assignASlot(node);
         }
 
@@ -1293,12 +1325,13 @@ export function remove(node, parent, suppressObservers) {
     const oldNextSibling = node.nextSibling;
 
     // 9. Remove node from its parent.
-    const nodeState = shadow(node);
-    const childNodes = shadow(parent).childNodes;
-    if (childNodes) {
-        const nodeIndex = childNodes.indexOf(node);
-        childNodes.splice(nodeIndex, 1);
-        delete nodeState.parentNode;
+    const nodeState = getShadowState(node);
+    const parentState = getShadowState(parent);
+    if (parentState && parentState.childNodes) {
+        const nodeIndex = parentState.childNodes.indexOf(node);
+        parentState.childNodes.splice(nodeIndex, 1);
+        // Should always have nodeState if we got here.
+        nodeState.parentNode = null;
         const parentNode = descriptors.Node.parentNode.get.call(node);
         descriptors.Node.removeChild.value.call(parentNode, node);
     }
@@ -1307,7 +1340,7 @@ export function remove(node, parent, suppressObservers) {
     }
 
     // 10. If node is assigned, then run assign slotables for node’s assigned slot.
-    if (nodeState.assignedSlot) {
+    if (nodeState && nodeState.assignedSlot) {
         assignSlotables(nodeState.assignedSlot);
         nodeState.assignedSlot = null;
     }
@@ -1350,8 +1383,9 @@ export function remove(node, parent, suppressObservers) {
     while (inclusiveAncestor) {
         // ...if inclusiveAncestor has any registered observers whose options' 
         // subtree is true, then for each such registered observer registered... 
-        const ancestorObservers = shadow(inclusiveAncestor).observers;
-        if (ancestorObservers) {
+        const ancestorState = getShadowState(inclusiveAncestor);
+        if (ancestorState && ancestorState.observers) {
+            const ancestorObservers = ancestorState.observers;
             for (let i = 0; i < ancestorObservers.length; i++) {
                 const ancestorObserver = ancestorObservers[i];
                 if (ancestorObserver.options.subtree) {
@@ -1383,7 +1417,7 @@ export function remove(node, parent, suppressObservers) {
 // TODO: test everything that queues mutation records
 
 function getOrCreateNodeObservers(node) {
-    const nodeState = shadow(node);
+    const nodeState = getShadowState(node) || setShadowState(node, {});
     const observers = nodeState.observers;
     return observers ? observers : nodeState.observers = [];
 }
@@ -1449,6 +1483,11 @@ const signalSlotList = [];
 const theEmptyList = Object.freeze([]);
 
 function queueMutationRecord(type, target, details) {
+    // PERF: This is an out-of-spec optimization
+    if (mutationObservers.length === 0) {
+        return;
+    }
+
     // https://dom.spec.whatwg.org/#queueing-a-mutation-record
     // 1. Let interested observers be an initially empty set of 
     // MutationObserver objects optionally paired with a string.
@@ -1463,15 +1502,15 @@ function queueMutationRecord(type, target, details) {
     // 3. Then, for each node in nodes... 
     for (let i = 0; i < nodes.length; i++) {
         const node = nodes[i];
-        const observers = shadow(node).observers;
-        if (!observers) {
+        const nodeState = getShadowState(node);
+        if (!nodeState || !nodeState.observers) {
             continue;
         }
         // ...and then for each registered observer (with registered 
         // observer’s options as options) in node’s list of registered 
         // observers...
-        for (let j = 0; j < observers.length; j++) {
-            const registeredObserver = observers[i];
+        for (let j = 0; j < nodeState.observers.length; j++) {
+            const registeredObserver = nodeState.observers[i];
             const options = registeredObserver.options;
             // ...run these substeps:
             // 1. If none of the following are true:
@@ -1513,6 +1552,11 @@ function queueMutationRecord(type, target, details) {
                 pairedStrings[index] = details.oldValue;
             }
         }
+    }
+
+    // PERF: This is an out-of-spec optimization
+    if (interestedObservers.length === 0) {
+        return;
     }
 
     // 4. Then, for each observer in interested observers, run these substeps:

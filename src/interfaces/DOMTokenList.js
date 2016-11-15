@@ -5,24 +5,24 @@ import * as $ from '../utils.js';
 export default class {
 
     get length() {
-        const state = $.shadow(this);
+        const state = $.getShadowState(this);
         return state.tokens.length;
     }
 
     // TODO: Caveat about indexer expressions?
     item(index) {
-        const state = $.shadow(this);
+        const state = $.getShadowState(this);
         return index >= state.tokens.length ? null : state.tokens[index];
     }
 
     contains(token) {
-        const state = $.shadow(this);
+        const state = $.getShadowState(this);
         return state.tokens.indexOf(token) !== -1;
     }
 
     add(...tokens) {
         validateTokens(tokens);
-        const state = $.shadow(this);
+        const state = $.getShadowState(this);
         for (let i = 0; i < tokens.length; i++) {
             const token = tokens[i];
             const index = state.tokens.indexOf(token);
@@ -36,7 +36,7 @@ export default class {
 
     remove(...tokens) {
         validateTokens(tokens);
-        const state = $.shadow(this);
+        const state = $.getShadowState(this);
         for (let i = 0; i < tokens.length; i++) {
             const token = tokens[i];
             const index = state.tokens.indexOf(token);
@@ -49,7 +49,7 @@ export default class {
 
     toggle(token, force) {
         validateToken(token);
-        const state = $.shadow(this);
+        const state = $.getShadowState(this);
         const index = state.tokens.indexOf(token);
         if (index !== -1) {
             if (arguments.length === 1 || force === false) {
@@ -77,7 +77,7 @@ export default class {
     replace(token, newToken) {
         validateToken(token);
         validateToken(newToken);
-        const state = $.shadow(this);
+        const state = $.getShadowState(this);
         const index = state.tokens.indexOf(token);
         if (index === -1) {
             return;
@@ -88,12 +88,12 @@ export default class {
     }
 
     get value() {
-        const state = $.shadow(this);
+        const state = $.getShadowState(this);
         return state.element.getAttribute(state.localName) || '';
     }
 
     set value(value) {
-        const state = $.shadow(this);
+        const state = $.getShadowState(this);
         $.setAttributeValue(state.element, state.localName, value);
         state.tokens = $.slice(this);
     }
@@ -113,4 +113,25 @@ function validateToken(token) {
     if (/\s/.test(token)) {
         throw $.makeError('InvalidCharacterError')
     }
+}
+
+function createDOMTokenList(element, localName) {
+    // TODO: run the steps per the DOM spec for 'when a DOMTokenList is created'
+    const originalValue = element.getAttribute(localName);
+    const tokens = originalValue ? originalValue.split(/\s/).sort() : [];
+    const tokenList = Object.create(DOMTokenList.prototype);
+    $.setShadowState(tokenList, { element, localName, tokens });
+    return tokenList;
+}
+
+export function getOrCreateDOMTokenList(element, localName) {
+    const elementState = $.getShadowState(element) || $.setShadowState(element, { tokenLists: {} });
+    if (!elementState.tokenLists) {
+        elementState.tokenLists = {};
+    }
+    let tokenList;
+    if (tokenList = elementState.tokenLists[localName]) {
+        return tokenList;
+    }
+    return elementState.tokenLists[localName] = createDOMTokenList(element, localName);
 }

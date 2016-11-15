@@ -138,6 +138,7 @@ export default function () {
     
     // Cleanup for IE, Edge
     delete Node.prototype.attributes;
+    delete HTMLElement.prototype.classList;
     delete HTMLElement.prototype.children;
     delete HTMLElement.prototype.parentElement;
     delete HTMLElement.prototype.innerHTML;

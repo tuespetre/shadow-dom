@@ -24,10 +24,7 @@ var _class = function () {
         key: 'value',
         get: function get() {
             return $.descriptors.Attr.value.get.call(this);
-        }
-
-        // TODO: MutationObserver tests
-        ,
+        },
         set: function set(value) {
             $.setExistingAttributeValue(this, value);
         }
@@ -64,32 +61,20 @@ var _class = function () {
 
     _createClass(_class, [{
         key: 'appendData',
-
-
-        // TODO: MutationObserver tests
         value: function appendData(data) {
             var length = getData.call(this).length;
             $.replaceData(this, length, 0, data);
         }
-
-        // TODO: MutationObserver tests
-
     }, {
         key: 'insertData',
         value: function insertData(offset, data) {
             $.replaceData(this, offset, 0, data);
         }
-
-        // TODO: MutationObserver tests
-
     }, {
         key: 'deleteData',
         value: function deleteData(offset, count) {
             $.replaceData(this, offset, count, '');
         }
-
-        // TODO: MutationObserver tests
-
     }, {
         key: 'replaceData',
         value: function replaceData(offset, count, data) {
@@ -141,7 +126,7 @@ var _class = function _class(type, init) {
     }
     var event = document.createEvent('CustomEvent');
     event.initCustomEvent(type, bubbles, cancelable, detail);
-    $.shadow(event).composed = composed;
+    $.setShadowState(event, { composed: composed });
     return event;
 };
 
@@ -155,6 +140,8 @@ Object.defineProperty(exports, "__esModule", {
 });
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // https://dom.spec.whatwg.org/#interface-domtokenlist
+
+exports.getOrCreateDOMTokenList = getOrCreateDOMTokenList;
 
 var _utils = require('../utils.js');
 
@@ -175,13 +162,13 @@ var _class = function () {
 
         // TODO: Caveat about indexer expressions?
         value: function item(index) {
-            var state = $.shadow(this);
+            var state = $.getShadowState(this);
             return index >= state.tokens.length ? null : state.tokens[index];
         }
     }, {
         key: 'contains',
         value: function contains(token) {
-            var state = $.shadow(this);
+            var state = $.getShadowState(this);
             return state.tokens.indexOf(token) !== -1;
         }
     }, {
@@ -192,7 +179,7 @@ var _class = function () {
             }
 
             validateTokens(tokens);
-            var state = $.shadow(this);
+            var state = $.getShadowState(this);
             for (var i = 0; i < tokens.length; i++) {
                 var token = tokens[i];
                 var index = state.tokens.indexOf(token);
@@ -211,7 +198,7 @@ var _class = function () {
             }
 
             validateTokens(tokens);
-            var state = $.shadow(this);
+            var state = $.getShadowState(this);
             for (var i = 0; i < tokens.length; i++) {
                 var token = tokens[i];
                 var index = state.tokens.indexOf(token);
@@ -225,7 +212,7 @@ var _class = function () {
         key: 'toggle',
         value: function toggle(token, force) {
             validateToken(token);
-            var state = $.shadow(this);
+            var state = $.getShadowState(this);
             var index = state.tokens.indexOf(token);
             if (index !== -1) {
                 if (arguments.length === 1 || force === false) {
@@ -251,7 +238,7 @@ var _class = function () {
         value: function replace(token, newToken) {
             validateToken(token);
             validateToken(newToken);
-            var state = $.shadow(this);
+            var state = $.getShadowState(this);
             var index = state.tokens.indexOf(token);
             if (index === -1) {
                 return;
@@ -263,17 +250,17 @@ var _class = function () {
     }, {
         key: 'length',
         get: function get() {
-            var state = $.shadow(this);
+            var state = $.getShadowState(this);
             return state.tokens.length;
         }
     }, {
         key: 'value',
         get: function get() {
-            var state = $.shadow(this);
+            var state = $.getShadowState(this);
             return state.element.getAttribute(state.localName) || '';
         },
         set: function set(value) {
-            var state = $.shadow(this);
+            var state = $.getShadowState(this);
             $.setAttributeValue(state.element, state.localName, value);
             state.tokens = $.slice(this);
         }
@@ -298,6 +285,27 @@ function validateToken(token) {
     if (/\s/.test(token)) {
         throw $.makeError('InvalidCharacterError');
     }
+}
+
+function createDOMTokenList(element, localName) {
+    // TODO: run the steps per the DOM spec for 'when a DOMTokenList is created'
+    var originalValue = element.getAttribute(localName);
+    var tokens = originalValue ? originalValue.split(/\s/).sort() : [];
+    var tokenList = Object.create(DOMTokenList.prototype);
+    $.setShadowState(tokenList, { element: element, localName: localName, tokens: tokens });
+    return tokenList;
+}
+
+function getOrCreateDOMTokenList(element, localName) {
+    var elementState = $.getShadowState(element) || $.setShadowState(element, { tokenLists: {} });
+    if (!elementState.tokenLists) {
+        elementState.tokenLists = {};
+    }
+    var tokenList = void 0;
+    if (tokenList = elementState.tokenLists[localName]) {
+        return tokenList;
+    }
+    return elementState.tokenLists[localName] = createDOMTokenList(element, localName);
 }
 
 },{"../utils.js":27}],5:[function(require,module,exports){
@@ -497,24 +505,31 @@ var _class = function () {
 
             $.extend(shadow, _ShadowRoot2.default);
 
-            var shadowState = $.shadow(shadow);
+            $.setShadowState(shadow, {
+                host: this,
+                mode: init.mode,
+                childNodes: []
+            });
 
-            shadowState.host = this;
-            shadowState.mode = init.mode;
-            shadowState.childNodes = [];
-
-            var childNodes = $.descriptors.Node.childNodes.get.call(this);
-            var hostState = $.shadow(this);
-
-            hostState.shadowRoot = shadow;
-            hostState.childNodes = $.slice(this.childNodes);
-
+            var originalChildNodes = $.descriptors.Node.childNodes.get.call(this);
             var removeChild = $.descriptors.Node.removeChild.value;
-            for (var i = 0; i < childNodes.length; i++) {
-                var childNode = childNodes[i];
-                $.shadow(childNode).parentNode = this;
-                removeChild.call(this, childNode);
+            var savedChildNodes = new Array(originalChildNodes.length);
+            var firstChild = void 0;
+            var i = 0;
+            while (firstChild = originalChildNodes[0]) {
+                var childState = $.getShadowState(firstChild) || $.setShadowState(firstChild, {});
+                childState.parentNode = this;
+                savedChildNodes[i++] = firstChild;
+                removeChild.call(this, firstChild);
             }
+
+            var hostState = $.getShadowState(this);
+            if (!hostState) {
+                hostState = {};
+                $.setShadowState(this, hostState);
+            }
+            hostState.shadowRoot = shadow;
+            hostState.childNodes = savedChildNodes;
 
             return shadow;
         }
@@ -602,20 +617,24 @@ var _class = function () {
         // TODO: tests
         get: function get() {
             var attributes = $.descriptors.Element.attributes.get.call(this);
-            $.shadow(attributes).element = this;
+            var shadowState = $.getShadowState(attributes);
+            if (!shadowState) {
+                $.setShadowState(attributes, { element: this });
+            }
             return attributes;
         }
     }, {
         key: 'shadowRoot',
         get: function get() {
             // https://dom.spec.whatwg.org/#dom-element-shadowroot
-
-            var shadowRoot = $.shadow(this).shadowRoot;
-
-            if (!shadowRoot || shadowRoot.mode === 'closed') {
-                return null;
+            var shadowRoot = null;
+            var shadowState = $.getShadowState(this);
+            if (shadowState) {
+                shadowRoot = shadowState.shadowRoot;
+                if (!shadowRoot || shadowRoot.mode === 'closed') {
+                    return null;
+                }
             }
-
             return shadowRoot;
         }
     }, {
@@ -698,7 +717,7 @@ var _class = function () {
         }
         var event = document.createEvent('event');
         event.initEvent(type, bubbles, cancelable);
-        $.shadow(event).composed = composed;
+        $.setShadowState(event, { composed: composed });
         return event;
     }
 
@@ -706,7 +725,7 @@ var _class = function () {
         key: 'stopImmediatePropagation',
         value: function stopImmediatePropagation() {
             this.stopPropagation();
-            $.shadow(this).stopImmediatePropagationFlag = true;
+            $.getShadowState(this).stopImmediatePropagationFlag = true;
         }
     }, {
         key: 'composedPath',
@@ -720,41 +739,44 @@ var _class = function () {
             var currentTarget = this.currentTarget;
 
             // 3. For each tuple in context object’s path:
-            var path = $.shadow(this).path || [];
+            var path = $.getShadowState(this).path;
 
-            for (var i = 0; i < path.length; i++) {
-                var item = path[i][0];
-                if (currentTarget instanceof Window) {
-                    if (!(item instanceof Node) || !$.closedShadowHidden(item, $.shadowIncludingRoot(item))) {
-                        composedPath.push(item);
+            if (path) {
+                var c = 0;
+                for (var i = 0; i < path.length; i++) {
+                    var item = path[i][0];
+                    if (currentTarget instanceof Window) {
+                        if (!(item instanceof Node) || !$.closedShadowHidden(item, $.shadowIncludingRoot(item))) {
+                            composedPath[c++] = item;
+                        }
+                    } else if (currentTarget instanceof Node) {
+                        if (!$.closedShadowHidden(item, currentTarget)) {
+                            composedPath[c++] = item;
+                        }
+                    } else {
+                        composedPath[c++] = item;
                     }
-                } else if (currentTarget instanceof Node) {
-                    if (!$.closedShadowHidden(item, currentTarget)) {
-                        composedPath.push(item);
-                    }
-                } else {
-                    composedPath.push(item);
                 }
             }
 
             // 4. return composedPath.
-            return composedPath.slice();
+            return composedPath;
         }
     }, {
         key: 'currentTarget',
         get: function get() {
-            return $.shadow(this).currentTarget;
+            return $.getShadowState(this).currentTarget;
         }
     }, {
         key: 'target',
         get: function get() {
-            return $.shadow(this).target;
+            return $.getShadowState(this).target;
         }
     }, {
         key: 'composed',
         get: function get() {
             // TODO: Compare against the actual prototype instead of just the type strings
-            return $.shadow(this).composed || builtInComposedEvents.indexOf(this.type) !== -1;
+            return $.getShadowState(this).composed || builtInComposedEvents.indexOf(this.type) !== -1;
         }
     }]);
 
@@ -777,7 +799,7 @@ var hasRelatedTarget = exports.hasRelatedTarget = function () {
     _createClass(hasRelatedTarget, [{
         key: 'relatedTarget',
         get: function get() {
-            return $.shadow(this).relatedTarget;
+            return $.getShadowState(this).relatedTarget;
         }
     }]);
 
@@ -902,11 +924,17 @@ var EventListenerCollection = function () {
     _createClass(EventListenerCollection, null, [{
         key: 'get',
         value: function get(target, type, capture) {
-            var nativeTarget = $.shadow(target).host || target;
-            var collections = $.shadow(nativeTarget).listeners;
-            if (!(collections instanceof Array)) {
+            var targetState = $.getShadowState(target);
+            var nativeTarget = target;
+            var nativeTargetState = targetState;
+            if (targetState && targetState.host) {
+                nativeTarget = targetState.host;
+                nativeTargetState = $.getShadowState(nativeTarget);
+            }
+            if (!nativeTargetState || !nativeTargetState.listeners) {
                 return null;
             }
+            var collections = nativeTargetState.listeners;
             for (var i = 0; i < collections.length; i++) {
                 var collection = collections[i];
                 if (collection.target === nativeTarget && collection.type === type && collection.capture === capture) {
@@ -918,14 +946,20 @@ var EventListenerCollection = function () {
     }, {
         key: 'create',
         value: function create(target, type, capture) {
-            var nativeTarget = $.shadow(target).host || target;
-            var nativeTargetState = $.shadow(nativeTarget);
-            var collections = nativeTargetState.listeners;
-            if (!(collections instanceof Array)) {
-                collections = nativeTargetState.listeners = [];
+            var targetState = $.getShadowState(target);
+            var nativeTarget = target;
+            var nativeTargetState = targetState;
+            if (targetState && targetState.host) {
+                nativeTarget = targetState.host;
+                nativeTargetState = $.getShadowState(nativeTarget);
+            }
+            if (!nativeTargetState) {
+                nativeTargetState = $.setShadowState(nativeTarget, { listeners: [] });
+            } else if (!nativeTargetState.listeners) {
+                nativeTargetState.listeners = [];
             }
             var collection = new EventListenerCollection(nativeTarget, type, capture);
-            collections.push(collection);
+            nativeTargetState.listeners.push(collection);
             return collection;
         }
     }]);
@@ -935,7 +969,7 @@ var EventListenerCollection = function () {
 
         _classCallCheck(this, EventListenerCollection);
 
-        this.target = $.shadow(target).host || target;
+        this.target = target;
         this.type = type;
         this.capture = capture;
 
@@ -943,7 +977,11 @@ var EventListenerCollection = function () {
         this.shadowListeners = [];
 
         this.callback = function (event) {
-            var shadowRoot = $.shadow(_this.target).shadowRoot;
+            var shadowRoot = null;
+            var targetState = $.getShadowState(target);
+            if (targetState) {
+                shadowRoot = targetState.shadowRoot;
+            }
             switch (event.eventPhase) {
                 case Event.prototype.CAPTURING_PHASE:
                     _this.invokeListeners(event, _this.target, _this.hostListeners);
@@ -968,7 +1006,11 @@ var EventListenerCollection = function () {
     _createClass(EventListenerCollection, [{
         key: 'getListeners',
         value: function getListeners(target) {
-            return $.shadow(target).host ? this.shadowListeners : this.hostListeners;
+            var targetState = $.getShadowState(target);
+            if (targetState && targetState.host) {
+                return this.shadowListeners;
+            }
+            return this.hostListeners;
         }
     }, {
         key: 'addListener',
@@ -999,21 +1041,18 @@ var EventListenerCollection = function () {
     }, {
         key: 'invokeListeners',
         value: function invokeListeners(event, currentTarget, listeners) {
-            var eventState = $.shadow(event);
+            var eventState = $.getShadowState(event) || $.setShadowState(event, {});
             var path = eventState.calculatedPath;
-
             if (!path) {
                 path = eventState.calculatedPath = calculatePath(event);
             }
-
-            var target = calculateTarget(currentTarget, path);
-
             // if there is no target, the event is not composed and should be stopped
+            var target = calculateTarget(currentTarget, path);
             if (!target) {
                 event.stopImmediatePropagation();
             } else {
                 var relatedTarget = calculateRelatedTarget(currentTarget, path);
-                var remove = [];
+                var remove = void 0;
 
                 eventState.path = path;
                 eventState.currentTarget = currentTarget;
@@ -1024,7 +1063,11 @@ var EventListenerCollection = function () {
                     var listener = listeners[i];
                     var result = listener.callback.call(currentTarget, event);
                     if (listener.once) {
-                        remove.push(listener);
+                        if (!remove) {
+                            remove = [listener];
+                        } else {
+                            remove.push[listener];
+                        }
                     }
                     if (eventState.stopImmediatePropagationFlag) {
                         break;
@@ -1034,9 +1077,11 @@ var EventListenerCollection = function () {
                 eventState.path = null;
                 eventState.currentTarget = null;
 
-                for (var _i = 0; _i < remove.length; _i++) {
-                    var index = listeners.indexOf(remove[_i]);
-                    listeners.splice(index, 1);
+                if (remove) {
+                    for (var _i = 0; _i < remove.length; _i++) {
+                        var index = listeners.indexOf(remove[_i]);
+                        listeners.splice(index, 1);
+                    }
                 }
             }
         }
@@ -1064,6 +1109,7 @@ function calculatePath(event) {
     // https://dom.spec.whatwg.org/#concept-event-dispatch
 
     var path = [];
+    var p = 0;
 
     var target = $.descriptors.Event.target.get.call(event);
 
@@ -1097,7 +1143,7 @@ function calculatePath(event) {
     // 4. If target is relatedTarget and target is not event’s relatedTarget, then return true.
 
     // 5. Append (target, targetOverride, relatedTarget) to event’s path.
-    path.push([target, targetOverride, relatedTarget]);
+    path[p++] = [target, targetOverride, relatedTarget];
 
     // Skip (native)
     // 6. Let isActivationEvent be true, if event is a MouseEvent object and 
@@ -1118,23 +1164,25 @@ function calculatePath(event) {
         // 2. If target’s root is a shadow-including inclusive ancestor of parent, then... 
         // append (parent, null, relatedTarget) to event’s path.
         if ($.shadowIncludingInclusiveAncestor($.root(target), parent)) {
-            path.push([parent, null, relatedTarget]);
+            path[p++] = [parent, null, relatedTarget];
+            parent = getTheParent(parent, event);
+            continue;
         }
         // 3. Otherwise, if parent and relatedTarget are identical, then set parent to null.
         else if (parent === relatedTarget) {
-                parent = null;
+                break;
             }
             // 4. Otherwise, set target to parent and then... 
             // append (parent, target, relatedTarget) to event’s path.
             else {
                     target = parent;
-                    path.push([parent, target, relatedTarget]);
+                    path[p++] = [parent, target, relatedTarget];
+                    parent = getTheParent(parent, event);
+                    continue;
                 }
         // 5. If parent is non-null, then set parent to the result of 
         // invoking parent’s get the parent with event.
-        if (parent != null) {
-            parent = getTheParent(parent, event);
-        }
+        // NOTE: This step was duplicated above to save some cycles.
     }
 
     return path;
@@ -1167,8 +1215,8 @@ function getTheParent(node, event) {
             return node.defaultView;
         } else if ($.isShadowRoot(node)) {
             if (!event.composed) {
-                var _$$shadow$path$ = _slicedToArray($.shadow(event).path[0], 1),
-                    item = _$$shadow$path$[0];
+                var _$$getShadowState$pat = _slicedToArray($.getShadowState(event).path[0], 1),
+                    item = _$$getShadowState$pat[0];
 
                 if ($.root(item) === node) {
                     return null;
@@ -1252,7 +1300,12 @@ var _class = function () {
 
             // 1. If the value of options's flatten member is false, then return this element's assigned nodes.
             if (!options || options.flatten !== true) {
-                return $.shadow(this).assignedNodes || [];
+                var assignedNodes = null;
+                var shadowState = $.getShadowState(this);
+                if (shadowState) {
+                    assignedNodes = shadowState.assignedNodes;
+                }
+                return assignedNodes || [];
             }
 
             // 2. Return the result of finding flattened slotables with this element.
@@ -1471,24 +1524,24 @@ var _class = function () {
         _classCallCheck(this, _class);
 
         var observer = $.createMutationObserver(callback);
-        $.shadow(this).observer = observer;
+        $.setShadowState(this, { observer: observer });
         observer.interface = this;
     }
 
     _createClass(_class, [{
         key: 'observe',
         value: function observe(target, options) {
-            $.shadow(this).observer.observe(target, options);
+            $.getShadowState(this).observer.observe(target, options);
         }
     }, {
         key: 'disconnect',
         value: function disconnect() {
-            $.shadow(this).observer.disconnect();
+            $.getShadowState(this).observer.disconnect();
         }
     }, {
         key: 'takeRecords',
         value: function takeRecords() {
-            var records = $.shadow(this).observer.queue;
+            var records = $.getShadowState(this).observer.queue;
             return records.splice(0, records.length);
         }
     }]);
@@ -1524,37 +1577,41 @@ var _class = function () {
         key: 'setNamedItem',
 
 
-        // todo: tests
+        // TODO: tests
         value: function setNamedItem(attr) {
-            return $.setAttribute(attr, $.shadow(this).element);
+            var shadowState = $.getShadowState(this);
+            return $.setAttribute(attr, shadowState.element);
         }
 
-        // todo: tests
+        // TODO: tests
 
     }, {
         key: 'setNamedItemNS',
         value: function setNamedItemNS(attr) {
-            return $.setAttribute(attr, $.shadow(this).element);
+            var shadowState = $.getShadowState(this);
+            return $.setAttribute(attr, shadowState.element);
         }
 
-        // todo: tests
+        // TODO: tests
 
     }, {
         key: 'removeNamedItem',
         value: function removeNamedItem(qualifiedName) {
-            var attr = $.removeAttributeByName(qualifiedName, $.shadow(this).element);
+            var shadowState = $.getShadowState(this);
+            var attr = $.removeAttributeByName(qualifiedName, shadowState.element);
             if (!attr) {
                 throw $.makeError('NotFoundError');
             }
             return attr;
         }
 
-        // todo: tests
+        // TODO: tests
 
     }, {
         key: 'removeNamedItemNS',
         value: function removeNamedItemNS(namespace, localName) {
-            var attr = $.removeAttributeByNamespace(namespace, localName, $.shadow(this).element);
+            var shadowState = $.getShadowState(this);
+            var attr = $.removeAttributeByNamespace(namespace, localName, shadowState.element);
             if (!attr) {
                 throw $.makeError('NotFoundError');
             }
@@ -1601,9 +1658,12 @@ var _class = function () {
 
         // TODO: tests
         value: function hasChildNodes() {
-            var childNodes = $.shadow(this).childNodes;
-            if (childNodes) {
-                return childNodes.length > 0;
+            var nodeState = $.getShadowState(this);
+            if (nodeState) {
+                var childNodes = nodeState.childNodes;
+                if (childNodes) {
+                    return childNodes.length > 0;
+                }
             }
 
             return $.descriptors.Node.hasChildNodes.value.call(this);
@@ -1631,15 +1691,16 @@ var _class = function () {
                         continue;
                     }
                     var data = '';
-                    var contiguousTextNodes = [];
+                    var contiguousTextNodes = new Array(childNodes.length);
+                    var contiguousCount = 0;
                     var next = childNode;
                     while (next = next.nextSibling && next.nodeType === Node.TEXT_NODE) {
                         data += dataDescriptor.get.call(next);
-                        contiguousTextNodes.push(next);
+                        contiguousTextNodes[contiguousCount++] = next;
                     }
                     $.replaceData(childNode, length, 0, data);
                     // TODO: (Range)
-                    for (var j = 0; j < contiguousTextNodes.length; j++) {
+                    for (var j = 0; j < contiguousCount; j++) {
                         $.remove(contiguousTextNodes[j], this);
                     }
                 } else {
@@ -1867,12 +1928,13 @@ var _class = function () {
     }, {
         key: 'parentNode',
         get: function get() {
-            var parentNode = $.shadow(this).parentNode;
-            if (parentNode) {
-                return parentNode;
+            var parentNode = void 0;
+            var nodeState = $.getShadowState(this);
+            if (nodeState) {
+                parentNode = nodeState.parentNode;
             }
 
-            return $.descriptors.Node.parentNode.get.call(this);
+            return parentNode || $.descriptors.Node.parentNode.get.call(this);
         }
     }, {
         key: 'parentElement',
@@ -1887,9 +1949,12 @@ var _class = function () {
     }, {
         key: 'childNodes',
         get: function get() {
-            var childNodes = $.shadow(this).childNodes;
-            if (childNodes) {
-                return childNodes.slice();
+            var nodeState = $.getShadowState(this);
+            if (nodeState) {
+                var childNodes = nodeState.childNodes;
+                if (childNodes) {
+                    return childNodes.slice();
+                }
             }
 
             return $.descriptors.Node.childNodes.get.call(this);
@@ -1900,12 +1965,15 @@ var _class = function () {
     }, {
         key: 'firstChild',
         get: function get() {
-            var childNodes = $.shadow(this).childNodes;
-            if (childNodes) {
-                if (childNodes.length) {
-                    return childNodes[0];
+            var nodeState = $.getShadowState(this);
+            if (nodeState) {
+                var childNodes = nodeState.childNodes;
+                if (childNodes) {
+                    if (childNodes.length) {
+                        return childNodes[0];
+                    }
+                    return null;
                 }
-                return null;
             }
 
             return $.descriptors.Node.firstChild.get.call(this);
@@ -1916,12 +1984,15 @@ var _class = function () {
     }, {
         key: 'lastChild',
         get: function get() {
-            var childNodes = $.shadow(this).childNodes;
-            if (childNodes) {
-                if (childNodes.length) {
-                    return childNodes[childNodes.length - 1];
+            var nodeState = $.getShadowState(this);
+            if (nodeState) {
+                var childNodes = nodeState.childNodes;
+                if (childNodes) {
+                    if (childNodes.length) {
+                        return childNodes[childNodes.length - 1];
+                    }
+                    return null;
                 }
-                return null;
             }
 
             return $.descriptors.Node.lastChild.get.call(this);
@@ -1932,11 +2003,14 @@ var _class = function () {
     }, {
         key: 'previousSibling',
         get: function get() {
-            var parentNode = $.shadow(this).parentNode;
-            if (parentNode) {
-                var childNodes = $.shadow(parentNode).childNodes;
-                var siblingIndex = childNodes.indexOf(this) - 1;
-                return siblingIndex < 0 ? null : childNodes[siblingIndex];
+            var nodeState = $.getShadowState(this);
+            if (nodeState) {
+                var parentNode = nodeState.parentNode;
+                if (parentNode) {
+                    var childNodes = $.getShadowState(parentNode).childNodes;
+                    var siblingIndex = childNodes.indexOf(this) - 1;
+                    return siblingIndex < 0 ? null : childNodes[siblingIndex];
+                }
             }
 
             return $.descriptors.Node.previousSibling.get.call(this);
@@ -1947,11 +2021,14 @@ var _class = function () {
     }, {
         key: 'nextSibling',
         get: function get() {
-            var parentNode = $.shadow(this).parentNode;
-            if (parentNode) {
-                var childNodes = $.shadow(parentNode).childNodes;
-                var siblingIndex = childNodes.indexOf(this) + 1;
-                return siblingIndex === childNodes.length ? null : childNodes[siblingIndex];
+            var nodeState = $.getShadowState(this);
+            if (nodeState) {
+                var parentNode = nodeState.parentNode;
+                if (parentNode) {
+                    var childNodes = $.getShadowState(parentNode).childNodes;
+                    var siblingIndex = childNodes.indexOf(this) + 1;
+                    return siblingIndex === childNodes.length ? null : childNodes[siblingIndex];
+                }
             }
 
             return $.descriptors.Node.nextSibling.get.call(this);
@@ -2136,12 +2213,12 @@ var _class = function () {
     }, {
         key: 'mode',
         get: function get() {
-            return $.shadow(this).mode;
+            return $.getShadowState(this).mode;
         }
     }, {
         key: 'host',
         get: function get() {
-            return $.shadow(this).host;
+            return $.getShadowState(this).host;
         }
 
         // TODO: tests
@@ -2206,9 +2283,8 @@ var _class = function () {
                 // TODO: (Range)
             }
             $.replaceData(this, offset, count, '');
-            if (!parent) {
-                // TODO: (Range)
-            }
+            // TODO: (Range)
+            // if (!parent) { }
             return newNode;
         }
     }]);
@@ -2485,31 +2561,29 @@ exports.default = function (base) {
 
             // TODO: tests
             get: function get() {
-                var parentNode = $.shadow(this).parentNode;
-
-                if (!parentNode) {
-                    if (native.previousElementSibling) {
-                        return native.previousElementSibling.get(this);
+                var nodeState = $.getShadowState(this);
+                if (nodeState && nodeState.parentNode) {
+                    var childNodes = $.getShadowState(nodeState.parentNode).childNodes;
+                    var index = childNodes.indexOf(this);
+                    while (index > 0) {
+                        var previous = childNodes[--index];
+                        if (previous.nodeType === Node.ELEMENT_NODE) {
+                            return previous;
+                        }
+                    };
+                    return null;
+                } else if (native.previousElementSibling) {
+                    return native.previousElementSibling.get.call(this);
+                } else {
+                    var getPreviousSibling = $.descriptors.Node.previousSibling.get;
+                    var previousSibling = this;
+                    while (previousSibling = getPreviousSibling.call(previousSibling)) {
+                        if (previousSibling.nodeType === Node.ELEMENT_NODE) {
+                            return previousSibling;
+                        }
                     }
-                    parentNode = this.parentNode;
-                }
-
-                var childNodes = $.shadow(parentNode).childNodes;
-                var index = childNodes.indexOf(this);
-
-                if (index === 0) {
                     return null;
                 }
-
-                do {
-                    var previous = childNodes[--index];
-
-                    if (previous.nodeType === Node.ELEMENT_NODE) {
-                        return previous;
-                    }
-                } while (index > 0);
-
-                return null;
             }
 
             // TODO: tests
@@ -2517,31 +2591,29 @@ exports.default = function (base) {
         }, {
             key: 'nextElementSibling',
             get: function get() {
-                var parentNode = $.shadow(this).parentNode;
-
-                if (!parentNode) {
-                    if (native.nextElementSibling) {
-                        return native.nextElementSibling.get(this);
+                var nodeState = $.getShadowState(this);
+                if (nodeState && nodeState.parentNode) {
+                    var childNodes = $.getShadowState(nodeState.parentNode).childNodes;
+                    var index = childNodes.indexOf(this);
+                    while (index < childNodes.length - 1) {
+                        var next = childNodes[++index];
+                        if (next.nodeType === Node.ELEMENT_NODE) {
+                            return next;
+                        }
+                    };
+                    return null;
+                } else if (native.nextElementSibling) {
+                    return native.nextElementSibling.get.call(this);
+                } else {
+                    var getNextSibling = $.descriptors.Node.nextSibling.get;
+                    var nextSibling = this;
+                    while (nextSibling = getNextSibling.call(nextSibling)) {
+                        if (nextSibling.nodeType === Node.ELEMENT_NODE) {
+                            return nextSibling;
+                        }
                     }
-                    parentNode = this.parentNode;
-                }
-
-                var childNodes = $.shadow(parentNode).childNodes;
-                var index = childNodes.indexOf(this);
-
-                if (index === childNodes.length - 1) {
                     return null;
                 }
-
-                do {
-                    var previous = childNodes[++index];
-
-                    if (previous.nodeType === Node.ELEMENT_NODE) {
-                        return previous;
-                    }
-                } while (index < childNodes.length);
-
-                return null;
             }
         }]);
 
@@ -2590,7 +2662,8 @@ exports.default = function (base) {
                 var results = void 0;
 
                 if ($.isShadowRoot(this)) {
-                    results = $.descriptors.Element.querySelectorAll.value.call($.shadow(this).host, selector);
+                    var host = $.getShadowState(this).host;
+                    results = $.descriptors.Element.querySelectorAll.value.call(host, selector);
                 } else {
                     results = native.querySelectorAll.value.call(this, selector);
                 }
@@ -2743,35 +2816,23 @@ exports.default = function (base) {
                     return null;
                 }
 
-                var stack = [{ node: firstChild, recursed: false }];
                 var results = [];
 
-                while (stack.length) {
-                    var frame = stack.pop();
-
-                    if (frame.recursed) {
-                        if (frame.node.nextSibling) {
-                            stack.push({ node: frame.node.nextSibling, recursed: false });
-                        }
-                    } else {
-                        if (frame.node.nodeType == Node.ELEMENT_NODE && frame.node.matches(selectors)) {
-                            results.push(frame.node);
-                        }
-
-                        stack.push({ node: frame.node, recursed: true });
-
-                        if (firstChild = frame.node.firstChild) {
-                            stack.push({ node: firstChild, recursed: false });
-                        }
-                    }
-                }
+                $.treeOrderRecursiveSelectAll(firstChild, results, function (node) {
+                    return node.nodeType === Node.ELEMENT_NODE && node.matches(selectors);
+                });
 
                 return results;
             }
         }, {
             key: 'children',
             get: function get() {
-                var childNodes = $.shadow(this).childNodes;
+                var childNodes = void 0;
+
+                var shadowState = $.getShadowState(this);
+                if (shadowState) {
+                    childNodes = shadowState.childNodes;
+                }
 
                 if (!childNodes) {
                     if (native.children) {
@@ -2794,7 +2855,12 @@ exports.default = function (base) {
         }, {
             key: 'firstElementChild',
             get: function get() {
-                var childNodes = $.shadow(this).childNodes;
+                var childNodes = void 0;
+
+                var shadowState = $.getShadowState(this);
+                if (shadowState) {
+                    childNodes = shadowState.childNodes;
+                }
 
                 if (!childNodes) {
                     if (native.firstElementChild) {
@@ -2815,7 +2881,12 @@ exports.default = function (base) {
         }, {
             key: 'lastElementChild',
             get: function get() {
-                var childNodes = $.shadow(this).childNodes;
+                var childNodes = void 0;
+
+                var shadowState = $.getShadowState(this);
+                if (shadowState) {
+                    childNodes = shadowState.childNodes;
+                }
 
                 if (!childNodes) {
                     if (native.lastElementChild) {
@@ -2836,7 +2907,12 @@ exports.default = function (base) {
         }, {
             key: 'childElementCount',
             get: function get() {
-                var childNodes = $.shadow(this).childNodes;
+                var childNodes = void 0;
+
+                var shadowState = $.getShadowState(this);
+                if (shadowState) {
+                    childNodes = shadowState.childNodes;
+                }
 
                 if (!childNodes) {
                     if (native.childElementCount) {
@@ -2892,11 +2968,15 @@ exports.default = function (base) {
                 // spec implementation is:
                 // return $.findASlot(this, true);
                 // this uses an alternative (see https://github.com/whatwg/dom/issues/369)
-                var slot = $.shadow(this).assignedSlot;
-                if (slot && $.closedShadowHidden(slot, this)) {
-                    slot = null;
+                var shadowState = $.getShadowState(this);
+                if (shadowState) {
+                    var slot = shadowState.assignedSlot;
+                    if (slot && $.closedShadowHidden(slot, this)) {
+                        slot = null;
+                    }
+                    return slot;
                 }
-                return slot;
+                return null;
             }
         }]);
 
@@ -3024,6 +3104,7 @@ exports.default = function () {
 
     // Cleanup for IE, Edge
     delete Node.prototype.attributes;
+    delete HTMLElement.prototype.classList;
     delete HTMLElement.prototype.children;
     delete HTMLElement.prototype.parentElement;
     delete HTMLElement.prototype.innerHTML;
@@ -3149,6 +3230,8 @@ var _utils = require('./utils.js');
 
 var $ = _interopRequireWildcard(_utils);
 
+var _DOMTokenList = require('./interfaces/DOMTokenList.js');
+
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 // Fear not the single page
@@ -3162,6 +3245,8 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 // TODO: implement on demand
 // This would be useful to polyfill considering most current browsers don't implement it yet
 // HTMLHyperlinkElementUtils (Anchor, Area)
+
+// An index of IDL attributes that should reflect a corresponding content attribute.
 
 var interfaces = {
     Element: {
@@ -3509,8 +3594,6 @@ var interfaces = {
 
 // https://www.w3.org/TR/html/single-page.html#reflection
 
-// An index of IDL attributes that should reflect a corresponding content attribute.
-
 function reflectString(attributeName) {
     return function (type, name) {
         attributeName = attributeName || name.toLowerCase();
@@ -3594,36 +3677,14 @@ function reflectFloat(minValue, defaultValue) {
 
 function reflectDOMTokenList(localName) {
     return function (type, name) {
-        var descriptor = $.descriptor(type, name);
-        if (!descriptor) {
-            return;
-        }
         Object.defineProperty(type.prototype, name, {
             configurable: true,
             enumerable: true,
             get: function get() {
-                var state = $.shadow(this);
-                if (!state.tokenList) {
-                    var element = this;
-                    var original = this.getAttribute(localName);
-                    var tokens = original ? original.split(/\s/).sort() : [];
-                    var tokenList = Object.create(DOMTokenList.prototype);
-                    $.setShadowState(tokenList, { element: element, localName: localName, tokens: tokens });
-                    state.tokenList = tokenList;
-                }
-                return state.tokenList;
+                return (0, _DOMTokenList.getOrCreateDOMTokenList)(this, localName);
             },
             set: function set(value) {
-                var state = $.shadow(this);
-                if (!state.tokenList) {
-                    var element = this;
-                    var original = this.getAttribute(localName);
-                    var tokens = original ? original.split(/\s/).sort() : [];
-                    var tokenList = Object.create(DOMTokenList.prototype);
-                    $.setShadowState(tokenList, { element: element, localName: localName, tokens: tokens });
-                    state.tokenList = tokenList;
-                }
-                state.tokenList.value = value;
+                (0, _DOMTokenList.getOrCreateDOMTokenList)(this, localName).value = value;
             }
         });
     };
@@ -3693,7 +3754,7 @@ function patchAll() {
     }
 }
 
-},{"./utils.js":27}],27:[function(require,module,exports){
+},{"./interfaces/DOMTokenList.js":4,"./utils.js":27}],27:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3702,9 +3763,10 @@ Object.defineProperty(exports, "__esModule", {
 exports.makeError = makeError;
 exports.reportError = reportError;
 exports.extend = extend;
-exports.hasShadowState = hasShadowState;
+exports.getShadowState = getShadowState;
 exports.setShadowState = setShadowState;
-exports.shadow = shadow;
+exports.treeOrderRecursiveSelectAll = treeOrderRecursiveSelectAll;
+exports.treeOrderRecursiveSelectFirst = treeOrderRecursiveSelectFirst;
 exports.filterByRoot = filterByRoot;
 exports.isShadowRoot = isShadowRoot;
 exports.isValidCustomElementName = isValidCustomElementName;
@@ -3818,7 +3880,11 @@ var descriptors = exports.descriptors = {
 // TODO: add a note about importing YuzuJS/setImmediate before 
 // this polyfill if better performance is desired.
 var setImmediate = exports.setImmediate = 'setImmediate' in window ? window.setImmediate : function (callback) {
-    return setTimeout(callback, 0);
+    for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+        args[_key - 1] = arguments[_key];
+    }
+
+    return setTimeout.apply(undefined, [callback, 0].concat(args));
 };
 
 // TODO: analyze usages and provide brief but descriptive messages
@@ -3840,8 +3906,8 @@ function reportError(error) {
 }
 
 function extend(object) {
-    for (var _len = arguments.length, mixins = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-        mixins[_key - 1] = arguments[_key];
+    for (var _len2 = arguments.length, mixins = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
+        mixins[_key2 - 1] = arguments[_key2];
     }
 
     for (var i = 0; i < mixins.length; i++) {
@@ -3858,30 +3924,57 @@ function extend(object) {
     }
 }
 
-function hasShadowState(object) {
-    return '_shadow' in object;
+function getShadowState(object) {
+    return object._shadow;
 }
 
 function setShadowState(object, state) {
-    object._shadow = state;
+    return object._shadow = state;
 }
 
-function shadow(object) {
-    var shadow = object._shadow || {};
-    return object._shadow = shadow;
+function treeOrderRecursiveSelectAll(node, results, match) {
+    if (match(node)) {
+        results.push(node);
+    }
+    var firstChild = node.firstChild;
+    if (firstChild) {
+        treeOrderRecursiveSelectAll(firstChild, results, match);
+    }
+    var firstSibling = node.firstSibling;
+    if (firstSibling) {
+        treeOrderRecursiveSelectAll(firstSibling, results, match);
+    }
+}
+
+function treeOrderRecursiveSelectFirst(node, match) {
+    if (match(node)) {
+        return node;
+    }
+    var firstChild = node.firstChild;
+    if (firstChild) {
+        var result = treeOrderRecursiveSelectFirst(firstChild, match);
+        if (result) {
+            return result;
+        }
+    }
+    var firstSibling = node.firstSibling;
+    if (firstSibling) {
+        return treeOrderRecursiveSelectFirst(firstSibling, match);
+    }
+    return null;
 }
 
 function filterByRoot(node, descendants) {
     var contextRoot = root(node);
-    var filtered = [];
-
+    var filtered = new Array(descendants.length);
+    var filteredCount = 0;
     for (var i = 0; i < descendants.length; i++) {
         var item = descendants[i];
         if (root(item) === contextRoot) {
-            filtered.push(item);
+            filtered[filteredCount++] = item;
         }
     }
-
+    filtered.length = filteredCount;
     return filtered;
 }
 
@@ -3913,18 +4006,29 @@ function isValidCustomElementName(localName) {
 
 // https://www.w3.org/TR/DOM-Parsing/
 
+// PERF: This function uses a recycled div element
+// and a recycled document fragment stored in the passed 
+// element's owner document so it can avoid allocation.
+// Callers must empty the returned fragment.
 function parseHTMLFragment(markup, context) {
-    var temp = context.ownerDocument.createElement('div');
-    descriptors.Element.innerHTML.set.call(temp, markup);
-    var childNodes = descriptors.Node.childNodes.get.call(temp);
-    var fragment = context.ownerDocument.createDocumentFragment();
-    var getFirstChild = descriptors.Node.firstChild.get;
-    var appendChild = descriptors.Node.appendChild.value;
-    var firstChild = void 0;
-    while (firstChild = getFirstChild.call(temp)) {
-        appendChild.call(fragment, firstChild);
+    var document = context.ownerDocument;
+    var documentState = getShadowState(document);
+    if (!documentState) {
+        documentState = setShadowState(document, {
+            parsingElement: document.createElement('div'),
+            parsingFragment: document.createDocumentFragment()
+        });
     }
-    return fragment;
+    var parsingElement = documentState.parsingElement;
+    var parsingFragment = documentState.parsingFragment;
+    descriptors.Element.innerHTML.set.call(parsingElement, markup);
+    var nodeFirstChildGet = descriptors.Node.firstChild.get;
+    var nodeAppendChildValue = descriptors.Node.appendChild.value;
+    var firstChild = void 0;
+    while (firstChild = nodeFirstChildGet.call(parsingElement)) {
+        nodeAppendChildValue.call(parsingFragment, firstChild);
+    }
+    return parsingFragment;
 }
 
 function serializeHTMLFragment(node) {
@@ -4305,9 +4409,9 @@ function updateSlotableName(element, localName, oldValue, value, namespace) {
         } else {
             descriptors.Element.setAttribute.value.call(element, 'slot', value);
         }
-        var assignedSlot = shadow(element).assignedSlot;
-        if (assignedSlot) {
-            assignSlotables(assignedSlot);
+        var elementState = getShadowState(element);
+        if (elementState && elementState.assignedSlot) {
+            assignSlotables(elementState.assignedSlot);
         }
         assignASlot(element);
     }
@@ -4410,7 +4514,7 @@ function replaceAttribute(oldAttr, newAttr, element) {
 }
 
 function setAttribute(attr, element) {
-    if (attr.ownerElement != null || attr.ownerElement !== element) {
+    if (attr.ownerElement != null && attr.ownerElement !== element) {
         throw makeError('InUseAttributeError');
     }
     var attributes = descriptors.Element.attributes.get.call(element);
@@ -4529,48 +4633,28 @@ function findASlot(slotable, open) {
     }
 
     // 2. Let shadow be slotable’s parent’s shadow root.
-    var shadowRoot = shadow(parent).shadowRoot;
+    var parentState = getShadowState(parent);
 
     // 3. If shadow is null, then return null.
-    if (!shadowRoot) {
+    if (!parentState || !parentState.shadowRoot) {
         return null;
     }
 
     // 4. If the open flag is set and shadow’s mode is not "open", then return null.
-    if (open === true && shadowRoot.mode !== 'open') {
+    if (open === true && parentState.shadowRoot.mode !== 'open') {
         return null;
     }
 
     // 5. Return the first slot in shadow’s tree whose name is slotable’s name, if any, and null otherwise.
-    if (!shadowRoot.firstChild) {
+    if (!parentState.shadowRoot.firstChild) {
         return null;
     }
 
     var name = slotable instanceof Element ? slotable.slot : null;
-    var stack = [{ node: shadowRoot.firstChild, recursed: false }];
 
-    while (stack.length) {
-        var frame = stack.pop();
-        var node = frame.node;
-
-        if (frame.recursed) {
-            if (node.nextSibling) {
-                stack.push({ node: node.nextSibling, recursed: false });
-            }
-        } else {
-            if (node.localName === 'slot' && node.getAttribute('name') === name) {
-                return node;
-            }
-
-            stack.push({ node: frame.node, recursed: true });
-
-            if (node.firstChild) {
-                stack.push({ node: node.firstChild, recursed: false });
-            }
-        }
-    }
-
-    return null;
+    return treeOrderRecursiveSelectFirst(parentState.shadowRoot.firstChild, function (node) {
+        return node.localName === 'slot' && node.name === name;
+    });
 }
 
 function findSlotables(slot) {
@@ -4657,7 +4741,7 @@ function assignSlotables(slot, suppressSignaling) {
     // 2. If suppress signaling flag is unset, and slotables and slot’s assigned 
     // nodes are not identical, then run signal a slot change for slot.
     var identical = true;
-    var slotState = shadow(slot);
+    var slotState = getShadowState(slot) || setShadowState(slot, {});
     var assignedNodes = slotState.assignedNodes || [];
     for (var i = 0; i < slotables.length; i++) {
         if (slotables[i] !== assignedNodes[i]) {
@@ -4675,39 +4759,44 @@ function assignSlotables(slot, suppressSignaling) {
     // 4. For each slotable in slotables, set slotable’s assigned slot to slot.
     for (var _i3 = 0; _i3 < slotables.length; _i3++) {
         var slotable = slotables[_i3];
-        shadow(slotable).assignedSlot = slot;
+        // If it's a slotable it should already have an associated state object.
+        getShadowState(slotable).assignedSlot = slot;
     }
 
-    !identical && setImmediate(function () {
-        // 4a. If we haven't tracked them yet, track the slot's logical children
-        if (!slotState.childNodes) {
-            var childNodes = descriptors.Node.childNodes.get.call(slot);
-            slotState.childNodes = slice(childNodes);
-        }
+    // 4a. If we haven't tracked them yet, track the slot's logical children
+    if (!slotState.childNodes) {
+        slotState.childNodes = slice(descriptors.Node.childNodes.get.call(slot));
+    }
 
-        // 4b. Clean out the slot
-        var firstChild = void 0;
-        while (firstChild = descriptors.Node.firstChild.get.call(slot)) {
-            descriptors.Node.removeChild.value.call(slot, firstChild);
-        }
+    // function call avoiding closure for performance.
+    if (!identical) {
+        setImmediate(renderSlotablesAsync, slot);
+    }
+}
 
-        // 4c. Append the slotables, if any
-        for (var _i4 = 0; _i4 < slotables.length; _i4++) {
-            var _slotable = slotables[_i4];
-            slotState.assignedSlot = slot;
-            // if we break out the physical portion to go async, we still
-            // need to set the assignedSlot property sync
-            descriptors.Node.appendChild.value.call(slot, _slotable);
-        }
+function renderSlotablesAsync(slot) {
+    var slotState = getShadowState(slot);
+    var slotables = slotState.assignedNodes;
 
-        // 4d. Append the fallback content, if no slots
-        if (!slotables.length) {
-            var _childNodes = slotState.childNodes;
-            for (var _i5 = 0; _i5 < _childNodes.length; _i5++) {
-                descriptors.Node.appendChild.value.call(slot, _childNodes[_i5]);
-            }
+    // 4b. Clean out the slot
+    var firstChild = void 0;
+    while (firstChild = descriptors.Node.firstChild.get.call(slot)) {
+        descriptors.Node.removeChild.value.call(slot, firstChild);
+    }
+
+    // 4c. Append the slotables, if any
+    for (var i = 0; i < slotables.length; i++) {
+        var slotable = slotables[i];
+        descriptors.Node.appendChild.value.call(slot, slotable);
+    }
+
+    // 4d. Append the fallback content, if no slots
+    if (!slotables.length) {
+        var childNodes = slotState.childNodes;
+        for (var _i4 = 0; _i4 < childNodes.length; _i4++) {
+            descriptors.Node.appendChild.value.call(slot, childNodes[_i4]);
         }
-    });
+    }
 }
 
 function assignSlotablesForATree(tree, noSignalSlots) {
@@ -4817,41 +4906,51 @@ function insert(node, parent, child, suppressObservers) {
     // https://dom.spec.whatwg.org/#concept-node-insert
     // To insert a node into a parent before a child, with an optional suppress observers flag, run these steps:
 
-    // Skip (Range)
     // 1. Let count be the number of children of node if it is a DocumentFragment node, and one otherwise.
+    var count = 1;
+    var nodeChildNodes = void 0;
+    if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+        nodeChildNodes = node.childNodes;
+        count = nodeChildNodes.length;
+    }
+
+    // Skip (Range)
     // 2. If child is non-null, run these substeps:
 
     // 3. Let nodes be node’s children if node is a DocumentFragment node, 
     // and a list containing solely node otherwise.
-    var nodes = void 0;
+    var nodes = new Array(count);
 
     // 4. If node is a DocumentFragment node, remove its children with the suppress observers flag set.
     if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
-        nodes = slice(node.childNodes);
-        for (var i = 0; i < nodes.length; i++) {
-            remove(nodes[i], node, true);
+        for (var i = 0; i < count; i++) {
+            nodes[i] = nodeChildNodes[i];
+        }
+        for (var _i5 = 0; _i5 < count; _i5++) {
+            remove(nodes[_i5], node, true);
         }
         // 5. If node is a DocumentFragment node, queue a mutation record of "childList" for node with removedNodes nodes.
         queueMutationRecord('childList', node, { removedNodes: nodes });
     } else {
-        nodes = [node];
+        nodes[0] = node;
     }
 
     // 6. For each node in nodes, in tree order, run these substeps:
-    var parentState = shadow(parent);
+    var parentState = getShadowState(parent);
     var parentIsShadow = isShadowRoot(parent);
+    var hasShadowStateChildNodes = parentState && parentState.childNodes;
     for (var _i6 = 0; _i6 < nodes.length; _i6++) {
         var _node = nodes[_i6];
         // 1. Insert node into parent before child or at the end of parent if child is null.
-        var childNodes = parentState.childNodes;
-        if (childNodes) {
+        if (hasShadowStateChildNodes) {
             if (child) {
-                var childIndex = childNodes.indexOf(child);
-                childNodes.splice(childIndex, 0, _node);
+                var childIndex = parentState.childNodes.indexOf(child);
+                parentState.childNodes.splice(childIndex, 0, _node);
             } else {
-                childNodes.push(_node);
+                parentState.childNodes.push(_node);
             }
-            shadow(_node).parentNode = parent;
+            var nodeState = getShadowState(_node) || setShadowState(_node, {});
+            nodeState.parentNode = parent;
             // If it's a shadow root, perform physical insert on the host.
             if (parentIsShadow) {
                 descriptors.Node.insertBefore.value.call(parentState.host, _node, child);
@@ -4861,7 +4960,7 @@ function insert(node, parent, child, suppressObservers) {
         }
 
         // 2. If parent is a shadow host and node is a slotable, then assign a slot for node.
-        if (parentState.shadowRoot && 'assignedSlot' in _node) {
+        if (parentState && parentState.shadowRoot && 'assignedSlot' in _node) {
             assignASlot(_node);
         }
 
@@ -5039,12 +5138,13 @@ function remove(node, parent, suppressObservers) {
     var oldNextSibling = node.nextSibling;
 
     // 9. Remove node from its parent.
-    var nodeState = shadow(node);
-    var childNodes = shadow(parent).childNodes;
-    if (childNodes) {
-        var nodeIndex = childNodes.indexOf(node);
-        childNodes.splice(nodeIndex, 1);
-        delete nodeState.parentNode;
+    var nodeState = getShadowState(node);
+    var parentState = getShadowState(parent);
+    if (parentState && parentState.childNodes) {
+        var nodeIndex = parentState.childNodes.indexOf(node);
+        parentState.childNodes.splice(nodeIndex, 1);
+        // Should always have nodeState if we got here.
+        nodeState.parentNode = null;
         var parentNode = descriptors.Node.parentNode.get.call(node);
         descriptors.Node.removeChild.value.call(parentNode, node);
     } else {
@@ -5052,7 +5152,7 @@ function remove(node, parent, suppressObservers) {
     }
 
     // 10. If node is assigned, then run assign slotables for node’s assigned slot.
-    if (nodeState.assignedSlot) {
+    if (nodeState && nodeState.assignedSlot) {
         assignSlotables(nodeState.assignedSlot);
         nodeState.assignedSlot = null;
     }
@@ -5095,8 +5195,9 @@ function remove(node, parent, suppressObservers) {
     while (inclusiveAncestor) {
         // ...if inclusiveAncestor has any registered observers whose options' 
         // subtree is true, then for each such registered observer registered... 
-        var ancestorObservers = shadow(inclusiveAncestor).observers;
-        if (ancestorObservers) {
+        var ancestorState = getShadowState(inclusiveAncestor);
+        if (ancestorState && ancestorState.observers) {
+            var ancestorObservers = ancestorState.observers;
             for (var i = 0; i < ancestorObservers.length; i++) {
                 var ancestorObserver = ancestorObservers[i];
                 if (ancestorObserver.options.subtree) {
@@ -5128,7 +5229,7 @@ function remove(node, parent, suppressObservers) {
 // TODO: test everything that queues mutation records
 
 function getOrCreateNodeObservers(node) {
-    var nodeState = shadow(node);
+    var nodeState = getShadowState(node) || setShadowState(node, {});
     var observers = nodeState.observers;
     return observers ? observers : nodeState.observers = [];
 }
@@ -5194,6 +5295,11 @@ var signalSlotList = [];
 var theEmptyList = Object.freeze([]);
 
 function queueMutationRecord(type, target, details) {
+    // PERF: This is an out-of-spec optimization
+    if (mutationObservers.length === 0) {
+        return;
+    }
+
     // https://dom.spec.whatwg.org/#queueing-a-mutation-record
     // 1. Let interested observers be an initially empty set of 
     // MutationObserver objects optionally paired with a string.
@@ -5208,15 +5314,15 @@ function queueMutationRecord(type, target, details) {
     // 3. Then, for each node in nodes... 
     for (var i = 0; i < nodes.length; i++) {
         var node = nodes[i];
-        var observers = shadow(node).observers;
-        if (!observers) {
+        var nodeState = getShadowState(node);
+        if (!nodeState || !nodeState.observers) {
             continue;
         }
         // ...and then for each registered observer (with registered 
         // observer’s options as options) in node’s list of registered 
         // observers...
-        for (var j = 0; j < observers.length; j++) {
-            var registeredObserver = observers[i];
+        for (var j = 0; j < nodeState.observers.length; j++) {
+            var registeredObserver = nodeState.observers[i];
             var options = registeredObserver.options;
             // ...run these substeps:
             // 1. If none of the following are true:
@@ -5255,6 +5361,11 @@ function queueMutationRecord(type, target, details) {
                 pairedStrings[index] = details.oldValue;
             }
         }
+    }
+
+    // PERF: This is an out-of-spec optimization
+    if (interestedObservers.length === 0) {
+        return;
     }
 
     // 4. Then, for each observer in interested observers, run these substeps:

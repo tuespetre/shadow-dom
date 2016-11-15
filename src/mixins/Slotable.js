@@ -10,11 +10,15 @@ export default function (base) {
             // spec implementation is:
             // return $.findASlot(this, true);
             // this uses an alternative (see https://github.com/whatwg/dom/issues/369)
-            let slot = $.shadow(this).assignedSlot;
-            if (slot && $.closedShadowHidden(slot, this)) {
-                slot = null;
+            const shadowState = $.getShadowState(this);
+            if (shadowState) {
+                let slot = shadowState.assignedSlot;
+                if (slot && $.closedShadowHidden(slot, this)) {
+                    slot = null;
+                }
+                return slot;
             }
-            return slot;            
+            return null;            
         }
 
     };

@@ -14,7 +14,12 @@ export default function (base) {
     return class {
 
         get children() {
-            let childNodes = $.shadow(this).childNodes;
+            let childNodes;
+
+            const shadowState = $.getShadowState(this);
+            if (shadowState) {
+                childNodes = shadowState.childNodes
+            }
 
             if (!childNodes) {
                 if (native.children) {
@@ -36,7 +41,12 @@ export default function (base) {
         }
 
         get firstElementChild() {
-            let childNodes = $.shadow(this).childNodes;
+            let childNodes;
+
+            const shadowState = $.getShadowState(this);
+            if (shadowState) {
+                childNodes = shadowState.childNodes
+            }
 
             if (!childNodes) {
                 if (native.firstElementChild) {
@@ -56,7 +66,12 @@ export default function (base) {
         }
 
         get lastElementChild() {
-            let childNodes = $.shadow(this).childNodes;
+            let childNodes;
+
+            const shadowState = $.getShadowState(this);
+            if (shadowState) {
+                childNodes = shadowState.childNodes
+            }
 
             if (!childNodes) {
                 if (native.lastElementChild) {
@@ -76,7 +91,12 @@ export default function (base) {
         }
 
         get childElementCount() {
-            let childNodes = $.shadow(this).childNodes;
+            let childNodes;
+
+            const shadowState = $.getShadowState(this);
+            if (shadowState) {
+                childNodes = shadowState.childNodes
+            }
 
             if (!childNodes) {
                 if (native.childElementCount) {
@@ -149,29 +169,11 @@ export default function (base) {
                 return null;
             }
 
-            const stack = [{ node: firstChild, recursed: false }];
             const results = [];
 
-            while (stack.length) {
-                const frame = stack.pop();
-
-                if (frame.recursed) {
-                    if (frame.node.nextSibling) {
-                        stack.push({ node: frame.node.nextSibling, recursed: false });
-                    }
-                }
-                else {
-                    if (frame.node.nodeType == Node.ELEMENT_NODE && frame.node.matches(selectors)) {
-                        results.push(frame.node);
-                    }
-
-                    stack.push({ node: frame.node, recursed: true });
-
-                    if (firstChild = frame.node.firstChild) {
-                        stack.push({ node: firstChild, recursed: false });
-                    }
-                }
-            }
+            $.treeOrderRecursiveSelectAll(firstChild, results, function (node) {
+                return node.nodeType === Node.ELEMENT_NODE && node.matches(selectors);
+            });
 
             return results;
         }

@@ -19,9 +19,8 @@ export default class {
             // TODO: (Range)
         }
         $.replaceData(this, offset, count, '');
-        if (!parent) {
-            // TODO: (Range)
-        }
+        // TODO: (Range)
+        // if (!parent) { }
         return newNode;
     }
 

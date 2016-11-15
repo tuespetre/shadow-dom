@@ -17,7 +17,7 @@ export default class {
         }
         const event = document.createEvent('CustomEvent');
         event.initCustomEvent(type, bubbles, cancelable, detail);
-        $.shadow(event).composed = composed;
+        $.setShadowState(event, { composed });
         return event;
     }
 

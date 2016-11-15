@@ -73,11 +73,17 @@ export default function (base) {
 class EventListenerCollection {
 
     static get(target, type, capture) {
-        const nativeTarget = $.shadow(target).host || target;
-        const collections = $.shadow(nativeTarget).listeners;
-        if (!(collections instanceof Array)) {
+        let targetState = $.getShadowState(target);
+        let nativeTarget = target;
+        let nativeTargetState = targetState;
+        if (targetState && targetState.host) {
+            nativeTarget = targetState.host;
+            nativeTargetState = $.getShadowState(nativeTarget);
+        }
+        if (!nativeTargetState || !nativeTargetState.listeners) {
             return null;
         }
+        const collections = nativeTargetState.listeners;
         for (let i = 0; i < collections.length; i++) {
             const collection = collections[i];
             if (collection.target === nativeTarget &&
@@ -90,19 +96,26 @@ class EventListenerCollection {
     }
 
     static create(target, type, capture) {
-        const nativeTarget = $.shadow(target).host || target;
-        const nativeTargetState = $.shadow(nativeTarget);
-        let collections = nativeTargetState.listeners;
-        if (!(collections instanceof Array)) {
-            collections = nativeTargetState.listeners = [];
+        let targetState = $.getShadowState(target);
+        let nativeTarget = target;
+        let nativeTargetState = targetState;
+        if (targetState && targetState.host) {
+            nativeTarget = targetState.host;
+            nativeTargetState = $.getShadowState(nativeTarget);
+        }
+        if (!nativeTargetState) {
+            nativeTargetState = $.setShadowState(nativeTarget, { listeners: [] });
+        }
+        else if (!nativeTargetState.listeners) {
+            nativeTargetState.listeners = [];
         }
         const collection = new EventListenerCollection(nativeTarget, type, capture);
-        collections.push(collection);
+        nativeTargetState.listeners.push(collection);
         return collection;
     }
 
     constructor(target, type, capture) {
-        this.target = $.shadow(target).host || target;
+        this.target = target;
         this.type = type;
         this.capture = capture;
 
@@ -110,7 +123,11 @@ class EventListenerCollection {
         this.shadowListeners = [];
 
         this.callback = event => {
-            const shadowRoot = $.shadow(this.target).shadowRoot;
+            let shadowRoot = null;
+            let targetState = $.getShadowState(target);
+            if (targetState) {
+                shadowRoot = targetState.shadowRoot;
+            }
             switch (event.eventPhase) {
                 case Event.prototype.CAPTURING_PHASE:
                     this.invokeListeners(event, this.target, this.hostListeners);
@@ -138,7 +155,11 @@ class EventListenerCollection {
     }
 
     getListeners(target) {
-        return $.shadow(target).host ? this.shadowListeners : this.hostListeners
+        let targetState = $.getShadowState(target);
+        if (targetState && targetState.host) {
+            return this.shadowListeners;
+        }
+        return this.hostListeners;
     }
 
     addListener(target, listener) {
@@ -166,22 +187,19 @@ class EventListenerCollection {
     }
 
     invokeListeners(event, currentTarget, listeners) {
-        const eventState = $.shadow(event);
+        const eventState = $.getShadowState(event) || $.setShadowState(event, {});
         let path = eventState.calculatedPath;
-
         if (!path) {
             path = eventState.calculatedPath = calculatePath(event);
         }
-
-        const target = calculateTarget(currentTarget, path);
-
         // if there is no target, the event is not composed and should be stopped
+        const target = calculateTarget(currentTarget, path);
         if (!target) {
             event.stopImmediatePropagation();
         }
         else {
             const relatedTarget = calculateRelatedTarget(currentTarget, path);
-            const remove = [];
+            let remove;
 
             eventState.path = path;
             eventState.currentTarget = currentTarget;
@@ -192,7 +210,12 @@ class EventListenerCollection {
                 const listener = listeners[i];
                 const result = listener.callback.call(currentTarget, event);
                 if (listener.once) {
-                    remove.push(listener);
+                    if (!remove) {
+                        remove = [listener];
+                    }
+                    else {
+                        remove.push[listener];
+                    }
                 }
                 if (eventState.stopImmediatePropagationFlag) {
                     break;
@@ -202,9 +225,11 @@ class EventListenerCollection {
             eventState.path = null;
             eventState.currentTarget = null;
 
-            for (let i = 0; i < remove.length; i++) {
-                let index = listeners.indexOf(remove[i]);
-                listeners.splice(index, 1);
+            if (remove) {
+                for (let i = 0; i < remove.length; i++) {
+                    let index = listeners.indexOf(remove[i]);
+                    listeners.splice(index, 1);
+                }
             }
         }
     }
@@ -223,6 +248,7 @@ function calculatePath(event) {
     // https://dom.spec.whatwg.org/#concept-event-dispatch
 
     const path = [];
+    let p = 0;
 
     let target = $.descriptors.Event.target.get.call(event);
 
@@ -257,7 +283,7 @@ function calculatePath(event) {
     // 4. If target is relatedTarget and target is not event’s relatedTarget, then return true.
 
     // 5. Append (target, targetOverride, relatedTarget) to event’s path.
-    path.push([target, targetOverride, relatedTarget]);
+    path[p++] = [target, targetOverride, relatedTarget];
 
     // Skip (native)
     // 6. Let isActivationEvent be true, if event is a MouseEvent object and 
@@ -278,23 +304,25 @@ function calculatePath(event) {
         // 2. If target’s root is a shadow-including inclusive ancestor of parent, then... 
         // append (parent, null, relatedTarget) to event’s path.
         if ($.shadowIncludingInclusiveAncestor($.root(target), parent)) {
-            path.push([parent, null, relatedTarget]);
+            path[p++] = [parent, null, relatedTarget];
+            parent = getTheParent(parent, event);
+            continue;
         }
         // 3. Otherwise, if parent and relatedTarget are identical, then set parent to null.
         else if (parent === relatedTarget) {
-            parent = null;
+            break;
         }
         // 4. Otherwise, set target to parent and then... 
         // append (parent, target, relatedTarget) to event’s path.
         else {
             target = parent;
-            path.push([parent, target, relatedTarget]);
+            path[p++] = [parent, target, relatedTarget];
+            parent = getTheParent(parent, event);
+            continue;
         }
         // 5. If parent is non-null, then set parent to the result of 
         // invoking parent’s get the parent with event.
-        if (parent != null) {
-            parent = getTheParent(parent, event);
-        }
+        // NOTE: This step was duplicated above to save some cycles.
     }
 
     return path;
@@ -327,7 +355,7 @@ function getTheParent(node, event) {
         }
         else if ($.isShadowRoot(node)) {
             if (!event.composed) {
-                const [item] = $.shadow(event).path[0];
+                const [item] = $.getShadowState(event).path[0];
                 if ($.root(item) === node) {
                     return null;
                 }

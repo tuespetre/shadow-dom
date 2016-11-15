@@ -33,7 +33,12 @@ export default class {
 
         // 1. If the value of options's flatten member is false, then return this element's assigned nodes.
         if (!options || options.flatten !== true) {
-            return $.shadow(this).assignedNodes || [];
+            let assignedNodes = null;
+            const shadowState = $.getShadowState(this);
+            if (shadowState) {
+                assignedNodes = shadowState.assignedNodes;
+            }
+            return assignedNodes || [];
         }
 
         // 2. Return the result of finding flattened slotables with this element.

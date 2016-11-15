@@ -13,62 +13,60 @@ export default function (base) {
 
         // TODO: tests
         get previousElementSibling() {
-            let parentNode = $.shadow(this).parentNode;
-
-            if (!parentNode) {
-                if (native.previousElementSibling) {
-                    return native.previousElementSibling.get(this);
-                }
-                parentNode = this.parentNode;
-            }
-
-            const childNodes = $.shadow(parentNode).childNodes;
-            let index = childNodes.indexOf(this);
-
-            if (index === 0) {
+            let nodeState = $.getShadowState(this);
+            if (nodeState && nodeState.parentNode) {
+                const childNodes = $.getShadowState(nodeState.parentNode).childNodes;
+                let index = childNodes.indexOf(this);
+                while (index > 0) {
+                    const previous = childNodes[--index];
+                    if (previous.nodeType === Node.ELEMENT_NODE) {
+                        return previous;
+                    }
+                };
                 return null;
             }
-
-            do {
-                const previous = childNodes[--index];
-
-                if (previous.nodeType === Node.ELEMENT_NODE) {
-                    return previous;
-                }
+            else if (native.previousElementSibling) {
+                return native.previousElementSibling.get.call(this);
             }
-            while (index > 0);
-
-            return null;
+            else {
+                const getPreviousSibling = $.descriptors.Node.previousSibling.get;
+                let previousSibling = this;
+                while (previousSibling = getPreviousSibling.call(previousSibling)) {
+                    if (previousSibling.nodeType === Node.ELEMENT_NODE) {
+                        return previousSibling;
+                    }
+                }
+                return null;
+            }
         }
 
         // TODO: tests
         get nextElementSibling() {
-            let parentNode = $.shadow(this).parentNode;
-
-            if (!parentNode) {
-                if (native.nextElementSibling) {
-                    return native.nextElementSibling.get(this);
-                }
-                parentNode = this.parentNode;
-            }
-
-            const childNodes = $.shadow(parentNode).childNodes;
-            let index = childNodes.indexOf(this);
-
-            if (index === childNodes.length - 1) {
+            let nodeState = $.getShadowState(this);
+            if (nodeState && nodeState.parentNode) {
+                const childNodes = $.getShadowState(nodeState.parentNode).childNodes;
+                let index = childNodes.indexOf(this);
+                while (index < childNodes.length - 1) {
+                    const next = childNodes[++index];
+                    if (next.nodeType === Node.ELEMENT_NODE) {
+                        return next;
+                    }
+                };
                 return null;
             }
-
-            do {
-                const previous = childNodes[++index];
-
-                if (previous.nodeType === Node.ELEMENT_NODE) {
-                    return previous;
-                }
+            else if (native.nextElementSibling) {
+                return native.nextElementSibling.get.call(this);
             }
-            while (index < childNodes.length);
-
-            return null;
+            else {
+                const getNextSibling = $.descriptors.Node.nextSibling.get;
+                let nextSibling = this;
+                while (nextSibling = getNextSibling.call(nextSibling)) {
+                    if (nextSibling.nodeType === Node.ELEMENT_NODE) {
+                        return nextSibling;
+                    }
+                }
+                return null;
+            }
         }
 
     };

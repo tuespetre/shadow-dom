@@ -1,0 +1,16 @@
+{
+  "name": "shadow-dom",
+  "description": "A Shadow DOM v1 polyfill",
+  "main": "dist/shadow-dom.min.js",
+  "authors": [
+    "Derek Gray"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/tuespetre/shadow-dom",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "tests"
+  ]
+}

@@ -15,21 +15,21 @@ export default class {
         }
         const event = document.createEvent('event');
         event.initEvent(type, bubbles, cancelable);
-        $.shadow(event).composed = composed;
+        $.setShadowState(event, { composed });
         return event;
     }
 
     get currentTarget() {
-        return $.shadow(this).currentTarget;
+        return $.getShadowState(this).currentTarget;
     }
 
     get target() {
-        return $.shadow(this).target;
+        return $.getShadowState(this).target;
     }
 
     stopImmediatePropagation() {
         this.stopPropagation();
-        $.shadow(this).stopImmediatePropagationFlag = true;
+        $.getShadowState(this).stopImmediatePropagationFlag = true;
     }
 
     composedPath() {
@@ -42,32 +42,35 @@ export default class {
         const currentTarget = this.currentTarget;
 
         // 3. For each tuple in context object’s path:
-        const path = $.shadow(this).path || [];
+        const path = $.getShadowState(this).path;
 
-        for (let i = 0; i < path.length; i++) {
-            const item = path[i][0];
-            if (currentTarget instanceof Window) {
-                if (!(item instanceof Node) || !$.closedShadowHidden(item, $.shadowIncludingRoot(item))) {
-                    composedPath.push(item);
+        if (path) {
+            let c = 0;
+            for (let i = 0; i < path.length; i++) {
+                const item = path[i][0];
+                if (currentTarget instanceof Window) {
+                    if (!(item instanceof Node) || !$.closedShadowHidden(item, $.shadowIncludingRoot(item))) {
+                        composedPath[c++] = item;
+                    }
                 }
-            }
-            else if (currentTarget instanceof Node) {
-                if (!$.closedShadowHidden(item, currentTarget)) {
-                    composedPath.push(item);
+                else if (currentTarget instanceof Node) {
+                    if (!$.closedShadowHidden(item, currentTarget)) {
+                        composedPath[c++] = item;
+                    }
                 }
-            }
-            else {
-                composedPath.push(item);
+                else {
+                    composedPath[c++] = item;
+                }
             }
         }
 
         // 4. return composedPath.
-        return composedPath.slice();
+        return composedPath;
     }
 
     get composed() {
         // TODO: Compare against the actual prototype instead of just the type strings
-        return $.shadow(this).composed || builtInComposedEvents.indexOf(this.type) !== -1;
+        return $.getShadowState(this).composed || builtInComposedEvents.indexOf(this.type) !== -1;
     }
 
 }
@@ -79,7 +82,7 @@ export default class {
 export class hasRelatedTarget {
 
     get relatedTarget() {
-        return $.shadow(this).relatedTarget;
+        return $.getShadowState(this).relatedTarget;
     }
 
 };

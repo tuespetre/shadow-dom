@@ -2,6 +2,8 @@
 
 import * as $ from './utils.js';
 
+import { getOrCreateDOMTokenList } from './interfaces/DOMTokenList.js';
+
 // Fear not the single page
 // https://www.w3.org/TR/html/single-page.html
 
@@ -470,36 +472,14 @@ function reflectFloat(minValue, defaultValue) {
 
 function reflectDOMTokenList(localName) {
     return function (type, name) {
-        const descriptor = $.descriptor(type, name);
-        if (!descriptor) {
-            return;
-        }
         Object.defineProperty(type.prototype, name, {
             configurable: true,
             enumerable: true,
             get: function () {
-                const state = $.shadow(this);
-                if (!state.tokenList) {
-                    const element = this;
-                    const original = this.getAttribute(localName);
-                    const tokens = original ? original.split(/\s/).sort() : [];
-                    const tokenList = Object.create(DOMTokenList.prototype);
-                    $.setShadowState(tokenList, { element, localName, tokens });
-                    state.tokenList = tokenList;
-                }
-                return state.tokenList;
+                return getOrCreateDOMTokenList(this, localName);
             },
             set: function (value) {
-                const state = $.shadow(this);
-                if (!state.tokenList) {
-                    const element = this;
-                    const original = this.getAttribute(localName);
-                    const tokens = original ? original.split(/\s/).sort() : [];
-                    const tokenList = Object.create(DOMTokenList.prototype);
-                    $.setShadowState(tokenList, { element, localName, tokens });
-                    state.tokenList = tokenList;
-                }
-                state.tokenList.value = value;
+                getOrCreateDOMTokenList(this, localName).value = value;
             }
         });
     };

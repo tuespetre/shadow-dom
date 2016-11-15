@@ -21,7 +21,8 @@ export default function (base) {
             let results;
 
             if ($.isShadowRoot(this)) {
-                results = $.descriptors.Element.querySelectorAll.value.call($.shadow(this).host, selector);
+                const host = $.getShadowState(this).host;
+                results = $.descriptors.Element.querySelectorAll.value.call(host, selector);
             }
             else {
                 results = native.querySelectorAll.value.call(this, selector);

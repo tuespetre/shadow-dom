@@ -2,6 +2,10 @@
 
 suite('MutationObserver', function () {
 
+    if (window.skipAsyncTests) {
+        return;
+    }
+
     var assert = chai.assert;
 
     test('arguments and this value', function (done) {
@@ -11,6 +15,7 @@ suite('MutationObserver', function () {
             assert.equal(this, observer);
             assert.equal(observerArg, observer);
             assert.isTrue(records instanceof Array);
+            observer.disconnect();
             done();
         });
         observer.observe(node, {
@@ -30,6 +35,7 @@ suite('MutationObserver', function () {
                 assert.equal(records[0].removedNodes.length, 0);
                 assert.equal(records[0].addedNodes.length, 1);
                 assert.equal(records[0].addedNodes[0], child);
+                observer.disconnect();
                 done();
             });
             observer.observe(node, {
@@ -47,6 +53,7 @@ suite('MutationObserver', function () {
                 assert.equal(records[0].addedNodes.length, 0);
                 assert.equal(records[0].removedNodes.length, 1);
                 assert.equal(records[0].removedNodes[0], child);
+                observer.disconnect();
                 done();
             });
             node.append(child);
@@ -67,6 +74,7 @@ suite('MutationObserver', function () {
                 assert.equal(records[0].removedNodes[0], child1);
                 assert.equal(records[0].addedNodes.length, 1);
                 assert.equal(records[0].addedNodes[0], child2);
+                observer.disconnect();
                 done();
             });
             node.append(child1);

@@ -10,12 +10,13 @@ export default class {
     }
 
     get parentNode() {
-        const parentNode = $.shadow(this).parentNode;
-        if (parentNode) {
-            return parentNode;
+        let parentNode;
+        const nodeState = $.getShadowState(this);
+        if (nodeState) {
+            parentNode = nodeState.parentNode;
         }
 
-        return $.descriptors.Node.parentNode.get.call(this);
+        return parentNode || $.descriptors.Node.parentNode.get.call(this);
     }
 
     get parentElement() {
@@ -29,9 +30,12 @@ export default class {
 
     // TODO: tests
     hasChildNodes() {
-        const childNodes = $.shadow(this).childNodes;
-        if (childNodes) {
-            return childNodes.length > 0;
+        const nodeState = $.getShadowState(this);
+        if (nodeState) {
+            const childNodes = nodeState.childNodes;
+            if (childNodes) {
+                return childNodes.length > 0;
+            }
         }
 
         return $.descriptors.Node.hasChildNodes.value.call(this);
@@ -39,9 +43,12 @@ export default class {
 
     // TODO: tests
     get childNodes() {
-        const childNodes = $.shadow(this).childNodes;
-        if (childNodes) {
-            return childNodes.slice();
+        const nodeState = $.getShadowState(this);
+        if (nodeState) {
+            const childNodes = nodeState.childNodes;
+            if (childNodes) {
+                return childNodes.slice();
+            }
         }
 
         return $.descriptors.Node.childNodes.get.call(this);
@@ -49,12 +56,15 @@ export default class {
 
     // TODO: tests
     get firstChild() {
-        const childNodes = $.shadow(this).childNodes;
-        if (childNodes) {
-            if (childNodes.length) {
-                return childNodes[0];
+        const nodeState = $.getShadowState(this);
+        if (nodeState) {
+            const childNodes = nodeState.childNodes;
+            if (childNodes) {
+                if (childNodes.length) {
+                    return childNodes[0];
+                }
+                return null;
             }
-            return null;
         }
 
         return $.descriptors.Node.firstChild.get.call(this);
@@ -62,12 +72,15 @@ export default class {
 
     // TODO: tests
     get lastChild() {
-        const childNodes = $.shadow(this).childNodes;
-        if (childNodes) {
-            if (childNodes.length) {
-                return childNodes[childNodes.length - 1];
+        const nodeState = $.getShadowState(this);
+        if (nodeState) {
+            const childNodes = nodeState.childNodes;
+            if (childNodes) {
+                if (childNodes.length) {
+                    return childNodes[childNodes.length - 1];
+                }
+                return null;
             }
-            return null;
         }
 
         return $.descriptors.Node.lastChild.get.call(this);
@@ -75,11 +88,14 @@ export default class {
 
     // TODO: tests
     get previousSibling() {
-        const parentNode = $.shadow(this).parentNode;
-        if (parentNode) {
-            const childNodes = $.shadow(parentNode).childNodes;
-            const siblingIndex = childNodes.indexOf(this) - 1;
-            return siblingIndex < 0 ? null : childNodes[siblingIndex];
+        const nodeState = $.getShadowState(this);
+        if (nodeState) {
+            const parentNode = nodeState.parentNode;
+            if (parentNode) {
+                const childNodes = $.getShadowState(parentNode).childNodes;
+                const siblingIndex = childNodes.indexOf(this) - 1;
+                return siblingIndex < 0 ? null : childNodes[siblingIndex];
+            }
         }
 
         return $.descriptors.Node.previousSibling.get.call(this);
@@ -87,11 +103,14 @@ export default class {
 
     // TODO: tests
     get nextSibling() {
-        const parentNode = $.shadow(this).parentNode;
-        if (parentNode) {
-            const childNodes = $.shadow(parentNode).childNodes;
-            const siblingIndex = childNodes.indexOf(this) + 1;
-            return siblingIndex === childNodes.length ? null : childNodes[siblingIndex];
+        const nodeState = $.getShadowState(this);
+        if (nodeState) {
+            const parentNode = nodeState.parentNode;
+            if (parentNode) {
+                const childNodes = $.getShadowState(parentNode).childNodes;
+                const siblingIndex = childNodes.indexOf(this) + 1;
+                return siblingIndex === childNodes.length ? null : childNodes[siblingIndex];
+            }
         }
 
         return $.descriptors.Node.nextSibling.get.call(this);
@@ -172,15 +191,16 @@ export default class {
                     continue;
                 }
                 let data = '';
-                let contiguousTextNodes = [];
+                let contiguousTextNodes = new Array(childNodes.length);
+                let contiguousCount = 0;
                 let next = childNode;
                 while (next = next.nextSibling && next.nodeType === Node.TEXT_NODE) {
                     data += dataDescriptor.get.call(next);
-                    contiguousTextNodes.push(next);
+                    contiguousTextNodes[contiguousCount++] = next;
                 }
                 $.replaceData(childNode, length, 0, data);
                 // TODO: (Range)
-                for (let j = 0; j < contiguousTextNodes.length; j++) {
+                for (let j = 0; j < contiguousCount; j++) {
                     $.remove(contiguousTextNodes[j], this);
                 }
             }
