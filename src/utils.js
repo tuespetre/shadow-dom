@@ -109,9 +109,9 @@ export function treeOrderRecursiveSelectAll(node, results, match) {
     if (firstChild) {
         treeOrderRecursiveSelectAll(firstChild, results, match);
     }
-    const firstSibling = node.firstSibling;
-    if (firstSibling) {
-        treeOrderRecursiveSelectAll(firstSibling, results, match);
+    const nextSibling = node.nextSibling;
+    if (nextSibling) {
+        treeOrderRecursiveSelectAll(nextSibling, results, match);
     }
 }
 
@@ -126,9 +126,9 @@ export function treeOrderRecursiveSelectFirst(node, match) {
             return result;
         }
     }
-    const firstSibling = node.firstSibling;
-    if (firstSibling) {
-        return treeOrderRecursiveSelectFirst(firstSibling, match);
+    const nextSibling = node.nextSibling;
+    if (nextSibling) {
+        return treeOrderRecursiveSelectFirst(nextSibling, match);
     }
     return null;
 }
