@@ -9,6 +9,7 @@
   "homepage": "https://github.com/tuespetre/shadow-dom",
   "ignore": [
     "**/.*",
+    "build.js",
     "node_modules",
     "bower_components",
     "tests"
