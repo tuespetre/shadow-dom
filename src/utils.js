@@ -181,15 +181,15 @@ export function isValidCustomElementName(localName) {
 // Callers must empty the returned fragment.
 export function parseHTMLFragment(markup, context) {
     const document = context.ownerDocument;
-    let documentState = getShadowState(document);
-    if (!documentState) {
-        documentState = setShadowState(document, {
-            parsingElement: document.createElement('div'),
-            parsingFragment: document.createDocumentFragment()
-        });
+    const documentState = getShadowState(document) || setShadowState(document, {});
+    let parsingElement = documentState.parsingElement;
+    if (!parsingElement) {
+        parsingElement = documentState.parsingElement = document.createElement('div');
     }
-    const parsingElement = documentState.parsingElement;
-    const parsingFragment = documentState.parsingFragment;
+    let parsingFragment = documentState.parsingFragment;
+    if (!documentState.parsingFragment) {
+        parsingFragment = documentState.parsingFragment = document.createDocumentFragment();
+    }
     descriptors.Element.innerHTML.set.call(parsingElement, markup);
     const nodeFirstChildGet = descriptors.Node.firstChild.get;
     const nodeAppendChildValue = descriptors.Node.appendChild.value;

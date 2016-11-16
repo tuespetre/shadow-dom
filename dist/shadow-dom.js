@@ -3974,15 +3974,15 @@ function isValidCustomElementName(localName) {
 // Callers must empty the returned fragment.
 function parseHTMLFragment(markup, context) {
     var document = context.ownerDocument;
-    var documentState = getShadowState(document);
-    if (!documentState) {
-        documentState = setShadowState(document, {
-            parsingElement: document.createElement('div'),
-            parsingFragment: document.createDocumentFragment()
-        });
-    }
+    var documentState = getShadowState(document) || setShadowState(document, {});
     var parsingElement = documentState.parsingElement;
+    if (!parsingElement) {
+        parsingElement = documentState.parsingElement = document.createElement('div');
+    }
     var parsingFragment = documentState.parsingFragment;
+    if (!documentState.parsingFragment) {
+        parsingFragment = documentState.parsingFragment = document.createDocumentFragment();
+    }
     descriptors.Element.innerHTML.set.call(parsingElement, markup);
     var nodeFirstChildGet = descriptors.Node.firstChild.get;
     var nodeAppendChildValue = descriptors.Node.appendChild.value;
