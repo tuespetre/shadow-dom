@@ -17,13 +17,13 @@ import { getOrCreateDOMTokenList } from './interfaces/DOMTokenList.js';
 // HTMLHyperlinkElementUtils (Anchor, Area)
 
 const interfaces = {
-    Element: {
+    'Element': {
         'id': reflectString(),
         'className': reflectString('class'),
         'classList': reflectDOMTokenList('class'),
         'slot': reflectString()
     },
-    HTMLElement: {
+    'HTMLElement': {
         'title': reflectString(),
         'lang': reflectString(),
         'translate': reflectString(),
@@ -39,7 +39,7 @@ const interfaces = {
         // ElementContentEditable
         'contentEditable': reflectString()
     },
-    HTMLAnchorElement: {
+    'HTMLAnchorElement': {
         'target': reflectString(),
         'download': reflectString(),
         'rel': reflectString(),
@@ -49,7 +49,7 @@ const interfaces = {
         'type': reflectString(),
         'text': reflectTextContent()
     },
-    HTMLAreaElement: {
+    'HTMLAreaElement': {
         'alt': reflectString(),
         'coords': reflectString(),
         'shape': reflectString(),
@@ -60,11 +60,11 @@ const interfaces = {
         'hreflang': reflectString(),
         'type': reflectString()
     },
-    HTMLBaseElement: {
+    'HTMLBaseElement': {
         'href': reflectString(),
         'target': reflectString()
     },
-    HTMLButtonElement: {
+    'HTMLButtonElement': {
         'autofocus': reflectBoolean(),
         'disabled': reflectBoolean(),
         'form': reflectHTMLElement(HTMLFormElement, true),
@@ -80,30 +80,30 @@ const interfaces = {
         // TODO: implement on demand
         // 'labels': reflectLabels()
     },
-    HTMLCanvasElement: {
+    'HTMLCanvasElement': {
         'width': reflectInteger(null, 0),
         'height': reflectInteger(null, 0)
     },
-    HTMLDataElement: {
+    'HTMLDataElement': {
         'value': reflectString()
     },
-    HTMLDetailsElement: {
+    'HTMLDetailsElement': {
         'open': reflectBoolean()
     },
-    HTMLEmbedElement: {
+    'HTMLEmbedElement': {
         'src': reflectString(),
         'type': reflectString(),
         'width': reflectInteger(null, 0),
         'height': reflectInteger(null, 0)
     },
-    HTMLFieldSetElement: {
+    'HTMLFieldSetElement': {
         'disabled': reflectBoolean(),
         'form': reflectHTMLElement(HTMLFormElement, true),
         'name': reflectString(),
         // TODO: implement on demand
         // 'elements': reflectHTMLFormControlsCollection()
     },
-    HTMLFormElement: {
+    'HTMLFormElement': {
         'acceptCharset': reflectString('accept-charset'),
         'action': reflectString(),
         'autocomplete': reflectString(),
@@ -119,7 +119,7 @@ const interfaces = {
         // getter Element (unsigned long index);
         // getter (RadioNodeList or Element) (DOMString name);
     },
-    HTMLIFrameElement: {
+    'HTMLIFrameElement': {
         'src': reflectString(),
         'srcdoc': reflectString(),
         'name': reflectString(),
@@ -128,7 +128,7 @@ const interfaces = {
         'width': reflectInteger(null, 0),
         'height': reflectInteger(null, 0)
     },
-    HTMLImageElement: {
+    'HTMLImageElement': {
         'alt': reflectString(),
         'src': reflectString(),
         'srcset': reflectString(),
@@ -139,7 +139,7 @@ const interfaces = {
         'height': reflectInteger(null, 0)
     },
     // TODO: caveat about feature testing input elements using anything besides 'type'
-    HTMLInputElement: {
+    'HTMLInputElement': {
         'accept': reflectString(),
         'alt': reflectString(),
         'autocomplete': reflectString(),
@@ -179,7 +179,7 @@ const interfaces = {
         // TODO: implement on demand
         // 'labels': reflectLabels()
     },
-    HTMLKeygenElement: {
+    'HTMLKeygenElement': {
         'autofocus': reflectBoolean(),
         'challenge': reflectString(),
         'disabled': reflectBoolean(),
@@ -189,19 +189,19 @@ const interfaces = {
         // TODO: implement on demand
         // 'labels': reflectLabels()
     },
-    HTMLLabelElement: {
+    'HTMLLabelElement': {
         'form': reflectHTMLElement(HTMLFormElement, true),
         'htmlFor': reflectString('for'),
         // TODO: implement on demand
         // 'control': reflectLabelControl()
     },
-    HTMLLegendElement: {
+    'HTMLLegendElement': {
         'form': reflectHTMLElement(HTMLFormElement, true)
     },
-    HTMLLIElement: {
+    'HTMLLIElement': {
         'value': reflectString()
     },
-    HTMLLinkElement: {
+    'HTMLLinkElement': {
         'href': reflectString(),
         'crossOrigin': reflectString(),
         'rel': reflectString(),
@@ -212,13 +212,13 @@ const interfaces = {
         'type': reflectString(),
         'sizes': reflectDOMTokenList('sizes')
     },
-    HTMLMapElement: {
+    'HTMLMapElement': {
         'name': reflectString(),
         // TODO: implement on demand
         // 'areas': reflectMapAreas(),
         // 'images': reflectMapImages()
     },
-    HTMLMediaElement: {
+    'HTMLMediaElement': {
         'src': reflectString(),
         'crossOrigin': reflectString(),
         'preload': reflectString(),
@@ -228,11 +228,11 @@ const interfaces = {
         'controls': reflectBoolean(),
         'defaultMuted': reflectBoolean('muted')
     },
-    HTMLMenuElement: {
+    'HTMLMenuElement': {
         'type': reflectString(),
         'label': reflectString()
     },
-    HTMLMenuItemElement: {
+    'HTMLMenuItemElement': {
         'type': reflectString(),
         'label': reflectString(),
         'icon': reflectString(),
@@ -241,12 +241,12 @@ const interfaces = {
         'radiogroup': reflectString(),
         'default': reflectBoolean()
     },
-    HTMLMetaElement: {
+    'HTMLMetaElement': {
         'name': reflectString(),
         'httpEquiv': reflectString('http-equiv'),
         'content': reflectString()
     },
-    HTMLMeterElement: {
+    'HTMLMeterElement': {
         'value': reflectFloat(null, 0),
         'min': reflectFloat(null, 0),
         'max': reflectFloat(null, 0),
@@ -256,11 +256,11 @@ const interfaces = {
         // TODO: implement on demand
         // 'labels': reflectLabels()
     },
-    HTMLModElement: {
+    'HTMLModElement': {
         'cite': reflectString(),
         'dateTime': reflectString()
     },
-    HTMLObjectElement: {
+    'HTMLObjectElement': {
         'data': reflectString(),
         'type': reflectString(),
         'typeMustMatch': reflectBoolean(),
@@ -269,23 +269,23 @@ const interfaces = {
         'width': reflectInteger(null, 0),
         'height': reflectInteger(null, 0)
     },
-    HTMLOListElement: {
+    'HTMLOListElement': {
         'reversed': reflectBoolean(),
         'start': reflectInteger(null, 0),
         'type': reflectString()
     },
-    HTMLOptGroupElement: {
+    'HTMLOptGroupElement': {
         'disabled': reflectBoolean(),
         'label': reflectString()
     },
-    HTMLOptionElement: {
+    'HTMLOptionElement': {
         'disabled': reflectBoolean(),
         'form': reflectHTMLElement(HTMLFormElement, true),
         'label': reflectString(),
         'defaultSelected': reflectBoolean('selected'),
         'value': reflectString()
     },
-    HTMLOutputElement: {
+    'HTMLOutputElement': {
         'htmlFor': reflectDOMTokenList('for'),
         'form': reflectHTMLElement(HTMLFormElement, true),
         'name': reflectString(),
@@ -293,20 +293,20 @@ const interfaces = {
         // TODO: implement on demand
         // 'labels': reflectLabels()
     },
-    HTMLParamElement: {
+    'HTMLParamElement': {
         'name': reflectString(),
         'value': reflectString()
     },
-    HTMLProgressElement: {
+    'HTMLProgressElement': {
         'value': reflectFloat(null, 0),
         'max': reflectFloat(null, 0),
         // TODO: implement on demand
         // 'labels': reflectLabels()
     },
-    HTMLQuoteElement: {
+    'HTMLQuoteElement': {
         'cite': reflectString()
     },
-    HTMLScriptElement: {
+    'HTMLScriptElement': {
         'src': reflectString(),
         'type': reflectString(),
         'charset': reflectString(),
@@ -317,7 +317,7 @@ const interfaces = {
         // 'text': reflectScriptText(),
         'nonce': reflectString()
     },
-    HTMLSelectElement: {
+    'HTMLSelectElement': {
         'autocomplete': reflectString(),
         'autofocus': reflectBoolean(),
         'disabled': reflectBoolean(),
@@ -327,29 +327,29 @@ const interfaces = {
         'required': reflectBoolean(),
         'size': reflectInteger(1, 1)
     },
-    HTMLSourceElement: {
+    'HTMLSourceElement': {
         'src': reflectString(),
         'type': reflectString(),
         'media': reflectString()
     },
-    HTMLStyleElement: {
+    'HTMLStyleElement': {
         'media': reflectString(),
         'nonce': reflectString(),
         'type': reflectString()
     },
-    HTMLTableCellElement: {
+    'HTMLTableCellElement': {
         'colSpan': reflectInteger(0, -1),
         'rowSpan': reflectInteger(0, -1),
         'headers': reflectDOMTokenList('headers')
     },
-    HTMLTableColElement: {
+    'HTMLTableColElement': {
         'span': reflectInteger(1, 1)
     },
-    HTMLTableHeaderCellElement: {
+    'HTMLTableHeaderCellElement': {
         'scope': reflectString(),
         'abbr': reflectString()
     },
-    HTMLTextAreaElement: {
+    'HTMLTextAreaElement': {
         'autocomplete': reflectString(),
         'autofocus': reflectBoolean(),
         'cols': reflectString(),
@@ -369,17 +369,17 @@ const interfaces = {
         // TODO: implement on demand
         // 'labels': reflectLabels()
     },
-    HTMLTimeElement: {
+    'HTMLTimeElement': {
         'dateTime': reflectString()
     },
-    HTMLTrackElement: {
+    'HTMLTrackElement': {
         'kind': reflectString(),
         'src': reflectString(),
         'srclang': reflectString(),
         'label': reflectString(),
         'default': reflectBoolean()
     },
-    HTMLVideoElement: {
+    'HTMLVideoElement': {
         'width': reflectInteger(null, 0),
         'height': reflectInteger(null, 0),
         'poster': reflectString()
