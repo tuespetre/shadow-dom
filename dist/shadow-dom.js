@@ -2772,13 +2772,13 @@ exports.default = function (base) {
                 // that might not amount to much in practice, though.
                 // after all, this is a polyfill.
 
+                var results = [];
+
                 var firstChild = this.firstChild;
 
                 if (!firstChild) {
-                    return null;
+                    return results;
                 }
-
-                var results = [];
 
                 $.treeOrderRecursiveSelectAll(firstChild, results, function (node) {
                     return node.nodeType === Node.ELEMENT_NODE && node.matches(selectors);

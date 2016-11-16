@@ -163,13 +163,13 @@ export default function (base) {
             // that might not amount to much in practice, though.
             // after all, this is a polyfill.
 
+            const results = [];
+
             let firstChild = this.firstChild;
 
             if (!firstChild) {
-                return null;
+                return results;
             }
-
-            const results = [];
 
             $.treeOrderRecursiveSelectAll(firstChild, results, function (node) {
                 return node.nodeType === Node.ELEMENT_NODE && node.matches(selectors);
