@@ -2305,7 +2305,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 var nativeShadowDom = 'attachShadow' in Element.prototype;
 
-if (!nativeShadowDom || window.forceShadowDomPolyfill) {
+if (!nativeShadowDom || window['forceShadowDomPolyfill']) {
     (0, _patch2.default)();
 }
 
@@ -2658,26 +2658,15 @@ exports.default = function (base) {
                     return null;
                 }
 
-                var selector = '#' + serializeIdentifier(id);
-                var results = void 0;
+                var firstChild = this.firstChild;
 
-                if ($.isShadowRoot(this)) {
-                    var host = $.getShadowState(this).host;
-                    results = $.descriptors.Element.querySelectorAll.value.call(host, selector);
-                } else {
-                    results = native.querySelectorAll.value.call(this, selector);
+                if (!firstChild) {
+                    return null;
                 }
 
-                if (results.length) {
-                    for (var i = 0; i < results.length; i++) {
-                        var item = results[i];
-                        if ($.root(item) === this) {
-                            return item;
-                        }
-                    }
-                }
-
-                return null;
+                return $.treeOrderRecursiveSelectFirst(firstChild, function (node) {
+                    return node.id === id;
+                });
             }
         }]);
 
@@ -2692,33 +2681,6 @@ var $ = _interopRequireWildcard(_utils);
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var serializeIdentifier = 'CSS' in window && 'escape' in window.CSS ? window.CSS.escape : function (string) {
-    // https://drafts.csswg.org/cssom/#serialize-an-identifier
-    var result = '';
-    for (var i = 0; i < string.length; i++) {
-        var charCode = string.charCodeAt(i);
-        if (charCode === 0x0000) {
-            result += '\uFFFD';
-            continue;
-        }
-        if (charCode >= 0x0001 && charCode <= 0x001F || charCode === 0x007F || i === 0 && charCode >= 0x0030 && charCode <= 0x00039 || i === 1 && string[0] === '-' && charCode >= 0x0030 && charCode <= 0x00039) {
-            result += '\\' + charCode.toString(16) + ' ';
-            continue;
-        }
-        if (i === 0 && charCode === 0x002D && string.length === 1) {
-            result += '\\' + string.charAt(i);
-            continue;
-        }
-        if (charCode >= 0x0080 || charCode === 0x002D || charCode === 0x005F || charCode >= 0x0030 && charCode <= 0x0039 || charCode >= 0x0041 && charCode <= 0x005A || charCode >= 0x0061 && charCode <= 0x007A) {
-            result += string.charAt(i);
-            continue;
-        }
-        result += '\\' + string.charAt(i);
-        continue;
-    }
-    return result;
-};
 
 },{"../utils.js":27}],23:[function(require,module,exports){
 'use strict';
@@ -3249,13 +3211,13 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 // An index of IDL attributes that should reflect a corresponding content attribute.
 
 var interfaces = {
-    Element: {
+    'Element': {
         'id': reflectString(),
         'className': reflectString('class'),
         'classList': reflectDOMTokenList('class'),
         'slot': reflectString()
     },
-    HTMLElement: {
+    'HTMLElement': {
         'title': reflectString(),
         'lang': reflectString(),
         'translate': reflectString(),
@@ -3271,7 +3233,7 @@ var interfaces = {
         // ElementContentEditable
         'contentEditable': reflectString()
     },
-    HTMLAnchorElement: {
+    'HTMLAnchorElement': {
         'target': reflectString(),
         'download': reflectString(),
         'rel': reflectString(),
@@ -3281,7 +3243,7 @@ var interfaces = {
         'type': reflectString(),
         'text': reflectTextContent()
     },
-    HTMLAreaElement: {
+    'HTMLAreaElement': {
         'alt': reflectString(),
         'coords': reflectString(),
         'shape': reflectString(),
@@ -3292,11 +3254,11 @@ var interfaces = {
         'hreflang': reflectString(),
         'type': reflectString()
     },
-    HTMLBaseElement: {
+    'HTMLBaseElement': {
         'href': reflectString(),
         'target': reflectString()
     },
-    HTMLButtonElement: {
+    'HTMLButtonElement': {
         'autofocus': reflectBoolean(),
         'disabled': reflectBoolean(),
         'form': reflectHTMLElement(HTMLFormElement, true),
@@ -3310,28 +3272,28 @@ var interfaces = {
         'value': reflectString(),
         'menu': reflectHTMLElement(window.HTMLMenuElement)
     },
-    HTMLCanvasElement: {
+    'HTMLCanvasElement': {
         'width': reflectInteger(null, 0),
         'height': reflectInteger(null, 0)
     },
-    HTMLDataElement: {
+    'HTMLDataElement': {
         'value': reflectString()
     },
-    HTMLDetailsElement: {
+    'HTMLDetailsElement': {
         'open': reflectBoolean()
     },
-    HTMLEmbedElement: {
+    'HTMLEmbedElement': {
         'src': reflectString(),
         'type': reflectString(),
         'width': reflectInteger(null, 0),
         'height': reflectInteger(null, 0)
     },
-    HTMLFieldSetElement: {
+    'HTMLFieldSetElement': {
         'disabled': reflectBoolean(),
         'form': reflectHTMLElement(HTMLFormElement, true),
         'name': reflectString()
     },
-    HTMLFormElement: {
+    'HTMLFormElement': {
         'acceptCharset': reflectString('accept-charset'),
         'action': reflectString(),
         'autocomplete': reflectString(),
@@ -3342,7 +3304,7 @@ var interfaces = {
         'noValidate': reflectBoolean(),
         'target': reflectString()
     },
-    HTMLIFrameElement: {
+    'HTMLIFrameElement': {
         'src': reflectString(),
         'srcdoc': reflectString(),
         'name': reflectString(),
@@ -3351,7 +3313,7 @@ var interfaces = {
         'width': reflectInteger(null, 0),
         'height': reflectInteger(null, 0)
     },
-    HTMLImageElement: {
+    'HTMLImageElement': {
         'alt': reflectString(),
         'src': reflectString(),
         'srcset': reflectString(),
@@ -3362,7 +3324,7 @@ var interfaces = {
         'height': reflectInteger(null, 0)
     },
     // TODO: caveat about feature testing input elements using anything besides 'type'
-    HTMLInputElement: {
+    'HTMLInputElement': {
         'accept': reflectString(),
         'alt': reflectString(),
         'autocomplete': reflectString(),
@@ -3400,7 +3362,7 @@ var interfaces = {
         'defaultValue': reflectString('value'),
         'width': reflectInteger(null, 0)
     },
-    HTMLKeygenElement: {
+    'HTMLKeygenElement': {
         'autofocus': reflectBoolean(),
         'challenge': reflectString(),
         'disabled': reflectBoolean(),
@@ -3408,17 +3370,17 @@ var interfaces = {
         'keytype': reflectString(),
         'name': reflectString()
     },
-    HTMLLabelElement: {
+    'HTMLLabelElement': {
         'form': reflectHTMLElement(HTMLFormElement, true),
         'htmlFor': reflectString('for')
     },
-    HTMLLegendElement: {
+    'HTMLLegendElement': {
         'form': reflectHTMLElement(HTMLFormElement, true)
     },
-    HTMLLIElement: {
+    'HTMLLIElement': {
         'value': reflectString()
     },
-    HTMLLinkElement: {
+    'HTMLLinkElement': {
         'href': reflectString(),
         'crossOrigin': reflectString(),
         'rel': reflectString(),
@@ -3429,10 +3391,10 @@ var interfaces = {
         'type': reflectString(),
         'sizes': reflectDOMTokenList('sizes')
     },
-    HTMLMapElement: {
+    'HTMLMapElement': {
         'name': reflectString()
     },
-    HTMLMediaElement: {
+    'HTMLMediaElement': {
         'src': reflectString(),
         'crossOrigin': reflectString(),
         'preload': reflectString(),
@@ -3442,11 +3404,11 @@ var interfaces = {
         'controls': reflectBoolean(),
         'defaultMuted': reflectBoolean('muted')
     },
-    HTMLMenuElement: {
+    'HTMLMenuElement': {
         'type': reflectString(),
         'label': reflectString()
     },
-    HTMLMenuItemElement: {
+    'HTMLMenuItemElement': {
         'type': reflectString(),
         'label': reflectString(),
         'icon': reflectString(),
@@ -3455,12 +3417,12 @@ var interfaces = {
         'radiogroup': reflectString(),
         'default': reflectBoolean()
     },
-    HTMLMetaElement: {
+    'HTMLMetaElement': {
         'name': reflectString(),
         'httpEquiv': reflectString('http-equiv'),
         'content': reflectString()
     },
-    HTMLMeterElement: {
+    'HTMLMeterElement': {
         'value': reflectFloat(null, 0),
         'min': reflectFloat(null, 0),
         'max': reflectFloat(null, 0),
@@ -3468,11 +3430,11 @@ var interfaces = {
         'high': reflectFloat(null, 0),
         'optimum': reflectFloat(null, 0)
     },
-    HTMLModElement: {
+    'HTMLModElement': {
         'cite': reflectString(),
         'dateTime': reflectString()
     },
-    HTMLObjectElement: {
+    'HTMLObjectElement': {
         'data': reflectString(),
         'type': reflectString(),
         'typeMustMatch': reflectBoolean(),
@@ -3481,40 +3443,40 @@ var interfaces = {
         'width': reflectInteger(null, 0),
         'height': reflectInteger(null, 0)
     },
-    HTMLOListElement: {
+    'HTMLOListElement': {
         'reversed': reflectBoolean(),
         'start': reflectInteger(null, 0),
         'type': reflectString()
     },
-    HTMLOptGroupElement: {
+    'HTMLOptGroupElement': {
         'disabled': reflectBoolean(),
         'label': reflectString()
     },
-    HTMLOptionElement: {
+    'HTMLOptionElement': {
         'disabled': reflectBoolean(),
         'form': reflectHTMLElement(HTMLFormElement, true),
         'label': reflectString(),
         'defaultSelected': reflectBoolean('selected'),
         'value': reflectString()
     },
-    HTMLOutputElement: {
+    'HTMLOutputElement': {
         'htmlFor': reflectDOMTokenList('for'),
         'form': reflectHTMLElement(HTMLFormElement, true),
         'name': reflectString(),
         'defaultValue': reflectString('value')
     },
-    HTMLParamElement: {
+    'HTMLParamElement': {
         'name': reflectString(),
         'value': reflectString()
     },
-    HTMLProgressElement: {
+    'HTMLProgressElement': {
         'value': reflectFloat(null, 0),
         'max': reflectFloat(null, 0)
     },
-    HTMLQuoteElement: {
+    'HTMLQuoteElement': {
         'cite': reflectString()
     },
-    HTMLScriptElement: {
+    'HTMLScriptElement': {
         'src': reflectString(),
         'type': reflectString(),
         'charset': reflectString(),
@@ -3525,7 +3487,7 @@ var interfaces = {
         // 'text': reflectScriptText(),
         'nonce': reflectString()
     },
-    HTMLSelectElement: {
+    'HTMLSelectElement': {
         'autocomplete': reflectString(),
         'autofocus': reflectBoolean(),
         'disabled': reflectBoolean(),
@@ -3535,29 +3497,29 @@ var interfaces = {
         'required': reflectBoolean(),
         'size': reflectInteger(1, 1)
     },
-    HTMLSourceElement: {
+    'HTMLSourceElement': {
         'src': reflectString(),
         'type': reflectString(),
         'media': reflectString()
     },
-    HTMLStyleElement: {
+    'HTMLStyleElement': {
         'media': reflectString(),
         'nonce': reflectString(),
         'type': reflectString()
     },
-    HTMLTableCellElement: {
+    'HTMLTableCellElement': {
         'colSpan': reflectInteger(0, -1),
         'rowSpan': reflectInteger(0, -1),
         'headers': reflectDOMTokenList('headers')
     },
-    HTMLTableColElement: {
+    'HTMLTableColElement': {
         'span': reflectInteger(1, 1)
     },
-    HTMLTableHeaderCellElement: {
+    'HTMLTableHeaderCellElement': {
         'scope': reflectString(),
         'abbr': reflectString()
     },
-    HTMLTextAreaElement: {
+    'HTMLTextAreaElement': {
         'autocomplete': reflectString(),
         'autofocus': reflectBoolean(),
         'cols': reflectString(),
@@ -3575,17 +3537,17 @@ var interfaces = {
         'wrap': reflectString(),
         'defaultValue': reflectTextContent()
     },
-    HTMLTimeElement: {
+    'HTMLTimeElement': {
         'dateTime': reflectString()
     },
-    HTMLTrackElement: {
+    'HTMLTrackElement': {
         'kind': reflectString(),
         'src': reflectString(),
         'srclang': reflectString(),
         'label': reflectString(),
         'default': reflectBoolean()
     },
-    HTMLVideoElement: {
+    'HTMLVideoElement': {
         'width': reflectInteger(null, 0),
         'height': reflectInteger(null, 0),
         'poster': reflectString()
@@ -3940,9 +3902,9 @@ function treeOrderRecursiveSelectAll(node, results, match) {
     if (firstChild) {
         treeOrderRecursiveSelectAll(firstChild, results, match);
     }
-    var firstSibling = node.firstSibling;
-    if (firstSibling) {
-        treeOrderRecursiveSelectAll(firstSibling, results, match);
+    var nextSibling = node.nextSibling;
+    if (nextSibling) {
+        treeOrderRecursiveSelectAll(nextSibling, results, match);
     }
 }
 
@@ -3957,9 +3919,9 @@ function treeOrderRecursiveSelectFirst(node, match) {
             return result;
         }
     }
-    var firstSibling = node.firstSibling;
-    if (firstSibling) {
-        return treeOrderRecursiveSelectFirst(firstSibling, match);
+    var nextSibling = node.nextSibling;
+    if (nextSibling) {
+        return treeOrderRecursiveSelectFirst(nextSibling, match);
     }
     return null;
 }
