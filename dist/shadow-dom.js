@@ -1152,7 +1152,7 @@ function calculatePath(event) {
     //target has activation behavior, and null otherwise.
 
     // 8. Let parent be the result of invoking target’s get the parent with event.
-    var parent = getTheParent(target, event);
+    var parent = getTheParent(target, event, path);
 
     // 9. While parent is non-null:
     while (parent != null) {
@@ -1165,7 +1165,7 @@ function calculatePath(event) {
         // append (parent, null, relatedTarget) to event’s path.
         if ($.shadowIncludingInclusiveAncestor($.root(target), parent)) {
             path[p++] = [parent, null, relatedTarget];
-            parent = getTheParent(parent, event);
+            parent = getTheParent(parent, event, path);
             continue;
         }
         // 3. Otherwise, if parent and relatedTarget are identical, then set parent to null.
@@ -1177,7 +1177,7 @@ function calculatePath(event) {
             else {
                     target = parent;
                     path[p++] = [parent, target, relatedTarget];
-                    parent = getTheParent(parent, event);
+                    parent = getTheParent(parent, event, path);
                     continue;
                 }
         // 5. If parent is non-null, then set parent to the result of 
@@ -1188,7 +1188,7 @@ function calculatePath(event) {
     return path;
 }
 
-function getTheParent(node, event) {
+function getTheParent(node, event, path) {
     // https://dom.spec.whatwg.org/#get-the-parent
     // Each EventTarget object also has an associated get the parent 
     // algorithm, which takes an event event, and returns an EventTarget 
@@ -1215,8 +1215,8 @@ function getTheParent(node, event) {
             return node.defaultView;
         } else if ($.isShadowRoot(node)) {
             if (!event.composed) {
-                var _$$getShadowState$pat = _slicedToArray($.getShadowState(event).path[0], 1),
-                    item = _$$getShadowState$pat[0];
+                var _path$ = _slicedToArray(path[0], 1),
+                    item = _path$[0];
 
                 if ($.root(item) === node) {
                     return null;
