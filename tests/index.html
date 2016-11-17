@@ -29,6 +29,9 @@
   <script src="http://chaijs.com/chai.js"></script>
   <script>
     window.forceShadowDomPolyfill = true;
+    // Set this to false to verify Custom Element constructors in Chrome/etc.
+    window.forceCustomElementsPolyfill = true;
+
     if (location.href.indexOf('?skipAsyncTests') !== -1) {
       window.skipAsyncTests = true;
       document.getElementById('sync-tests-only-link').className = 'active';
@@ -41,6 +44,7 @@
   <script>
     mocha.setup('tdd');
   </script>
+  <script src="./custom.js"></script>
   <script src="./interfaces/Attr.js"></script>
   <script src="./interfaces/CharacterData.js"></script>
   <script src="./interfaces/CustomEvent.js"></script>

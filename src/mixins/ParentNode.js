@@ -2,6 +2,8 @@
 
 import * as $ from '../utils.js';
 
+import CustomElements from '../custom-elements.js';
+
 export default function (base) {
 
     const native = {
@@ -119,29 +121,33 @@ export default function (base) {
 
         // TODO: tests
         prepend(...nodes) {
-            // https://dom.spec.whatwg.org/#dom-parentnode-prepend
-            // The prepend(nodes) method, when invoked, must run these steps:
+            return CustomElements.executeCEReactions(() => {
+                // https://dom.spec.whatwg.org/#dom-parentnode-prepend
+                // The prepend(nodes) method, when invoked, must run these steps:
 
-            // 1. Let node be the result of converting nodes into a node given 
-            // nodes and context object’s node document. Rethrow any exceptions.
-            const node = $.convertNodesIntoANode(nodes, this.ownerDocument || this);
+                // 1. Let node be the result of converting nodes into a node given 
+                // nodes and context object’s node document. Rethrow any exceptions.
+                const node = $.convertNodesIntoANode(nodes, this.ownerDocument || this);
 
-            // 2. Pre-insert node into context object before the context object’s 
-            // first child. Rethrow any exceptions.
-            $.preInsert(node, this, this.firstChild);
+                // 2. Pre-insert node into context object before the context object’s 
+                // first child. Rethrow any exceptions.
+                $.preInsert(node, this, this.firstChild);
+            });
         }
 
         // TODO: tests
         append(...nodes) {
-            // https://dom.spec.whatwg.org/#dom-parentnode-append
-            // The append(nodes) method, when invoked, must run these steps:
+            return CustomElements.executeCEReactions(() => {
+                // https://dom.spec.whatwg.org/#dom-parentnode-append
+                // The append(nodes) method, when invoked, must run these steps:
 
-            // 1. Let node be the result of converting nodes into a node given 
-            // nodes and context object’s node document. Rethrow any exceptions.
-            const node = $.convertNodesIntoANode(nodes, this.ownerDocument || this);
+                // 1. Let node be the result of converting nodes into a node given 
+                // nodes and context object’s node document. Rethrow any exceptions.
+                const node = $.convertNodesIntoANode(nodes, this.ownerDocument || this);
 
-            // 2. Append node to context object. Rethrow any exceptions.
-            $.append(node, this);
+                // 2. Append node to context object. Rethrow any exceptions.
+                $.append(node, this);
+            });
         }
 
         // TODO: tests

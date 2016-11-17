@@ -1,5 +1,4 @@
 import * as $ from './utils.js';
-
 import * as reflect from './reflect.js';
 
 import $Attr from './interfaces/Attr.js';
@@ -27,7 +26,17 @@ import $NonElementParentNode from './mixins/NonElementParentNode.js';
 import $ParentNode from './mixins/ParentNode.js';
 import $Slotable from './mixins/Slotable.js';
 
-export default function () {
+const nativeSupport = 'attachShadow' in Element.prototype;
+
+export default {
+    nativeSupport,
+    install
+};
+
+function install() {
+
+    // Hacky setting in case you want to use ShadyCSS.
+    window['ShadyDOM'] = { 'inUse': true };
 
     // Reflected attributes
     reflect.patchAll();
@@ -60,6 +69,7 @@ export default function () {
 
     // DOMTokenList interface
     if ('DOMTokenList' in window) {
+        // TODO: what about IE9?
         $.extend(DOMTokenList, $DOMTokenList);
     }
 

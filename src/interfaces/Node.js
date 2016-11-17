@@ -2,7 +2,13 @@
 
 import * as $ from '../utils.js';
 
+import CustomElements from '../custom-elements.js';
+
 export default class {
+
+    get isConnected() {
+        return $.shadowIncludingRoot(this).nodeType === Node.DOCUMENT_NODE;
+    }
 
     getRootNode(options) {
         const composed = options && (options.composed === true);
@@ -124,17 +130,19 @@ export default class {
 
     // TODO: MutationObserver tests
     set nodeValue(value) {
-        switch (this.nodeType) {
-            case Node.ATTRIBUTE_NODE:
-                $.setExistingAttributeValue(this, value);
-                break;
-            case Node.TEXT_NODE:
-            case Node.PROCESSING_INSTRUCTION_NODE:
-            case Node.COMMENT_NODE:
-                const length = $.descriptors.CharacterData.data.get.call(this).length;
-                $.replaceData(this, 0, length, value);
-                break;
-        }
+        return CustomElements.executeCEReactions(() => {
+            switch (this.nodeType) {
+                case Node.ATTRIBUTE_NODE:
+                    $.setExistingAttributeValue(this, value);
+                    break;
+                case Node.TEXT_NODE:
+                case Node.PROCESSING_INSTRUCTION_NODE:
+                case Node.COMMENT_NODE:
+                    const length = $.descriptors.CharacterData.data.get.call(this).length;
+                    $.replaceData(this, 0, length, value);
+                    break;
+            }
+        });
     }
 
     get textContent() {
@@ -155,73 +163,79 @@ export default class {
 
     // TODO: MutationObserver tests
     set textContent(value) {
-        switch (this.nodeType) {
-            case Node.DOCUMENT_FRAGMENT_NODE:
-            case Node.ELEMENT_NODE:
-                let node = null;
-                if (value !== '') {
-                    node = this.ownerDocument.createTextNode(value);
-                }
-                $.replaceAll(node, this);
-                break;
-            case Node.ATTRIBUTE_NODE:
-                $.setExistingAttributeValue(this, value);
-                break;
-            case Node.TEXT_NODE:
-            case Node.PROCESSING_INSTRUCTION_NODE:
-            case Node.COMMENT_NODE:
-                $.replaceData(this, 0, this.data.length, value);
-                break;
-        }
+        return CustomElements.executeCEReactions(() => {
+            switch (this.nodeType) {
+                case Node.DOCUMENT_FRAGMENT_NODE:
+                case Node.ELEMENT_NODE:
+                    let node = null;
+                    if (value !== '') {
+                        node = this.ownerDocument.createTextNode(value);
+                    }
+                    $.replaceAll(node, this);
+                    break;
+                case Node.ATTRIBUTE_NODE:
+                    $.setExistingAttributeValue(this, value);
+                    break;
+                case Node.TEXT_NODE:
+                case Node.PROCESSING_INSTRUCTION_NODE:
+                case Node.COMMENT_NODE:
+                    $.replaceData(this, 0, this.data.length, value);
+                    break;
+            }
+        });
     }
 
     // TODO: tests
     normalize() {
-        // https://dom.spec.whatwg.org/#dom-node-normalize
-        // The normalize() method, when invoked, must run these steps 
-        // for each descendant exclusive Text node node of context object:
-        const childNodes = this.childNodes;
-        const dataDescriptor = $.descriptors.CharacterData.data;
-        for (let i = 0; i < childNodes.length; i++) {
-            let childNode = childNodes[i];
-            if (childNode.nodeType === Node.TEXT_NODE) {
-                let length = dataDescriptor.get.call(childNode).length;
-                if (length === 0) {
-                    $.remove(childNode, this);
-                    continue;
+        return CustomElements.executeCEReactions(() => {
+            // https://dom.spec.whatwg.org/#dom-node-normalize
+            // The normalize() method, when invoked, must run these steps 
+            // for each descendant exclusive Text node node of context object:
+            const childNodes = this.childNodes;
+            const dataDescriptor = $.descriptors.CharacterData.data;
+            for (let i = 0; i < childNodes.length; i++) {
+                let childNode = childNodes[i];
+                if (childNode.nodeType === Node.TEXT_NODE) {
+                    let length = dataDescriptor.get.call(childNode).length;
+                    if (length === 0) {
+                        $.remove(childNode, this);
+                        continue;
+                    }
+                    let data = '';
+                    let contiguousTextNodes = new Array(childNodes.length);
+                    let contiguousCount = 0;
+                    let next = childNode;
+                    while (next = next.nextSibling && next.nodeType === Node.TEXT_NODE) {
+                        data += dataDescriptor.get.call(next);
+                        contiguousTextNodes[contiguousCount++] = next;
+                    }
+                    $.replaceData(childNode, length, 0, data);
+                    // TODO: (Range)
+                    for (let j = 0; j < contiguousCount; j++) {
+                        $.remove(contiguousTextNodes[j], this);
+                    }
                 }
-                let data = '';
-                let contiguousTextNodes = new Array(childNodes.length);
-                let contiguousCount = 0;
-                let next = childNode;
-                while (next = next.nextSibling && next.nodeType === Node.TEXT_NODE) {
-                    data += dataDescriptor.get.call(next);
-                    contiguousTextNodes[contiguousCount++] = next;
-                }
-                $.replaceData(childNode, length, 0, data);
-                // TODO: (Range)
-                for (let j = 0; j < contiguousCount; j++) {
-                    $.remove(contiguousTextNodes[j], this);
+                else {
+                    childNode.normalize();
                 }
             }
-            else {
-                childNode.normalize();
-            }
-        }
+        });
     }
 
     // TODO: tests
-    cloneNode(deep) {
-        // https://dom.spec.whatwg.org/#dom-node-clonenode
-        // The cloneNode(deep) method, when invoked, must run these steps:
+    cloneNode(deep) {        
+        return CustomElements.executeCEReactions(() => {
+            // https://dom.spec.whatwg.org/#dom-node-clonenode
+            // The cloneNode(deep) method, when invoked, must run these steps:
 
-        // 1. If context object is a shadow root, then throw a NotSupportedError.
-        if ($.isShadowRoot(this)) {
-            throw $.makeError('NotSupportedError');
-        }
+            // 1. If context object is a shadow root, then throw a NotSupportedError.
+            if ($.isShadowRoot(this)) {
+                throw $.makeError('NotSupportedError');
+            }
 
-        // 2. Return a clone of the context object, with the clone children flag set if deep is true.
-        return $.clone(this, undefined, deep);
+            // 2. Return a clone of the context object, with the clone children flag set if deep is true.
+            return $.clone(this, undefined, deep);
+        });
     }
 
     // TODO: tests
@@ -388,34 +402,42 @@ export default class {
 
     // TODO: tests
     insertBefore(node, child) {
-        // https://dom.spec.whatwg.org/#dom-node-insertbefore
-        // The insertBefore(node, child) method, when invoked, must return the result 
-        // of pre-inserting node into context object before child.
-        return $.preInsert(node, this, child);
+        return CustomElements.executeCEReactions(() => {
+            // https://dom.spec.whatwg.org/#dom-node-insertbefore
+            // The insertBefore(node, child) method, when invoked, must return the result 
+            // of pre-inserting node into context object before child.
+            return $.preInsert(node, this, child);
+        });
     }
 
     // TODO: tests
     appendChild(node) {
-        // https://dom.spec.whatwg.org/#dom-node-appendchild
-        // The appendChild(node) method, when invoked, must return the result of 
-        // appending node to context object.
-        return $.append(node, this);
+        return CustomElements.executeCEReactions(() => {
+            // https://dom.spec.whatwg.org/#dom-node-appendchild
+            // The appendChild(node) method, when invoked, must return the result of 
+            // appending node to context object.
+            return $.append(node, this);
+        });
     }
 
     // TODO: tests
     replaceChild(node, child) {
-        // https://dom.spec.whatwg.org/#dom-node-replacechild
-        // The replaceChild(node, child) method, when invoked, must return the 
-        // result of replacing child with node within context object.
-        return $.replace(child, node, this);
+        return CustomElements.executeCEReactions(() => {
+            // https://dom.spec.whatwg.org/#dom-node-replacechild
+            // The replaceChild(node, child) method, when invoked, must return the 
+            // result of replacing child with node within context object.
+            return $.replace(child, node, this);
+        });
     }
 
     // TODO: tests
     removeChild(child) {
-        // https://dom.spec.whatwg.org/#dom-node-removechild
-        // The removeChild(child) method, when invoked, must return the result of 
-        // pre-removing child from context object.
-        return $.preRemove(child, this);
+        return CustomElements.executeCEReactions(() => {
+            // https://dom.spec.whatwg.org/#dom-node-removechild
+            // The removeChild(child) method, when invoked, must return the result of 
+            // pre-removing child from context object.
+            return $.preRemove(child, this);
+        });
     }
 
 }

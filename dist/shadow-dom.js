@@ -5,11 +5,792 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
+var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
+
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+// https://html.spec.whatwg.org/multipage/scripting.html#custom-elements
+
+// TODO: CEReactions annotations for Range in the DOM spec
+// TODO: CEReactions for interfaces in the HTML spec
+
+var nativeSupport = 'customElements' in window;
+var originalHTMLElement = window.HTMLElement;
+var originalCreateElement = Document.prototype.createElement;
+var originalCreateElementNS = Document.prototype.createElementNS;
+var htmlNamespace = 'http://www.w3.org/1999/xhtml';
+var alreadyConstructedMarker = 1;
+var upgradeReactionType = 1;
+var callbackReactionType = 2;
+
+exports.default = {
+    nativeSupport: nativeSupport,
+    install: install,
+    uninstall: uninstall,
+    isInstalled: isInstalled,
+    shimHtmlConstructors: shimHtmlConstructors,
+    isCustom: isCustom,
+    tryToUpgradeElement: tryToUpgradeElement,
+    enqueueCallbackReaction: enqueueCallbackReaction,
+    executeCEReactions: executeCEReactions,
+    isValidCustomElementName: isValidCustomElementName
+};
+
+// TODO: add a note about importing YuzuJS/setImmediate before this polyfill if better performance is desired.
+// TODO: what about IE9?
+
+var setImmediate = 'setImmediate' in window ? window.setImmediate : function (callback) {
+    for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+        args[_key - 1] = arguments[_key];
+    }
+
+    return setTimeout.apply(undefined, [callback, 0].concat(args));
+};
+
+// TODO: what about IE9, IE10 + others?
+var setPrototypeOf = Object.setPrototypeOf || function () {
+    var test = {};
+    var proto = {};
+    test.__proto__ = proto;
+    if (Object.getPrototypeOf(test) === proto) {
+        return function (object, proto) {
+            object.__proto__ = proto;
+            return object;
+        };
+    }
+    return function (object, proto) {};
+}();
+
+// Installation/uninstallation
+
+function install() {
+    var installation = {};
+
+    installation.builtInElementInterfaces = installHtmlConstructors();
+
+    Object.defineProperty(window, 'customElements', {
+        value: new CustomElementRegistry(),
+        writable: false,
+        configurable: true,
+        enumerable: true
+    });
+
+    Document.prototype.createElement = createElement;
+    Document.prototype.createElementNS = createElementNS;
+
+    window.document.addEventListener('DOMContentLoaded', function () {
+        // Upgrading elements initially present in the document
+        // TODO: Improve this, possibly with a MutationEvent or something
+        treeOrderShadowInclusiveForEach(document, tryToUpgradeElement);
+    });
+
+    installation.customElementsReactionStack = [];
+    installation.backupElementQueue = [];
+    installation.processingBackupElementQueue = false;
+
+    setInstallation(window, installation);
+}
+
+function uninstall() {
+    var windowState = getPrivateState(window);
+
+    if (!windowState) {
+        return;
+    }
+
+    uninstallHtmlConstructors(windowState.builtInElementInterfaces);
+
+    delete window['customElements'];
+
+    Document.prototype.createElement = originalCreateElement;
+    Document.prototype.createElementNS = originalCreateElementNS;
+
+    setPrivateState(window, undefined);
+}
+
+function isInstalled() {
+    return getInstallation(window) != null;
+}
+
+function gatherBuiltInElementInterfaces() {
+    var builtInElementInterfaces = [];
+    var windowPropertyNames = Object.getOwnPropertyNames(window);
+    for (var i = 0; i < windowPropertyNames.length; i++) {
+        var name = windowPropertyNames[i];
+        if (/^webkit/.test(name)) {
+            // This just avoids a slew of warnings.
+            continue;
+        }
+        var object = window[name];
+        if (object && object instanceof originalHTMLElement || object === originalHTMLElement) {
+            builtInElementInterfaces.push({ name: name, object: object, constructor: object.prototype.constructor });
+        }
+    }
+    return builtInElementInterfaces;
+}
+
+function shimHtmlConstructors() {
+    try {
+        // Ensure that we are only shimming browsers that support ES2015 class syntax.
+        new Function('return class {}');
+
+        var _makeHtmlConstructor = new Function('originalHTMLElement', 'return function(){const newTarget=new.target||this.constructor;' + 'return Reflect.construct(originalHTMLElement, [], newTarget);}');
+
+        var builtInElementInterfaces = gatherBuiltInElementInterfaces();
+        for (var i = 0; i < builtInElementInterfaces.length; i++) {
+            var _builtInElementInterf = builtInElementInterfaces[i],
+                name = _builtInElementInterf.name,
+                object = _builtInElementInterf.object;
+
+            var htmlConstructor = _makeHtmlConstructor(object);
+            htmlConstructor.prototype = object.prototype;
+            Object.defineProperty(object.prototype, 'constructor', {
+                value: htmlConstructor,
+                writable: true,
+                configurable: true
+            });
+            window[name] = htmlConstructor;
+        }
+    } catch (error) {
+        return;
+    }
+}
+
+function installHtmlConstructors() {
+    var builtInElementInterfaces = gatherBuiltInElementInterfaces();
+    for (var i = 0; i < builtInElementInterfaces.length; i++) {
+        var _builtInElementInterf2 = builtInElementInterfaces[i],
+            name = _builtInElementInterf2.name,
+            object = _builtInElementInterf2.object;
+
+        var htmlConstructor = makeHtmlConstructor();
+        htmlConstructor.prototype = object.prototype;
+        Object.defineProperty(object.prototype, 'constructor', {
+            value: htmlConstructor,
+            writable: true,
+            configurable: true
+        });
+        window[name] = htmlConstructor;
+    }
+    return builtInElementInterfaces;
+}
+
+function uninstallHtmlConstructors(builtInElementInterfaces) {
+    for (var i = 0; i < builtInElementInterfaces.length; i++) {
+        var _builtInElementInterf3 = builtInElementInterfaces[i],
+            name = _builtInElementInterf3.name,
+            object = _builtInElementInterf3.object,
+            _constructor = _builtInElementInterf3.constructor;
+
+        Object.defineProperty(object.prototype, 'constructor', {
+            value: _constructor,
+            writable: true,
+            configurable: true
+        });
+        window[name] = object;
+    }
+}
+
+function makeHtmlConstructor() {
+    return function htmlConstructor() {
+        var thisPrototype = Object.getPrototypeOf(this);
+
+        // 1. Let registry...
+        var registry = window['customElements'];
+        var registryState = getPrivateState(registry);
+
+        // 2. If NewTarget...
+        if (thisPrototype.constructor === htmlConstructor) {
+            throw new TypeError('Illegal constructor');
+        }
+
+        // 3. Let definition...
+        var definition = void 0;
+        for (var i = 0; i < registryState.definitions.length; i++) {
+            var current = registryState.definitions[i];
+            if (current.constructor === thisPrototype.constructor) {
+                definition = current;
+            }
+        }
+        if (!definition) {
+            throw new TypeError();
+        }
+
+        // 4. If definition's local name is equal...
+        // 5. Otherwise... (customized built-in)
+        if (htmlConstructor !== definition.htmlConstructor) {
+            // TODO: assert this is the correct HTML___Element
+            throw new TypeError('Illegal constructor');
+        }
+
+        // 6. let prototype...
+        var prototype = thisPrototype;
+
+        // 7. if prototype is not Object...
+        // in this polyfill, this should always be true
+
+        // 8. If construction stack is empty...
+        var constructionStack = definition.constructionStack;
+        if (constructionStack.length === 0) {
+            var _element = originalCreateElement.call(window.document, definition.localName);
+            setPrototypeOf(_element, prototype);
+            setPrivateState(_element, {
+                customElementState: 'custom',
+                customElementDefinition: definition
+            });
+            return _element;
+        }
+
+        var lastIndex = constructionStack.length - 1;
+        // 9. Let element be the last entry
+        var element = constructionStack[lastIndex];
+        // 10. if alreadyConstructedMarker
+        if (element === alreadyConstructedMarker) {
+            throw makeDOMException('InvalidStateError', 'This element instance is already constructed');
+        }
+        // 11. set prototype
+        setPrototypeOf(element, prototype);
+        // 12. replace last entry
+        constructionStack[lastIndex] = alreadyConstructedMarker;
+        // 13. return element
+        return element;
+    };
+}
+
+// DOM element creation
+
+function createAnElement(document, qualifiedOrLocalName, nameSpace, prefix, is, synchronousCustomElements) {
+    is = is || null;
+    var result = null;
+    var definition = lookupCustomElementDefinition(document, nameSpace, qualifiedOrLocalName, is);
+    if (definition && definition.name != definition.localName) {
+        result = originalCreateElement.call(document, qualifiedOrLocalName);
+        setPrivateState(result, {
+            customElementState: 'undefined',
+            customElementDefinition: null,
+            isValue: is
+        });
+        if (synchronousCustomElements) {
+            upgradeElement(result, definition);
+        } else {
+            enqueueUpgradeReaction(result, definition);
+        }
+    } else if (definition) {
+        if (synchronousCustomElements) {
+            try {
+                result = new definition.constructor();
+                if (!(result instanceof HTMLElement)) {
+                    throw new TypeError('Illegal constructor');
+                }
+                if (result.attributes.length !== 0 || result.hasChildNodes() || result.parentNode || result.ownerDocument !== document || result.namespaceURI !== htmlNamespace || result.localName !== qualifiedOrLocalName) {
+                    var error = new Error('Invalid state manipulation during custom element construction');
+                    error.name = 'NotSupportedError';
+                    throw error;
+                }
+            } catch (error) {
+                reportError(error);
+                result = originalCreateElement.call(document, qualifiedOrLocalName);
+                // should be HTMLUnknownElement already
+                setPrivateState(result, {
+                    customElementState: 'failed'
+                });
+            }
+        } else {
+            result = originalCreateElement.call(document, qualifiedOrLocalName);
+            Object.setPrototypeOf(result, HTMLElement.prototype);
+            enqueueUpgradeReaction(result, definition);
+        }
+    } else {
+        result = nameSpace ? originalCreateElementNS.call(document, nameSpace, qualifiedOrLocalName) : originalCreateElement.call(document, qualifiedOrLocalName);
+        // skip setting the custom element state to 'undefined' in order
+        // to avoid unnecessary allocation.
+    }
+    return result;
+}
+
+function createElement(localName, options) {
+    var nameSpace = null;
+    //if (this instanceof HTMLDocument) {
+    localName = localName.toLowerCase();
+    nameSpace = htmlNamespace;
+    //}
+    var is = options ? options.is || null : null;
+    var element = createAnElement(this, localName, nameSpace, null, is, true);
+    if (is != null) {
+        element.setAttribute('is', is);
+    }
+    return element;
+}
+
+function createElementNS(nameSpace, qualifiedName, options) {
+    var is = options ? options.is || null : null;
+    var element = createAnElement(this, qualifiedName, nameSpace, null, is, true);
+    if (is != null) {
+        element.setAttribute('is', is);
+    }
+    return element;
+}
+
+// Custom Element spec
+
+function isCustom(node) {
+    if (node.nodeType != Node.ELEMENT_NODE) {
+        return false;
+    }
+    var nodeState = getPrivateState(node);
+    if (!nodeState) {
+        return false;
+    }
+    return nodeState.customElementState === 'custom';
+}
+
+function isValidCustomElementName(localName) {
+    // https://html.spec.whatwg.org/multipage/scripting.html#valid-custom-element-name
+    switch (localName) {
+        case "annotation-xml":
+        case "color-profile":
+        case "font-face":
+        case "font-face-src":
+        case "font-face-uri":
+        case "font-face-format":
+        case "font-face-name":
+        case "missing-glyph":
+            return false;
+    }
+
+    var nameLength = localName.length;
+
+    if (nameLength < 2) {
+        return false;
+    }
+
+    var firstCode = localName.charCodeAt(0);
+    if (firstCode < 0x61 /* a */ || firstCode > 0x7A /* z */) {
+            return false;
+        }
+
+    var foundHyphen = false;
+
+    for (var i = 1; i < nameLength; i++) {
+        var code = localName.charCodeAt(i);
+        if (code >= 0x61 /* a */ && code <= 0x7A /* z */) {
+                continue;
+            }
+        if (code === 0x2D /* - */) {
+                foundHyphen = true;
+                continue;
+            }
+        if (code === 0x2E /* . */ || code === 0x5F /* _ */ || code === 0xB7 /* · */) {
+                continue;
+            }
+        if (code >= 0x30 /* 0 */ && code <= 0x39 /* 9 */) {
+                continue;
+            }
+        if (code < 0x00C0) {
+            return false;
+        }
+        if (code >= 0xC0 && code <= 0xD6) {
+            continue;
+        }
+        if (code >= 0xD8 && code <= 0xF6) {
+            continue;
+        }
+        if (code >= 0xF8 && code <= 0x37D) {
+            continue;
+        }
+        if (code >= 0x37F && code <= 0x1FFF) {
+            continue;
+        }
+        if (code >= 0x200C && code <= 0x200D) {
+            continue;
+        }
+        if (code >= 0x203F && code <= 0x2040) {
+            continue;
+        }
+        if (code >= 0x2070 && code <= 0x218F) {
+            continue;
+        }
+        if (code >= 0x2C00 && code <= 0x2FEF) {
+            continue;
+        }
+        if (code >= 0x3001 && code <= 0xD7FF) {
+            continue;
+        }
+        if (code >= 0xF900 && code <= 0xFDCF) {
+            continue;
+        }
+        if (code >= 0xFDF0 && code <= 0xFFFD) {
+            continue;
+        }
+        if (code >= 0x10000 && code <= 0xEFFFF) {
+            continue;
+        }
+        return false;
+    }
+
+    return foundHyphen;
+}
+
+function lookupCustomElementDefinition(document, nameSpace, localName, is) {
+    if (nameSpace !== htmlNamespace) {
+        return null;
+    }
+    if (!document.defaultView) {
+        return null;
+    }
+    var registry = document.defaultView.customElements;
+    var privateState = getPrivateState(registry);
+    for (var i = 0; i < privateState.definitions.length; i++) {
+        var definition = privateState.definitions[i];
+        if (definition.localName === localName) {
+            if (definition.name === localName || definition.name === is) {
+                return definition;
+            }
+        }
+    }
+    return null;
+}
+
+var CustomElementRegistry = function () {
+    function CustomElementRegistry() {
+        _classCallCheck(this, CustomElementRegistry);
+
+        setPrivateState(this, {
+            definitions: [],
+            elementDefinitionIsRunning: false,
+            whenDefinedPromiseMap: {}
+        });
+    }
+
+    _createClass(CustomElementRegistry, [{
+        key: 'define',
+        value: function define(name, constructor, options) {
+            var privateState = getPrivateState(this);
+            if (constructor !== constructor.prototype.constructor) {
+                throw new TypeError('The passed argument must be a constructor');
+            }
+            if (!isValidCustomElementName(name)) {
+                throw makeDOMException('SyntaxError');
+            }
+            // TODO: check for already defined name
+            // TODO: check for already defined constructor
+            var localName = name;
+            var extensionOf = options ? options.extends : null;
+            var htmlConstructor = window.HTMLElement;
+            if (extensionOf != null) {
+                if (isValidCustomElementName(extensionOf)) {
+                    throw makeDOMException('NotSupportedError');
+                }
+                var testElement = originalCreateElement.call(window.document, extensionOf);
+                if (testElement instanceof HTMLUnknownElement) {
+                    // TODO: check for HTMLUnknownElement
+                }
+                localName = extensionOf;
+                htmlConstructor = Object.getPrototypeOf(testElement).constructor;
+            }
+            if (privateState.elementDefinitionIsRunning) {
+                throw makeDOMException('NotSupportedError');
+            }
+            privateState.elementDefinitionIsRunning = true;
+            var caught = null;
+            var observedAttributes = [];
+            var lifecycleCallbacks = void 0;
+            var nativeInterface = void 0;
+            try {
+                var prototype = constructor.prototype;
+                if ((typeof prototype === 'undefined' ? 'undefined' : _typeof(prototype)) !== 'object') {
+                    throw new TypeError('Invalid prototype');
+                }
+                lifecycleCallbacks = {
+                    'connectedCallback': getCallback(prototype, 'connectedCallback'),
+                    'disconnectedCallback': getCallback(prototype, 'disconnectedCallback'),
+                    'adoptedCallback': getCallback(prototype, 'adoptedCallback'),
+                    'attributeChangedCallback': getCallback(prototype, 'attributeChangedCallback')
+                };
+                if (lifecycleCallbacks['attributeChangedCallback']) {
+                    var observedAttributesIterable = constructor.observedAttributes;
+                    if (observedAttributesIterable) {
+                        observedAttributes = observedAttributesIterable.slice();
+                    }
+                }
+            } catch (error) {
+                caught = error;
+            }
+            privateState.elementDefinitionIsRunning = false;
+            if (caught) {
+                throw caught;
+            }
+            var definition = {
+                name: name,
+                localName: localName,
+                constructor: constructor,
+                observedAttributes: observedAttributes,
+                lifecycleCallbacks: lifecycleCallbacks,
+                constructionStack: [],
+                htmlConstructor: htmlConstructor
+            };
+            privateState.definitions.push(definition);
+            var document = window.document;
+            treeOrderShadowInclusiveForEach(document, function (node) {
+                if (node.nodeType === Node.ELEMENT_NODE && node.namespaceURI === htmlNamespace && node.localName === localName) {
+                    if (extensionOf) {
+                        var nodeState = getPrivateState(node);
+                        if (nodeState.isValue !== extensionOf) {
+                            return;
+                        }
+                    }
+                    enqueueUpgradeReaction(element, definition);
+                }
+            });
+            // 16. when-defined promise map
+            // TODO: impl
+        }
+    }, {
+        key: 'get',
+        value: function get(name) {
+            var privateState = getPrivateState(this);
+            for (var i = 0; i < privateState.definitions.length; i++) {
+                var definition = privateState.definitions[i];
+                if (definition.name === name) {
+                    return definition.constructor;
+                }
+            }
+            return undefined;
+        }
+    }, {
+        key: 'whenDefined',
+        value: function whenDefined(name) {
+            // TODO: impl
+            throw new Error('Not implemented yet');
+        }
+    }]);
+
+    return CustomElementRegistry;
+}();
+
+function upgradeElement(element, definition) {
+    // https://html.spec.whatwg.org/multipage/scripting.html#concept-upgrade-an-element
+    var elementState = getPrivateState(element) || setPrivateState(element, { reactionQueue: [] });
+    if (elementState.customElementState === 'custom' || elementState.customElementState === 'failed') {
+        return;
+    }
+    var attributes = element.attributes;
+    for (var i = 0; i < attributes.length; i++) {
+        var attribute = attributes[i];
+        var _args = [attribute.localName, null, attribute.value, attribute.namespaceURI];
+        enqueueCallbackReaction(element, 'attributeChangedCallback', _args);
+    }
+    if (element.isConnected) {
+        enqueueCallbackReaction(element, 'connectedCallback', []);
+    }
+    definition.constructionStack.push(element);
+    var caught = null;
+    try {
+        var constructResult = new definition.constructor();
+        if (constructResult !== element) {
+            throw makeDOMException('InvalidStateError');
+        }
+    } catch (error) {
+        caught = error;
+        delete element.prototype;
+        elementState.customElementState = 'failed';
+        elementState.reactionQueue.splice(0, elementState.reactionQueue.length);
+    }
+    definition.constructionStack.pop();
+    if (caught) {
+        throw caught;
+    }
+    elementState.customElementState = 'custom';
+    elementState.customElementDefinition = definition;
+}
+
+function tryToUpgradeElement(element) {
+    var elementState = getPrivateState(element);
+    var isValue = null;
+    if (elementState) {
+        isValue = elementState.isValue;
+    }
+    var definition = lookupCustomElementDefinition(element.ownerDocument, element.namespaceURI, element.localName, isValue);
+    if (definition) {
+        enqueueUpgradeReaction(element, definition);
+    }
+}
+
+function enqueueElementOnAppropriateElementQueue(element) {
+    var installation = getInstallation(window);
+    if (!installation) {
+        return;
+    }
+    // https://html.spec.whatwg.org/multipage/scripting.html#enqueue-an-element-on-the-appropriate-element-queue
+    // 1. If the custom element reactions stack is empty, then:
+    var stack = installation.customElementsReactionStack;
+    if (stack.length === 0) {
+        // 1. Add element to the backup element queue.
+        installation.backupElementQueue.push(element);
+        // 2. If the processing the backup element queue flag is set, abort this algorithm.
+        if (installation.processingBackupElementQueue) {
+            return;
+        }
+        // 3. Set the processing the backup element queue flag.
+        installation.processingBackupElementQueue = true;
+        // 4. Queue a microtask to perform the following steps:
+        setImmediate(function () {
+            // 1. Invoke custom element reactions in the backup element queue.
+            invokeReactions(installation.backupElementQueue);
+            // 2. Unset the processing the backup element queue flag.
+            installation.processingBackupElementQueue = false;
+        });
+    }
+    // 2. Otherwise, add element to the current element queue.
+    else {
+            stack[stack.length - 1].push(element);
+        }
+}
+
+function enqueueCallbackReaction(element, callbackName, args) {
+    // https://html.spec.whatwg.org/multipage/scripting.html#enqueue-a-custom-element-callback-reaction
+    var elementState = getPrivateState(element);
+    var definition = elementState.customElementDefinition;
+    var callback = definition.lifecycleCallbacks[callbackName];
+    if (callback == null) {
+        return;
+    }
+    if (callbackName === 'attributeChangedCallback') {
+        var attributeName = args[0];
+        if (definition.observedAttributes.indexOf(attributeName) === -1) {
+            return;
+        }
+    }
+    if (!elementState.reactionQueue) {
+        elementState.reactionQueue = [];
+    }
+    elementState.reactionQueue.push({ type: callbackReactionType, callback: callback, args: args });
+    enqueueElementOnAppropriateElementQueue(element);
+}
+
+function enqueueUpgradeReaction(element, definition) {
+    // https://html.spec.whatwg.org/multipage/scripting.html#enqueue-a-custom-element-upgrade-reaction
+    var elementState = getPrivateState(element) || setPrivateState(element, { reactionQueue: [] });
+    elementState.customElementDefinition = definition;
+    elementState.reactionQueue.push({ type: upgradeReactionType, definition: definition });
+    enqueueElementOnAppropriateElementQueue(element);
+}
+
+function invokeReactions(queue) {
+    // https://html.spec.whatwg.org/multipage/scripting.html#invoke-custom-element-reactions
+    for (var i = 0; i < queue.length; i++) {
+        var _element2 = queue[i];
+        var reactions = getPrivateState(_element2).reactionQueue;
+        while (reactions.length) {
+            try {
+                var _reactions$splice = reactions.splice(0, 1),
+                    _reactions$splice2 = _slicedToArray(_reactions$splice, 1),
+                    reaction = _reactions$splice2[0];
+
+                switch (reaction.type) {
+                    case upgradeReactionType:
+                        upgradeElement(_element2, reaction.definition);
+                        break;
+                    case callbackReactionType:
+                        reaction.callback.apply(_element2, reaction.args);
+                        break;
+                }
+            } catch (error) {
+                reportError(error);
+            }
+        }
+    }
+}
+
+function executeCEReactions(callback) {
+    var installation = getInstallation(window);
+    if (installation) {
+        var stack = installation.customElementsReactionStack;
+        stack.push([]);
+        var result = callback();
+        invokeReactions(stack.pop());
+        return result;
+    }
+    return callback();
+}
+
+// Utility functions
+
+function makeDOMException(name, message) {
+    try {
+        var sacrifice = originalCreateElement.call(window.document, 'div');
+        descriptors.Node.appendChild.call(sacrifice, sacrifice);
+    } catch (error) {
+        error.message = message;
+        error.name = name;
+        return error;
+    }
+}
+
+function getCallback(prototype, callbackName) {
+    var callback = prototype[callbackName];
+    if (callback && typeof callback === 'function') {
+        return callback;
+    }
+    return null;
+}
+
+function getPrivateState(object) {
+    return object._custom;
+}
+
+function setPrivateState(object, state) {
+    return object._custom = state;
+}
+
+function getInstallation(window) {
+    return window._custom;
+}
+
+function setInstallation(window, installation) {
+    window._custom = installation;
+}
+
+function treeOrderShadowInclusiveForEach(node, callback) {
+    callback(node);
+    var shadowRoot = node.shadowRoot;
+    if (shadowRoot) {
+        treeOrderShadowInclusiveForEach(shadowRoot, callback);
+    }
+    var childNodes = node.childNodes;
+    for (var i = 0; i < childNodes.length; i++) {
+        treeOrderShadowInclusiveForEach(childNodes[i], callback);
+    }
+}
+
+function reportError(error) {
+    if ('console' in window && 'error' in window.console) {
+        window.console.error(error);
+    }
+}
+
+},{}],2:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // https://dom.spec.whatwg.org/#interface-attr
 
 var _utils = require('../utils.js');
 
 var $ = _interopRequireWildcard(_utils);
+
+var _customElements = require('../custom-elements.js');
+
+var _customElements2 = _interopRequireDefault(_customElements);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
@@ -26,7 +807,11 @@ var _class = function () {
             return $.descriptors.Attr.value.get.call(this);
         },
         set: function set(value) {
-            $.setExistingAttributeValue(this, value);
+            var _this = this;
+
+            return _customElements2.default.executeCEReactions(function () {
+                $.setExistingAttributeValue(_this, value);
+            });
         }
     }]);
 
@@ -35,7 +820,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":27}],2:[function(require,module,exports){
+},{"../custom-elements.js":1,"../utils.js":28}],3:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -96,7 +881,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":27}],3:[function(require,module,exports){
+},{"../utils.js":28}],4:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -132,7 +917,7 @@ var _class = function _class(type, init) {
 
 exports.default = _class;
 
-},{"../utils.js":27}],4:[function(require,module,exports){
+},{"../utils.js":28}],5:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -146,6 +931,12 @@ exports.getOrCreateDOMTokenList = getOrCreateDOMTokenList;
 var _utils = require('../utils.js');
 
 var $ = _interopRequireWildcard(_utils);
+
+var _customElements = require('../custom-elements.js');
+
+var _customElements2 = _interopRequireDefault(_customElements);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
@@ -174,78 +965,95 @@ var _class = function () {
     }, {
         key: 'add',
         value: function add() {
+            var _this = this;
+
             for (var _len = arguments.length, tokens = Array(_len), _key = 0; _key < _len; _key++) {
                 tokens[_key] = arguments[_key];
             }
 
-            validateTokens(tokens);
-            var state = $.getShadowState(this);
-            for (var i = 0; i < tokens.length; i++) {
-                var token = tokens[i];
-                var index = state.tokens.indexOf(token);
-                if (index === -1) {
-                    state.tokens.push(token);
+            return _customElements2.default.executeCEReactions(function () {
+                validateTokens(tokens);
+                var state = $.getShadowState(_this);
+                for (var i = 0; i < tokens.length; i++) {
+                    var token = tokens[i];
+                    var index = state.tokens.indexOf(token);
+                    if (index === -1) {
+                        state.tokens.push(token);
+                    }
                 }
-            }
-            state.tokens.sort();
-            $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
+                state.tokens.sort();
+                $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
+            });
         }
     }, {
         key: 'remove',
         value: function remove() {
+            var _this2 = this;
+
             for (var _len2 = arguments.length, tokens = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
                 tokens[_key2] = arguments[_key2];
             }
 
-            validateTokens(tokens);
-            var state = $.getShadowState(this);
-            for (var i = 0; i < tokens.length; i++) {
-                var token = tokens[i];
-                var index = state.tokens.indexOf(token);
-                if (index !== -1) {
-                    state.tokens.splice(index, 1);
+            return _customElements2.default.executeCEReactions(function () {
+                validateTokens(tokens);
+                var state = $.getShadowState(_this2);
+                for (var i = 0; i < tokens.length; i++) {
+                    var token = tokens[i];
+                    var index = state.tokens.indexOf(token);
+                    if (index !== -1) {
+                        state.tokens.splice(index, 1);
+                    }
                 }
-            }
-            $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
+                $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
+            });
         }
     }, {
         key: 'toggle',
         value: function toggle(token, force) {
-            validateToken(token);
-            var state = $.getShadowState(this);
-            var index = state.tokens.indexOf(token);
-            if (index !== -1) {
-                if (arguments.length === 1 || force === false) {
-                    state.tokens.splice(index, 1);
-                    $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
-                    return false;
+            var _this3 = this,
+                _arguments = arguments;
+
+            return _customElements2.default.executeCEReactions(function () {
+                validateToken(token);
+                var state = $.getShadowState(_this3);
+                var index = state.tokens.indexOf(token);
+                if (index !== -1) {
+                    if (_arguments.length === 1 || force === false) {
+                        state.tokens.splice(index, 1);
+                        $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
+                        return false;
+                    } else {
+                        return true;
+                    }
                 } else {
-                    return true;
+                    if (force === false) {
+                        return false;
+                    } else {
+                        state.tokens.push(token);
+                        state.tokens.sort();
+                        $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
+                        return true;
+                    }
                 }
-            } else {
-                if (force === false) {
-                    return false;
-                } else {
-                    state.tokens.push(token);
-                    state.tokens.sort();
-                    $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
-                    return true;
-                }
-            }
+            });
         }
     }, {
         key: 'replace',
         value: function replace(token, newToken) {
-            validateToken(token);
-            validateToken(newToken);
-            var state = $.getShadowState(this);
-            var index = state.tokens.indexOf(token);
-            if (index === -1) {
-                return;
-            }
-            state.tokens[index] = newToken;
-            state.tokens.sort();
-            $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
+            var _this4 = this;
+
+            return _customElements2.default.executeCEReactions(function () {
+                validateToken(token);
+                validateToken(newToken);
+                var state = $.getShadowState(_this4);
+                var index = state.tokens.indexOf(token);
+                if (index === -1) {
+                    return;
+                }
+                state.tokens[index] = newToken;
+                state.tokens.sort();
+                $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
+            });
         }
     }, {
         key: 'length',
@@ -260,9 +1068,13 @@ var _class = function () {
             return state.element.getAttribute(state.localName) || '';
         },
         set: function set(value) {
-            var state = $.getShadowState(this);
-            $.setAttributeValue(state.element, state.localName, value);
-            state.tokens = $.slice(this);
+            var _this5 = this;
+
+            return _customElements2.default.executeCEReactions(function () {
+                var state = $.getShadowState(_this5);
+                $.setAttributeValue(state.element, state.localName, value);
+                state.tokens = $.slice(_this5);
+            });
         }
     }]);
 
@@ -308,7 +1120,7 @@ function getOrCreateDOMTokenList(element, localName) {
     return elementState.tokenLists[localName] = createDOMTokenList(element, localName);
 }
 
-},{"../utils.js":27}],5:[function(require,module,exports){
+},{"../custom-elements.js":1,"../utils.js":28}],6:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -320,6 +1132,12 @@ var _createClass = function () { function defineProperties(target, props) { for 
 var _utils = require('../utils.js');
 
 var $ = _interopRequireWildcard(_utils);
+
+var _customElements = require('../custom-elements.js');
+
+var _customElements2 = _interopRequireDefault(_customElements);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
@@ -363,11 +1181,27 @@ var _class = function () {
     }, {
         key: 'importNode',
         value: function importNode(node, deep) {
-            if (node.nodeType === Node.DOCUMENT_NODE || $.isShadowRoot(node)) {
-                throw $.makeError('NotSupportedError');
-            }
+            var _this = this;
 
-            return $.clone(node, this, deep);
+            return _customElements2.default.executeCEReactions(function () {
+                if (node.nodeType === Node.DOCUMENT_NODE || $.isShadowRoot(node)) {
+                    throw $.makeError('NotSupportedError');
+                }
+
+                return $.clone(node, _this, deep);
+            });
+        }
+
+        // TODO: tests
+
+    }, {
+        key: 'adoptNode',
+        value: function adoptNode(node) {
+            var _this2 = this;
+
+            return _customElements2.default.executeCEReactions(function () {
+                return $.adopt(node, _this2);
+            });
         }
     }]);
 
@@ -376,7 +1210,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":27}],6:[function(require,module,exports){
+},{"../custom-elements.js":1,"../utils.js":28}],7:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -388,6 +1222,10 @@ var _createClass = function () { function defineProperties(target, props) { for 
 var _utils = require('../utils.js');
 
 var $ = _interopRequireWildcard(_utils);
+
+var _customElements = require('../custom-elements.js');
+
+var _customElements2 = _interopRequireDefault(_customElements);
 
 var _ShadowRoot = require('../interfaces/ShadowRoot.js');
 
@@ -410,14 +1248,18 @@ var _class = function () {
 
         // TODO: tests
         value: function setAttribute(qualifiedName, value) {
-            var attribute = $.descriptors.Element.attributes.get.call(this).getNamedItem(qualifiedName);
-            if (!attribute) {
-                attribute = this.ownerDocument.createAttribute(qualifiedName);
-                $.descriptors.Attr.value.set.call(attribute, value);
-                $.appendAttribute(attribute, this);
-                return;
-            }
-            $.changeAttribute(attribute, this, value);
+            var _this = this;
+
+            return _customElements2.default.executeCEReactions(function () {
+                var attribute = $.descriptors.Element.attributes.get.call(_this).getNamedItem(qualifiedName);
+                if (!attribute) {
+                    attribute = _this.ownerDocument.createAttribute(qualifiedName);
+                    $.descriptors.Attr.value.set.call(attribute, value);
+                    $.appendAttribute(attribute, _this);
+                    return;
+                }
+                $.changeAttribute(attribute, _this, value);
+            });
         }
 
         // TODO: tests
@@ -425,8 +1267,12 @@ var _class = function () {
     }, {
         key: 'setAttributeNS',
         value: function setAttributeNS(namespace, qualifiedName, value) {
-            var dummy = document.createAttributeNS(namespace, qualifiedName);
-            $.setAttributeValue(this, dummy.localName, value, dummy.prefix, dummy.namespaceURI);
+            var _this2 = this;
+
+            return _customElements2.default.executeCEReactions(function () {
+                var dummy = document.createAttributeNS(namespace, qualifiedName);
+                $.setAttributeValue(_this2, dummy.localName, value, dummy.prefix, dummy.namespaceURI);
+            });
         }
 
         // TODO: tests
@@ -434,7 +1280,11 @@ var _class = function () {
     }, {
         key: 'removeAttribute',
         value: function removeAttribute(qualifiedName) {
-            $.removeAttributeByName(qualifiedName, this);
+            var _this3 = this;
+
+            return _customElements2.default.executeCEReactions(function () {
+                $.removeAttributeByName(qualifiedName, _this3);
+            });
         }
 
         // TODO: tests
@@ -442,7 +1292,11 @@ var _class = function () {
     }, {
         key: 'removeAttributeNS',
         value: function removeAttributeNS(namespace, localName) {
-            $.removeAttributeByNamespace(namespace, localName, this);
+            var _this4 = this;
+
+            return _customElements2.default.executeCEReactions(function () {
+                $.removeAttributeByNamespace(namespace, localName, _this4);
+            });
         }
 
         // TODO: tests
@@ -450,7 +1304,11 @@ var _class = function () {
     }, {
         key: 'setAttributeNode',
         value: function setAttributeNode(attr) {
-            return $.setAttribute(attr, this);
+            var _this5 = this;
+
+            return _customElements2.default.executeCEReactions(function () {
+                return $.setAttribute(attr, _this5);
+            });
         }
 
         // TODO: tests
@@ -458,7 +1316,11 @@ var _class = function () {
     }, {
         key: 'setAttributeNodeNS',
         value: function setAttributeNodeNS(attr) {
-            return $.setAttribute(attr, this);
+            var _this6 = this;
+
+            return _customElements2.default.executeCEReactions(function () {
+                return $.setAttribute(attr, _this6);
+            });
         }
 
         // TODO: tests
@@ -466,11 +1328,15 @@ var _class = function () {
     }, {
         key: 'removeAttributeNode',
         value: function removeAttributeNode(attr) {
-            if (attr.ownerElement !== this) {
-                throw $.makeError('NotFoundError');
-            }
-            $.removeAttribute(attr, this);
-            return attr;
+            var _this7 = this;
+
+            return _customElements2.default.executeCEReactions(function () {
+                if (attr.ownerElement !== _this7) {
+                    throw $.makeError('NotFoundError');
+                }
+                $.removeAttribute(attr, _this7);
+                return attr;
+            });
         }
     }, {
         key: 'attachShadow',
@@ -491,7 +1357,7 @@ var _class = function () {
                 case "nav":case "p":case "section":case "span":
                     break;
                 default:
-                    if ($.isValidCustomElementName(this.localName)) {
+                    if (_customElements2.default.isValidCustomElementName(this.localName)) {
                         break;
                     }
                     throw $.makeError('NotSupportedError');
@@ -580,8 +1446,12 @@ var _class = function () {
     }, {
         key: 'insertAdjacentElement',
         value: function insertAdjacentElement(where, element) {
-            // https://dom.spec.whatwg.org/#dom-element-insertadjacentelement
-            return $.insertAdjacent(this, where, element);
+            var _this8 = this;
+
+            return _customElements2.default.executeCEReactions(function () {
+                // https://dom.spec.whatwg.org/#dom-element-insertadjacentelement
+                return $.insertAdjacent(_this8, where, element);
+            });
         }
 
         // TODO: tests
@@ -605,10 +1475,14 @@ var _class = function () {
 
         // TODO: tests
         value: function insertAdjacentHTML(position, text) {
-            // https://w3c.github.io/DOM-Parsing/#dom-element-insertadjacenthtml
-            // We aren't going to go exactly by the books for this one.
-            var fragment = $.parseHTMLFragment(text, this);
-            $.insertAdjacent(this, position, fragment);
+            var _this9 = this;
+
+            return _customElements2.default.executeCEReactions(function () {
+                // https://w3c.github.io/DOM-Parsing/#dom-element-insertadjacenthtml
+                // We aren't going to go exactly by the books for this one.
+                var fragment = $.parseHTMLFragment(text, _this9);
+                $.insertAdjacent(_this9, position, fragment);
+            });
         }
     }, {
         key: 'attributes',
@@ -647,9 +1521,18 @@ var _class = function () {
         // TODO: MutationObserver tests
         ,
         set: function set(value) {
-            // https://w3c.github.io/DOM-Parsing/#dom-element-innerhtml
-            var fragment = $.parseHTMLFragment(value, this);
-            $.replaceAll(fragment, this);
+            var _this10 = this;
+
+            return _customElements2.default.executeCEReactions(function () {
+                // https://w3c.github.io/DOM-Parsing/#dom-element-innerhtml
+                var fragment = $.parseHTMLFragment(value, _this10);
+                var content = _this10['content'];
+                if (content instanceof DocumentFragment) {
+                    $.replaceAll(fragment, content);
+                } else {
+                    $.replaceAll(fragment, _this10);
+                }
+            });
         }
 
         // TODO: tests
@@ -664,19 +1547,23 @@ var _class = function () {
         // TODO: tests
         ,
         set: function set(value) {
-            // https://w3c.github.io/DOM-Parsing/#dom-element-outerhtml
-            var parent = this.parentNode;
-            if (parent === null) {
-                return;
-            }
-            if (parent.nodeType === Node.DOCUMENT_NODE) {
-                throw $.makeError('NoModificationAllowedError');
-            }
-            if (parent.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
-                parent = this.ownerDocument.createElement('body');
-            }
-            var fragment = $.parseHTMLFragment(value, parent);
-            $.replace(this, fragment, this.parentNode);
+            var _this11 = this;
+
+            return _customElements2.default.executeCEReactions(function () {
+                // https://w3c.github.io/DOM-Parsing/#dom-element-outerhtml
+                var parent = _this11.parentNode;
+                if (parent === null) {
+                    return;
+                }
+                if (parent.nodeType === Node.DOCUMENT_NODE) {
+                    throw $.makeError('NoModificationAllowedError');
+                }
+                if (parent.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+                    parent = _this11.ownerDocument.createElement('body');
+                }
+                var fragment = $.parseHTMLFragment(value, parent);
+                $.replace(_this11, fragment, _this11.parentNode);
+            });
         }
     }]);
 
@@ -685,7 +1572,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../interfaces/ShadowRoot.js":16,"../utils.js":27}],7:[function(require,module,exports){
+},{"../custom-elements.js":1,"../interfaces/ShadowRoot.js":17,"../utils.js":28}],8:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -828,7 +1715,7 @@ var builtInComposedEvents = [
 // Legacy KeyboardEvent
 'keypress'];
 
-},{"../utils.js":27}],8:[function(require,module,exports){
+},{"../utils.js":28}],9:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1263,7 +2150,7 @@ function calculateTarget(currentTarget, path) {
     return null;
 }
 
-},{"../utils.js":27}],9:[function(require,module,exports){
+},{"../utils.js":28}],10:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1340,7 +2227,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":27}],10:[function(require,module,exports){
+},{"../utils.js":28}],11:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1417,7 +2304,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":27}],11:[function(require,module,exports){
+},{"../utils.js":28}],12:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1461,7 +2348,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":27}],12:[function(require,module,exports){
+},{"../utils.js":28}],13:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1502,7 +2389,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":27}],13:[function(require,module,exports){
+},{"../utils.js":28}],14:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1551,7 +2438,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":27}],14:[function(require,module,exports){
+},{"../utils.js":28}],15:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1563,6 +2450,12 @@ var _createClass = function () { function defineProperties(target, props) { for 
 var _utils = require('../utils.js');
 
 var $ = _interopRequireWildcard(_utils);
+
+var _customElements = require('../custom-elements.js');
+
+var _customElements2 = _interopRequireDefault(_customElements);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
@@ -1579,8 +2472,12 @@ var _class = function () {
 
         // TODO: tests
         value: function setNamedItem(attr) {
-            var shadowState = $.getShadowState(this);
-            return $.setAttribute(attr, shadowState.element);
+            var _this = this;
+
+            return _customElements2.default.executeCEReactions(function () {
+                var shadowState = $.getShadowState(_this);
+                return $.setAttribute(attr, shadowState.element);
+            });
         }
 
         // TODO: tests
@@ -1588,8 +2485,12 @@ var _class = function () {
     }, {
         key: 'setNamedItemNS',
         value: function setNamedItemNS(attr) {
-            var shadowState = $.getShadowState(this);
-            return $.setAttribute(attr, shadowState.element);
+            var _this2 = this;
+
+            return _customElements2.default.executeCEReactions(function () {
+                var shadowState = $.getShadowState(_this2);
+                return $.setAttribute(attr, shadowState.element);
+            });
         }
 
         // TODO: tests
@@ -1597,12 +2498,16 @@ var _class = function () {
     }, {
         key: 'removeNamedItem',
         value: function removeNamedItem(qualifiedName) {
-            var shadowState = $.getShadowState(this);
-            var attr = $.removeAttributeByName(qualifiedName, shadowState.element);
-            if (!attr) {
-                throw $.makeError('NotFoundError');
-            }
-            return attr;
+            var _this3 = this;
+
+            return _customElements2.default.executeCEReactions(function () {
+                var shadowState = $.getShadowState(_this3);
+                var attr = $.removeAttributeByName(qualifiedName, shadowState.element);
+                if (!attr) {
+                    throw $.makeError('NotFoundError');
+                }
+                return attr;
+            });
         }
 
         // TODO: tests
@@ -1610,12 +2515,16 @@ var _class = function () {
     }, {
         key: 'removeNamedItemNS',
         value: function removeNamedItemNS(namespace, localName) {
-            var shadowState = $.getShadowState(this);
-            var attr = $.removeAttributeByNamespace(namespace, localName, shadowState.element);
-            if (!attr) {
-                throw $.makeError('NotFoundError');
-            }
-            return attr;
+            var _this4 = this;
+
+            return _customElements2.default.executeCEReactions(function () {
+                var shadowState = $.getShadowState(_this4);
+                var attr = $.removeAttributeByNamespace(namespace, localName, shadowState.element);
+                if (!attr) {
+                    throw $.makeError('NotFoundError');
+                }
+                return attr;
+            });
         }
     }]);
 
@@ -1624,7 +2533,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":27}],15:[function(require,module,exports){
+},{"../custom-elements.js":1,"../utils.js":28}],16:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1636,6 +2545,12 @@ var _createClass = function () { function defineProperties(target, props) { for 
 var _utils = require('../utils.js');
 
 var $ = _interopRequireWildcard(_utils);
+
+var _customElements = require('../custom-elements.js');
+
+var _customElements2 = _interopRequireDefault(_customElements);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
@@ -1677,36 +2592,40 @@ var _class = function () {
 
         // TODO: tests
         value: function normalize() {
-            // https://dom.spec.whatwg.org/#dom-node-normalize
-            // The normalize() method, when invoked, must run these steps 
-            // for each descendant exclusive Text node node of context object:
-            var childNodes = this.childNodes;
-            var dataDescriptor = $.descriptors.CharacterData.data;
-            for (var i = 0; i < childNodes.length; i++) {
-                var childNode = childNodes[i];
-                if (childNode.nodeType === Node.TEXT_NODE) {
-                    var length = dataDescriptor.get.call(childNode).length;
-                    if (length === 0) {
-                        $.remove(childNode, this);
-                        continue;
+            var _this = this;
+
+            return _customElements2.default.executeCEReactions(function () {
+                // https://dom.spec.whatwg.org/#dom-node-normalize
+                // The normalize() method, when invoked, must run these steps 
+                // for each descendant exclusive Text node node of context object:
+                var childNodes = _this.childNodes;
+                var dataDescriptor = $.descriptors.CharacterData.data;
+                for (var i = 0; i < childNodes.length; i++) {
+                    var childNode = childNodes[i];
+                    if (childNode.nodeType === Node.TEXT_NODE) {
+                        var length = dataDescriptor.get.call(childNode).length;
+                        if (length === 0) {
+                            $.remove(childNode, _this);
+                            continue;
+                        }
+                        var data = '';
+                        var contiguousTextNodes = new Array(childNodes.length);
+                        var contiguousCount = 0;
+                        var next = childNode;
+                        while (next = next.nextSibling && next.nodeType === Node.TEXT_NODE) {
+                            data += dataDescriptor.get.call(next);
+                            contiguousTextNodes[contiguousCount++] = next;
+                        }
+                        $.replaceData(childNode, length, 0, data);
+                        // TODO: (Range)
+                        for (var j = 0; j < contiguousCount; j++) {
+                            $.remove(contiguousTextNodes[j], _this);
+                        }
+                    } else {
+                        childNode.normalize();
                     }
-                    var data = '';
-                    var contiguousTextNodes = new Array(childNodes.length);
-                    var contiguousCount = 0;
-                    var next = childNode;
-                    while (next = next.nextSibling && next.nodeType === Node.TEXT_NODE) {
-                        data += dataDescriptor.get.call(next);
-                        contiguousTextNodes[contiguousCount++] = next;
-                    }
-                    $.replaceData(childNode, length, 0, data);
-                    // TODO: (Range)
-                    for (var j = 0; j < contiguousCount; j++) {
-                        $.remove(contiguousTextNodes[j], this);
-                    }
-                } else {
-                    childNode.normalize();
                 }
-            }
+            });
         }
 
         // TODO: tests
@@ -1714,16 +2633,20 @@ var _class = function () {
     }, {
         key: 'cloneNode',
         value: function cloneNode(deep) {
-            // https://dom.spec.whatwg.org/#dom-node-clonenode
-            // The cloneNode(deep) method, when invoked, must run these steps:
+            var _this2 = this;
 
-            // 1. If context object is a shadow root, then throw a NotSupportedError.
-            if ($.isShadowRoot(this)) {
-                throw $.makeError('NotSupportedError');
-            }
+            return _customElements2.default.executeCEReactions(function () {
+                // https://dom.spec.whatwg.org/#dom-node-clonenode
+                // The cloneNode(deep) method, when invoked, must run these steps:
 
-            // 2. Return a clone of the context object, with the clone children flag set if deep is true.
-            return $.clone(this, undefined, deep);
+                // 1. If context object is a shadow root, then throw a NotSupportedError.
+                if ($.isShadowRoot(_this2)) {
+                    throw $.makeError('NotSupportedError');
+                }
+
+                // 2. Return a clone of the context object, with the clone children flag set if deep is true.
+                return $.clone(_this2, undefined, deep);
+            });
         }
 
         // TODO: tests
@@ -1887,10 +2810,14 @@ var _class = function () {
     }, {
         key: 'insertBefore',
         value: function insertBefore(node, child) {
-            // https://dom.spec.whatwg.org/#dom-node-insertbefore
-            // The insertBefore(node, child) method, when invoked, must return the result 
-            // of pre-inserting node into context object before child.
-            return $.preInsert(node, this, child);
+            var _this3 = this;
+
+            return _customElements2.default.executeCEReactions(function () {
+                // https://dom.spec.whatwg.org/#dom-node-insertbefore
+                // The insertBefore(node, child) method, when invoked, must return the result 
+                // of pre-inserting node into context object before child.
+                return $.preInsert(node, _this3, child);
+            });
         }
 
         // TODO: tests
@@ -1898,10 +2825,14 @@ var _class = function () {
     }, {
         key: 'appendChild',
         value: function appendChild(node) {
-            // https://dom.spec.whatwg.org/#dom-node-appendchild
-            // The appendChild(node) method, when invoked, must return the result of 
-            // appending node to context object.
-            return $.append(node, this);
+            var _this4 = this;
+
+            return _customElements2.default.executeCEReactions(function () {
+                // https://dom.spec.whatwg.org/#dom-node-appendchild
+                // The appendChild(node) method, when invoked, must return the result of 
+                // appending node to context object.
+                return $.append(node, _this4);
+            });
         }
 
         // TODO: tests
@@ -1909,10 +2840,14 @@ var _class = function () {
     }, {
         key: 'replaceChild',
         value: function replaceChild(node, child) {
-            // https://dom.spec.whatwg.org/#dom-node-replacechild
-            // The replaceChild(node, child) method, when invoked, must return the 
-            // result of replacing child with node within context object.
-            return $.replace(child, node, this);
+            var _this5 = this;
+
+            return _customElements2.default.executeCEReactions(function () {
+                // https://dom.spec.whatwg.org/#dom-node-replacechild
+                // The replaceChild(node, child) method, when invoked, must return the 
+                // result of replacing child with node within context object.
+                return $.replace(child, node, _this5);
+            });
         }
 
         // TODO: tests
@@ -1920,10 +2855,19 @@ var _class = function () {
     }, {
         key: 'removeChild',
         value: function removeChild(child) {
-            // https://dom.spec.whatwg.org/#dom-node-removechild
-            // The removeChild(child) method, when invoked, must return the result of 
-            // pre-removing child from context object.
-            return $.preRemove(child, this);
+            var _this6 = this;
+
+            return _customElements2.default.executeCEReactions(function () {
+                // https://dom.spec.whatwg.org/#dom-node-removechild
+                // The removeChild(child) method, when invoked, must return the result of 
+                // pre-removing child from context object.
+                return $.preRemove(child, _this6);
+            });
+        }
+    }, {
+        key: 'isConnected',
+        get: function get() {
+            return $.shadowIncludingRoot(this).nodeType === Node.DOCUMENT_NODE;
         }
     }, {
         key: 'parentNode',
@@ -2046,17 +2990,21 @@ var _class = function () {
         // TODO: MutationObserver tests
         ,
         set: function set(value) {
-            switch (this.nodeType) {
-                case Node.ATTRIBUTE_NODE:
-                    $.setExistingAttributeValue(this, value);
-                    break;
-                case Node.TEXT_NODE:
-                case Node.PROCESSING_INSTRUCTION_NODE:
-                case Node.COMMENT_NODE:
-                    var length = $.descriptors.CharacterData.data.get.call(this).length;
-                    $.replaceData(this, 0, length, value);
-                    break;
-            }
+            var _this7 = this;
+
+            return _customElements2.default.executeCEReactions(function () {
+                switch (_this7.nodeType) {
+                    case Node.ATTRIBUTE_NODE:
+                        $.setExistingAttributeValue(_this7, value);
+                        break;
+                    case Node.TEXT_NODE:
+                    case Node.PROCESSING_INSTRUCTION_NODE:
+                    case Node.COMMENT_NODE:
+                        var length = $.descriptors.CharacterData.data.get.call(_this7).length;
+                        $.replaceData(_this7, 0, length, value);
+                        break;
+                }
+            });
         }
     }, {
         key: 'textContent',
@@ -2079,24 +3027,28 @@ var _class = function () {
         // TODO: MutationObserver tests
         ,
         set: function set(value) {
-            switch (this.nodeType) {
-                case Node.DOCUMENT_FRAGMENT_NODE:
-                case Node.ELEMENT_NODE:
-                    var node = null;
-                    if (value !== '') {
-                        node = this.ownerDocument.createTextNode(value);
-                    }
-                    $.replaceAll(node, this);
-                    break;
-                case Node.ATTRIBUTE_NODE:
-                    $.setExistingAttributeValue(this, value);
-                    break;
-                case Node.TEXT_NODE:
-                case Node.PROCESSING_INSTRUCTION_NODE:
-                case Node.COMMENT_NODE:
-                    $.replaceData(this, 0, this.data.length, value);
-                    break;
-            }
+            var _this8 = this;
+
+            return _customElements2.default.executeCEReactions(function () {
+                switch (_this8.nodeType) {
+                    case Node.DOCUMENT_FRAGMENT_NODE:
+                    case Node.ELEMENT_NODE:
+                        var node = null;
+                        if (value !== '') {
+                            node = _this8.ownerDocument.createTextNode(value);
+                        }
+                        $.replaceAll(node, _this8);
+                        break;
+                    case Node.ATTRIBUTE_NODE:
+                        $.setExistingAttributeValue(_this8, value);
+                        break;
+                    case Node.TEXT_NODE:
+                    case Node.PROCESSING_INSTRUCTION_NODE:
+                    case Node.COMMENT_NODE:
+                        $.replaceData(_this8, 0, _this8.data.length, value);
+                        break;
+                }
+            });
         }
     }]);
 
@@ -2182,7 +3134,7 @@ function elementTextContent(element) {
     return result;
 }
 
-},{"../utils.js":27}],16:[function(require,module,exports){
+},{"../custom-elements.js":1,"../utils.js":28}],17:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2195,6 +3147,12 @@ var _createClass = function () { function defineProperties(target, props) { for 
 var _utils = require('../utils.js');
 
 var $ = _interopRequireWildcard(_utils);
+
+var _customElements = require('../custom-elements.js');
+
+var _customElements2 = _interopRequireDefault(_customElements);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
@@ -2232,8 +3190,12 @@ var _class = function () {
         // TODO: tests
         ,
         set: function set(value) {
-            var fragment = $.parseHTMLFragment(value, this);
-            $.replaceAll(fragment, this);
+            var _this = this;
+
+            return _customElements2.default.executeCEReactions(function () {
+                var fragment = $.parseHTMLFragment(value, _this);
+                $.replaceAll(fragment, _this);
+            });
         }
     }]);
 
@@ -2242,7 +3204,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":27}],17:[function(require,module,exports){
+},{"../custom-elements.js":1,"../utils.js":28}],18:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2294,197 +3256,237 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":27}],18:[function(require,module,exports){
+},{"../utils.js":28}],19:[function(require,module,exports){
 'use strict';
 
-var _patch = require('./patch.js');
+var _shadowDom = require('./shadow-dom.js');
 
-var _patch2 = _interopRequireDefault(_patch);
+var _shadowDom2 = _interopRequireDefault(_shadowDom);
+
+var _customElements = require('./custom-elements.js');
+
+var _customElements2 = _interopRequireDefault(_customElements);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var nativeShadowDom = 'attachShadow' in Element.prototype;
+var installShadowDom = false;
+var installCustomElements = false;
 
-if (!nativeShadowDom || window['forceShadowDomPolyfill']) {
-    (0, _patch2.default)();
+if (window['forceShadowDomPolyfill'] || !_shadowDom2.default.nativeSupport) {
+    installShadowDom = true;
 }
 
-},{"./patch.js":25}],19:[function(require,module,exports){
+if (window['forceCustomElementsPolyfill'] || !_customElements2.default.nativeSupport) {
+    installShadowDom = true;
+    installCustomElements = true;
+}
+
+if (installShadowDom) {
+    _shadowDom2.default.install();
+}
+
+if (installCustomElements) {
+    _customElements2.default.install();
+} else {
+    // TODO: Offer a way to opt out if desired
+    _customElements2.default.shimHtmlConstructors();
+}
+
+},{"./custom-elements.js":1,"./shadow-dom.js":27}],20:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
-            value: true
+    value: true
 });
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // https://dom.spec.whatwg.org/#interface-childnode
 
 exports.default = function (base) {
 
-            return function () {
-                        function _class() {
-                                    _classCallCheck(this, _class);
+    return function () {
+        function _class() {
+            _classCallCheck(this, _class);
+        }
+
+        _createClass(_class, [{
+            key: 'before',
+
+
+            // TODO: tests
+            value: function before() {
+                var _this = this;
+
+                for (var _len = arguments.length, nodes = Array(_len), _key = 0; _key < _len; _key++) {
+                    nodes[_key] = arguments[_key];
+                }
+
+                return _customElements2.default.executeCEReactions(function () {
+                    // https://dom.spec.whatwg.org/#dom-childnode-before
+                    // The before(nodes) method, when invoked, must run these steps:
+
+                    // 1. Let parent be context object’s parent.
+                    var parent = _this.parentNode;
+
+                    // 2. If parent is null, terminate these steps.
+                    if (!parent) {
+                        return;
+                    }
+
+                    // 3. Let viablePreviousSibling be context object’s first preceding 
+                    // sibling not in nodes, and null otherwise.
+                    var viablePreviousSibling = _this.previousSibling;
+                    while (viablePreviousSibling && nodes.indexOf(viablePreviousSibling) !== -1) {
+                        viablePreviousSibling = viablePreviousSibling.previousSibling;
+                    }
+
+                    // 4. Let node be the result of converting nodes into a node, given 
+                    // nodes and context object’s node document. Rethrow any exceptions.
+                    var node = $.convertNodesIntoANode(nodes, _this.ownerDocument);
+
+                    // 5. If viablePreviousSibling is null, set it to parent’s first child, 
+                    // and to viablePreviousSibling’s next sibling otherwise.
+                    if (viablePreviousSibling === null) {
+                        viablePreviousSibling = parent.firstChild;
+                    } else {
+                        viablePreviousSibling = viablePreviousSibling.nextSibling;
+                    }
+
+                    // 6. Pre-insert node into parent before viablePreviousSibling. 
+                    // Rethrow any exceptions.
+                    $.preInsert(node, parent, viablePreviousSibling);
+                });
+            }
+
+            // TODO: tests
+
+        }, {
+            key: 'after',
+            value: function after() {
+                var _this2 = this;
+
+                for (var _len2 = arguments.length, nodes = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+                    nodes[_key2] = arguments[_key2];
+                }
+
+                return _customElements2.default.executeCEReactions(function () {
+                    // https://dom.spec.whatwg.org/#dom-childnode-after
+                    // The after(nodes) method, when invoked, must run these steps:
+
+                    // 1. Let parent be context object’s parent.
+                    var parent = _this2.parentNode;
+
+                    // 2. If parent is null, terminate these steps.
+                    if (!parent) {
+                        return;
+                    }
+
+                    // 3. Let viableNextSibling be context object’s first following 
+                    // sibling not in nodes, and null otherwise.
+                    var viableNextSibling = _this2.nextSibling;
+                    while (viableNextSibling && nodes.indexOf(viableNextSibling) !== -1) {
+                        viableNextSibling = viableNextSibling.nextSibling;
+                    }
+
+                    // 4. Let node be the result of converting nodes into a node, given 
+                    // nodes and context object’s node document. Rethrow any exceptions.
+                    var node = $.convertNodesIntoANode(nodes, _this2.ownerDocument);
+
+                    // 5. Pre-insert node into parent before viableNextSibling. Rethrow 
+                    // any exceptions.
+                    $.preInsert(node, parent, viableNextSibling);
+                });
+            }
+
+            // TODO: tests
+
+        }, {
+            key: 'replaceWith',
+            value: function replaceWith() {
+                var _this3 = this;
+
+                for (var _len3 = arguments.length, nodes = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
+                    nodes[_key3] = arguments[_key3];
+                }
+
+                return _customElements2.default.executeCEReactions(function () {
+                    // https://dom.spec.whatwg.org/#dom-childnode-replacewith
+                    // The replaceWith(nodes) method, when invoked, must run these steps:
+
+                    // 1. Let parent be context object’s parent.
+                    var parent = _this3.parentNode;
+
+                    // 2. If parent is null, terminate these steps.
+                    if (!parent) {
+                        return;
+                    }
+
+                    // 3. Let viableNextSibling be context object’s first following 
+                    // sibling not in nodes, and null otherwise.
+                    var viableNextSibling = _this3.nextSibling;
+                    while (viableNextSibling && nodes.indexOf(viableNextSibling) !== -1) {
+                        viableNextSibling = viableNextSibling.nextSibling;
+                    }
+
+                    // 4. Let node be the result of converting nodes into a node, given 
+                    // nodes and context object’s node document. Rethrow any exceptions.
+                    var node = $.convertNodesIntoANode(nodes, _this3.ownerDocument);
+
+                    // 5. If context object’s parent is parent, replace the context object 
+                    // with node within parent. Rethrow any exceptions.
+                    if (_this3.parentNode == parent) {
+                        $.replace(_this3, node, parent);
+                    }
+                    // 6. Otherwise, pre-insert node into parent before viableNextSibling. 
+                    // Rethrow any exceptions.
+                    else {
+                            $.preInsert(node, parent, viableNextSibling);
                         }
+                });
+            }
 
-                        _createClass(_class, [{
-                                    key: 'before',
+            // TODO: tests
 
+        }, {
+            key: 'remove',
+            value: function remove() {
+                var _this4 = this;
 
-                                    // TODO: tests
-                                    value: function before() {
-                                                // https://dom.spec.whatwg.org/#dom-childnode-before
-                                                // The before(nodes) method, when invoked, must run these steps:
+                return _customElements2.default.executeCEReactions(function () {
+                    // https://dom.spec.whatwg.org/#dom-childnode-remove
+                    // The remove() method, when invoked, must run these steps:
 
-                                                // 1. Let parent be context object’s parent.
-                                                var parent = this.parentNode;
+                    // 1. If context object’s parent is null, terminate these steps.
+                    var parent = _this4.parentNode;
 
-                                                // 2. If parent is null, terminate these steps.
-                                                if (!parent) {
-                                                            return;
-                                                }
+                    if (!parent) {
+                        return;
+                    }
 
-                                                // 3. Let viablePreviousSibling be context object’s first preceding 
-                                                // sibling not in nodes, and null otherwise.
-                                                var viablePreviousSibling = this.previousSibling;
+                    // 2. Remove the context object from context object’s parent.
+                    $.remove(_this4, parent);
+                });
+            }
+        }]);
 
-                                                for (var _len = arguments.length, nodes = Array(_len), _key = 0; _key < _len; _key++) {
-                                                            nodes[_key] = arguments[_key];
-                                                }
-
-                                                while (viablePreviousSibling && nodes.indexOf(viablePreviousSibling) !== -1) {
-                                                            viablePreviousSibling = viablePreviousSibling.previousSibling;
-                                                }
-
-                                                // 4. Let node be the result of converting nodes into a node, given 
-                                                // nodes and context object’s node document. Rethrow any exceptions.
-                                                var node = $.convertNodesIntoANode(nodes, this.ownerDocument);
-
-                                                // 5. If viablePreviousSibling is null, set it to parent’s first child, 
-                                                // and to viablePreviousSibling’s next sibling otherwise.
-                                                if (viablePreviousSibling === null) {
-                                                            viablePreviousSibling = parent.firstChild;
-                                                } else {
-                                                            viablePreviousSibling = viablePreviousSibling.nextSibling;
-                                                }
-
-                                                // 6. Pre-insert node into parent before viablePreviousSibling. 
-                                                // Rethrow any exceptions.
-                                                $.preInsert(node, parent, viablePreviousSibling);
-                                    }
-
-                                    // TODO: tests
-
-                        }, {
-                                    key: 'after',
-                                    value: function after() {
-                                                // https://dom.spec.whatwg.org/#dom-childnode-after
-                                                // The after(nodes) method, when invoked, must run these steps:
-
-                                                // 1. Let parent be context object’s parent.
-                                                var parent = this.parentNode;
-
-                                                // 2. If parent is null, terminate these steps.
-                                                if (!parent) {
-                                                            return;
-                                                }
-
-                                                // 3. Let viableNextSibling be context object’s first following 
-                                                // sibling not in nodes, and null otherwise.
-                                                var viableNextSibling = this.nextSibling;
-
-                                                for (var _len2 = arguments.length, nodes = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-                                                            nodes[_key2] = arguments[_key2];
-                                                }
-
-                                                while (viableNextSibling && nodes.indexOf(viableNextSibling) !== -1) {
-                                                            viableNextSibling = viableNextSibling.nextSibling;
-                                                }
-
-                                                // 4. Let node be the result of converting nodes into a node, given 
-                                                // nodes and context object’s node document. Rethrow any exceptions.
-                                                var node = $.convertNodesIntoANode(nodes, this.ownerDocument);
-
-                                                // 5. Pre-insert node into parent before viableNextSibling. Rethrow 
-                                                // any exceptions.
-                                                $.preInsert(node, parent, viableNextSibling);
-                                    }
-
-                                    // TODO: tests
-
-                        }, {
-                                    key: 'replaceWith',
-                                    value: function replaceWith() {
-                                                // https://dom.spec.whatwg.org/#dom-childnode-replacewith
-                                                // The replaceWith(nodes) method, when invoked, must run these steps:
-
-                                                // 1. Let parent be context object’s parent.
-                                                var parent = this.parentNode;
-
-                                                // 2. If parent is null, terminate these steps.
-                                                if (!parent) {
-                                                            return;
-                                                }
-
-                                                // 3. Let viableNextSibling be context object’s first following 
-                                                // sibling not in nodes, and null otherwise.
-                                                var viableNextSibling = this.nextSibling;
-
-                                                for (var _len3 = arguments.length, nodes = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
-                                                            nodes[_key3] = arguments[_key3];
-                                                }
-
-                                                while (viableNextSibling && nodes.indexOf(viableNextSibling) !== -1) {
-                                                            viableNextSibling = viableNextSibling.nextSibling;
-                                                }
-
-                                                // 4. Let node be the result of converting nodes into a node, given 
-                                                // nodes and context object’s node document. Rethrow any exceptions.
-                                                var node = $.convertNodesIntoANode(nodes, this.ownerDocument);
-
-                                                // 5. If context object’s parent is parent, replace the context object 
-                                                // with node within parent. Rethrow any exceptions.
-                                                if (this.parentNode == parent) {
-                                                            $.replace(this, node, parent);
-                                                }
-                                                // 6. Otherwise, pre-insert node into parent before viableNextSibling. 
-                                                // Rethrow any exceptions.
-                                                else {
-                                                                        $.preInsert(node, parent, viableNextSibling);
-                                                            }
-                                    }
-
-                                    // TODO: tests
-
-                        }, {
-                                    key: 'remove',
-                                    value: function remove() {
-                                                // https://dom.spec.whatwg.org/#dom-childnode-remove
-                                                // The remove() method, when invoked, must run these steps:
-
-                                                // 1. If context object’s parent is null, terminate these steps.
-                                                var parent = this.parentNode;
-
-                                                if (!parent) {
-                                                            return;
-                                                }
-
-                                                // 2. Remove the context object from context object’s parent.
-                                                $.remove(this, parent);
-                                    }
-                        }]);
-
-                        return _class;
-            }();
+        return _class;
+    }();
 };
 
 var _utils = require('../utils.js');
 
 var $ = _interopRequireWildcard(_utils);
 
+var _customElements = require('../custom-elements.js');
+
+var _customElements2 = _interopRequireDefault(_customElements);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-},{"../utils.js":27}],20:[function(require,module,exports){
+},{"../custom-elements.js":1,"../utils.js":28}],21:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2534,7 +3536,7 @@ var _class = function () {
 
 exports.default = _class;
 
-},{"../utils.js":27}],21:[function(require,module,exports){
+},{"../utils.js":28}],22:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2629,7 +3631,7 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-},{"../utils.js":27}],22:[function(require,module,exports){
+},{"../utils.js":28}],23:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2682,7 +3684,7 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-},{"../utils.js":27}],23:[function(require,module,exports){
+},{"../utils.js":28}],24:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2711,20 +3713,24 @@ exports.default = function (base) {
 
             // TODO: tests
             value: function prepend() {
+                var _this = this;
+
                 for (var _len = arguments.length, nodes = Array(_len), _key = 0; _key < _len; _key++) {
                     nodes[_key] = arguments[_key];
                 }
 
-                // https://dom.spec.whatwg.org/#dom-parentnode-prepend
-                // The prepend(nodes) method, when invoked, must run these steps:
+                return _customElements2.default.executeCEReactions(function () {
+                    // https://dom.spec.whatwg.org/#dom-parentnode-prepend
+                    // The prepend(nodes) method, when invoked, must run these steps:
 
-                // 1. Let node be the result of converting nodes into a node given 
-                // nodes and context object’s node document. Rethrow any exceptions.
-                var node = $.convertNodesIntoANode(nodes, this.ownerDocument || this);
+                    // 1. Let node be the result of converting nodes into a node given 
+                    // nodes and context object’s node document. Rethrow any exceptions.
+                    var node = $.convertNodesIntoANode(nodes, _this.ownerDocument || _this);
 
-                // 2. Pre-insert node into context object before the context object’s 
-                // first child. Rethrow any exceptions.
-                $.preInsert(node, this, this.firstChild);
+                    // 2. Pre-insert node into context object before the context object’s 
+                    // first child. Rethrow any exceptions.
+                    $.preInsert(node, _this, _this.firstChild);
+                });
             }
 
             // TODO: tests
@@ -2732,19 +3738,23 @@ exports.default = function (base) {
         }, {
             key: 'append',
             value: function append() {
+                var _this2 = this;
+
                 for (var _len2 = arguments.length, nodes = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
                     nodes[_key2] = arguments[_key2];
                 }
 
-                // https://dom.spec.whatwg.org/#dom-parentnode-append
-                // The append(nodes) method, when invoked, must run these steps:
+                return _customElements2.default.executeCEReactions(function () {
+                    // https://dom.spec.whatwg.org/#dom-parentnode-append
+                    // The append(nodes) method, when invoked, must run these steps:
 
-                // 1. Let node be the result of converting nodes into a node given 
-                // nodes and context object’s node document. Rethrow any exceptions.
-                var node = $.convertNodesIntoANode(nodes, this.ownerDocument || this);
+                    // 1. Let node be the result of converting nodes into a node given 
+                    // nodes and context object’s node document. Rethrow any exceptions.
+                    var node = $.convertNodesIntoANode(nodes, _this2.ownerDocument || _this2);
 
-                // 2. Append node to context object. Rethrow any exceptions.
-                $.append(node, this);
+                    // 2. Append node to context object. Rethrow any exceptions.
+                    $.append(node, _this2);
+                });
             }
 
             // TODO: tests
@@ -2904,11 +3914,17 @@ var _utils = require('../utils.js');
 
 var $ = _interopRequireWildcard(_utils);
 
+var _customElements = require('../custom-elements.js');
+
+var _customElements2 = _interopRequireDefault(_customElements);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-},{"../utils.js":27}],24:[function(require,module,exports){
+},{"../custom-elements.js":1,"../utils.js":28}],25:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2954,233 +3970,7 @@ function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj;
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
-},{"../utils.js":27}],25:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-
-exports.default = function () {
-
-    // Reflected attributes
-    reflect.patchAll();
-
-    // Element.matches(selectors) polyfill from MDN
-    // https://developer.mozilla.org/en-US/docs/Web/API/Element/matches#Polyfill
-    // Purposefully chop out the polyfill function that uses querySelectorAll.
-    if (!Element.prototype.matches) {
-        Element.prototype.matches = Element.prototype.matchesSelector || Element.prototype.mozMatchesSelector || Element.prototype.msMatchesSelector || Element.prototype.oMatchesSelector || Element.prototype.webkitMatchesSelector;
-    }
-
-    // Attr interface
-    $.extend(Attr, _Attr2.default);
-
-    // CharacterData interface
-    $.extend(CharacterData, _CharacterData2.default);
-
-    // CustomEvent interface
-    $.extend(CustomEvent, _CustomEvent2.default);
-    _CustomEvent2.default.prototype = CustomEvent.prototype;
-    window.CustomEvent = _CustomEvent2.default;
-
-    // Document interface
-    $.extend(Document, _Document2.default);
-
-    // DOMTokenList interface
-    if ('DOMTokenList' in window) {
-        $.extend(DOMTokenList, _DOMTokenList2.default);
-    }
-
-    // Element interface
-    $.extend(Element, _Element2.default);
-
-    // Event interface
-    $.extend(Event, _Event2.default);
-    $.extend(FocusEvent, _Event.hasRelatedTarget);
-    $.extend(MouseEvent, _Event.hasRelatedTarget);
-    _Event2.default.prototype = Event.prototype;
-    window.Event = _Event2.default;
-
-    // EventTarget
-    if ('EventTarget' in Window) {
-        $.extend(EventTarget, (0, _EventTarget2.default)(EventTarget));
-    } else {
-        // In IE, EventTarget is not exposed and Window's
-        // EventTarget methods are not the same as Node's.
-        $.extend(Window, (0, _EventTarget2.default)(Window));
-        $.extend(Node, (0, _EventTarget2.default)(Node));
-    }
-
-    // HTMLSlotElement interface
-    $.extend('HTMLSlotElement' in window ? HTMLSlotElement : HTMLUnknownElement, _HTMLSlotElement2.default);
-
-    // HTMLTableElement interface
-    $.extend(HTMLTableElement, _HTMLTableElement2.default);
-
-    // HTMLTableRowElement interface
-    $.extend(HTMLTableRowElement, _HTMLTableRowElement2.default);
-
-    // HTMLTableSectionElement interface
-    $.extend(HTMLTableSectionElement, _HTMLTableSectionElement2.default);
-
-    // MutationObserver interface
-    window.MutationObserver = _MutationObserver2.default;
-
-    // NamedNodeMap interface
-    $.extend(NamedNodeMap, _NamedNodeMap2.default);
-
-    // Node interface
-    $.extend(Node, _Node2.default);
-
-    // TODO: implement Range interface
-
-    // Text interface
-    $.extend(Text, _Text2.default);
-
-    // ChildNode mixin
-    $.extend(DocumentType, (0, _ChildNode2.default)(DocumentType));
-    $.extend(Element, (0, _ChildNode2.default)(Element));
-    $.extend(CharacterData, (0, _ChildNode2.default)(CharacterData));
-
-    // DocumentOrShadowRoot mixin
-    $.extend(Document, _DocumentOrShadowRoot2.default);
-    $.extend(_ShadowRoot2.default, _DocumentOrShadowRoot2.default);
-
-    // NonDocumentTypeChildNode mixin
-    $.extend(Element, (0, _NonDocumentTypeChildNode2.default)(Element));
-    $.extend(CharacterData, (0, _NonDocumentTypeChildNode2.default)(CharacterData));
-
-    // NonElementParentNode mixin
-    $.extend(Document, (0, _NonElementParentNode2.default)(Document));
-    $.extend(DocumentFragment, (0, _NonElementParentNode2.default)(DocumentFragment));
-
-    // ParentNode mixin
-    $.extend(Document, (0, _ParentNode2.default)(Document));
-    $.extend(DocumentFragment, (0, _ParentNode2.default)(DocumentFragment));
-    $.extend(Element, (0, _ParentNode2.default)(Element));
-
-    // Slotable mixin
-    $.extend(Element, (0, _Slotable2.default)(Element));
-    $.extend(Text, (0, _Slotable2.default)(Text));
-
-    // Cleanup for IE, Edge
-    delete Node.prototype.attributes;
-    delete HTMLElement.prototype.classList;
-    delete HTMLElement.prototype.children;
-    delete HTMLElement.prototype.parentElement;
-    delete HTMLElement.prototype.innerHTML;
-    delete HTMLElement.prototype.outerHTML;
-    delete HTMLElement.prototype.insertAdjacentText;
-    delete HTMLElement.prototype.insertAdjacentElement;
-    delete HTMLElement.prototype.insertAdjacentHTML;
-};
-
-var _utils = require('./utils.js');
-
-var $ = _interopRequireWildcard(_utils);
-
-var _reflect = require('./reflect.js');
-
-var reflect = _interopRequireWildcard(_reflect);
-
-var _Attr = require('./interfaces/Attr.js');
-
-var _Attr2 = _interopRequireDefault(_Attr);
-
-var _CharacterData = require('./interfaces/CharacterData.js');
-
-var _CharacterData2 = _interopRequireDefault(_CharacterData);
-
-var _CustomEvent = require('./interfaces/CustomEvent.js');
-
-var _CustomEvent2 = _interopRequireDefault(_CustomEvent);
-
-var _Document = require('./interfaces/Document.js');
-
-var _Document2 = _interopRequireDefault(_Document);
-
-var _DOMTokenList = require('./interfaces/DOMTokenList.js');
-
-var _DOMTokenList2 = _interopRequireDefault(_DOMTokenList);
-
-var _Element = require('./interfaces/Element.js');
-
-var _Element2 = _interopRequireDefault(_Element);
-
-var _Event = require('./interfaces/Event.js');
-
-var _Event2 = _interopRequireDefault(_Event);
-
-var _EventTarget = require('./interfaces/EventTarget.js');
-
-var _EventTarget2 = _interopRequireDefault(_EventTarget);
-
-var _HTMLSlotElement = require('./interfaces/HTMLSlotElement.js');
-
-var _HTMLSlotElement2 = _interopRequireDefault(_HTMLSlotElement);
-
-var _HTMLTableElement = require('./interfaces/HTMLTableElement.js');
-
-var _HTMLTableElement2 = _interopRequireDefault(_HTMLTableElement);
-
-var _HTMLTableRowElement = require('./interfaces/HTMLTableRowElement.js');
-
-var _HTMLTableRowElement2 = _interopRequireDefault(_HTMLTableRowElement);
-
-var _HTMLTableSectionElement = require('./interfaces/HTMLTableSectionElement.js');
-
-var _HTMLTableSectionElement2 = _interopRequireDefault(_HTMLTableSectionElement);
-
-var _MutationObserver = require('./interfaces/MutationObserver.js');
-
-var _MutationObserver2 = _interopRequireDefault(_MutationObserver);
-
-var _NamedNodeMap = require('./interfaces/NamedNodeMap.js');
-
-var _NamedNodeMap2 = _interopRequireDefault(_NamedNodeMap);
-
-var _Node = require('./interfaces/Node.js');
-
-var _Node2 = _interopRequireDefault(_Node);
-
-var _ShadowRoot = require('./interfaces/ShadowRoot.js');
-
-var _ShadowRoot2 = _interopRequireDefault(_ShadowRoot);
-
-var _Text = require('./interfaces/Text.js');
-
-var _Text2 = _interopRequireDefault(_Text);
-
-var _ChildNode = require('./mixins/ChildNode.js');
-
-var _ChildNode2 = _interopRequireDefault(_ChildNode);
-
-var _DocumentOrShadowRoot = require('./mixins/DocumentOrShadowRoot.js');
-
-var _DocumentOrShadowRoot2 = _interopRequireDefault(_DocumentOrShadowRoot);
-
-var _NonDocumentTypeChildNode = require('./mixins/NonDocumentTypeChildNode.js');
-
-var _NonDocumentTypeChildNode2 = _interopRequireDefault(_NonDocumentTypeChildNode);
-
-var _NonElementParentNode = require('./mixins/NonElementParentNode.js');
-
-var _NonElementParentNode2 = _interopRequireDefault(_NonElementParentNode);
-
-var _ParentNode = require('./mixins/ParentNode.js');
-
-var _ParentNode2 = _interopRequireDefault(_ParentNode);
-
-var _Slotable = require('./mixins/Slotable.js');
-
-var _Slotable2 = _interopRequireDefault(_Slotable);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
-
-},{"./interfaces/Attr.js":1,"./interfaces/CharacterData.js":2,"./interfaces/CustomEvent.js":3,"./interfaces/DOMTokenList.js":4,"./interfaces/Document.js":5,"./interfaces/Element.js":6,"./interfaces/Event.js":7,"./interfaces/EventTarget.js":8,"./interfaces/HTMLSlotElement.js":9,"./interfaces/HTMLTableElement.js":10,"./interfaces/HTMLTableRowElement.js":11,"./interfaces/HTMLTableSectionElement.js":12,"./interfaces/MutationObserver.js":13,"./interfaces/NamedNodeMap.js":14,"./interfaces/Node.js":15,"./interfaces/ShadowRoot.js":16,"./interfaces/Text.js":17,"./mixins/ChildNode.js":19,"./mixins/DocumentOrShadowRoot.js":20,"./mixins/NonDocumentTypeChildNode.js":21,"./mixins/NonElementParentNode.js":22,"./mixins/ParentNode.js":23,"./mixins/Slotable.js":24,"./reflect.js":26,"./utils.js":27}],26:[function(require,module,exports){
+},{"../utils.js":28}],26:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3583,7 +4373,7 @@ function reflectBoolean(attributeName) {
                 return this.hasAttribute(attributeName);
             },
             set: function set(value) {
-                if (value == null) {
+                if (value === false) {
                     $.removeAttributeByName(attributeName, this);
                 } else {
                     $.setAttributeValue(this, attributeName, value);
@@ -3716,22 +4506,261 @@ function patchAll() {
     }
 }
 
-},{"./interfaces/DOMTokenList.js":4,"./utils.js":27}],27:[function(require,module,exports){
+},{"./interfaces/DOMTokenList.js":5,"./utils.js":28}],27:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+
+var _utils = require('./utils.js');
+
+var $ = _interopRequireWildcard(_utils);
+
+var _reflect = require('./reflect.js');
+
+var reflect = _interopRequireWildcard(_reflect);
+
+var _Attr = require('./interfaces/Attr.js');
+
+var _Attr2 = _interopRequireDefault(_Attr);
+
+var _CharacterData = require('./interfaces/CharacterData.js');
+
+var _CharacterData2 = _interopRequireDefault(_CharacterData);
+
+var _CustomEvent = require('./interfaces/CustomEvent.js');
+
+var _CustomEvent2 = _interopRequireDefault(_CustomEvent);
+
+var _Document = require('./interfaces/Document.js');
+
+var _Document2 = _interopRequireDefault(_Document);
+
+var _DOMTokenList = require('./interfaces/DOMTokenList.js');
+
+var _DOMTokenList2 = _interopRequireDefault(_DOMTokenList);
+
+var _Element = require('./interfaces/Element.js');
+
+var _Element2 = _interopRequireDefault(_Element);
+
+var _Event = require('./interfaces/Event.js');
+
+var _Event2 = _interopRequireDefault(_Event);
+
+var _EventTarget = require('./interfaces/EventTarget.js');
+
+var _EventTarget2 = _interopRequireDefault(_EventTarget);
+
+var _HTMLSlotElement = require('./interfaces/HTMLSlotElement.js');
+
+var _HTMLSlotElement2 = _interopRequireDefault(_HTMLSlotElement);
+
+var _HTMLTableElement = require('./interfaces/HTMLTableElement.js');
+
+var _HTMLTableElement2 = _interopRequireDefault(_HTMLTableElement);
+
+var _HTMLTableRowElement = require('./interfaces/HTMLTableRowElement.js');
+
+var _HTMLTableRowElement2 = _interopRequireDefault(_HTMLTableRowElement);
+
+var _HTMLTableSectionElement = require('./interfaces/HTMLTableSectionElement.js');
+
+var _HTMLTableSectionElement2 = _interopRequireDefault(_HTMLTableSectionElement);
+
+var _MutationObserver = require('./interfaces/MutationObserver.js');
+
+var _MutationObserver2 = _interopRequireDefault(_MutationObserver);
+
+var _NamedNodeMap = require('./interfaces/NamedNodeMap.js');
+
+var _NamedNodeMap2 = _interopRequireDefault(_NamedNodeMap);
+
+var _Node = require('./interfaces/Node.js');
+
+var _Node2 = _interopRequireDefault(_Node);
+
+var _ShadowRoot = require('./interfaces/ShadowRoot.js');
+
+var _ShadowRoot2 = _interopRequireDefault(_ShadowRoot);
+
+var _Text = require('./interfaces/Text.js');
+
+var _Text2 = _interopRequireDefault(_Text);
+
+var _ChildNode = require('./mixins/ChildNode.js');
+
+var _ChildNode2 = _interopRequireDefault(_ChildNode);
+
+var _DocumentOrShadowRoot = require('./mixins/DocumentOrShadowRoot.js');
+
+var _DocumentOrShadowRoot2 = _interopRequireDefault(_DocumentOrShadowRoot);
+
+var _NonDocumentTypeChildNode = require('./mixins/NonDocumentTypeChildNode.js');
+
+var _NonDocumentTypeChildNode2 = _interopRequireDefault(_NonDocumentTypeChildNode);
+
+var _NonElementParentNode = require('./mixins/NonElementParentNode.js');
+
+var _NonElementParentNode2 = _interopRequireDefault(_NonElementParentNode);
+
+var _ParentNode = require('./mixins/ParentNode.js');
+
+var _ParentNode2 = _interopRequireDefault(_ParentNode);
+
+var _Slotable = require('./mixins/Slotable.js');
+
+var _Slotable2 = _interopRequireDefault(_Slotable);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
+
+var nativeSupport = 'attachShadow' in Element.prototype;
+
+exports.default = {
+    nativeSupport: nativeSupport,
+    install: install
+};
+
+
+function install() {
+
+    // Hacky setting in case you want to use ShadyCSS.
+    window['ShadyDOM'] = { 'inUse': true };
+
+    // Reflected attributes
+    reflect.patchAll();
+
+    // Element.matches(selectors) polyfill from MDN
+    // https://developer.mozilla.org/en-US/docs/Web/API/Element/matches#Polyfill
+    // Purposefully chop out the polyfill function that uses querySelectorAll.
+    if (!Element.prototype.matches) {
+        Element.prototype.matches = Element.prototype.matchesSelector || Element.prototype.mozMatchesSelector || Element.prototype.msMatchesSelector || Element.prototype.oMatchesSelector || Element.prototype.webkitMatchesSelector;
+    }
+
+    // Attr interface
+    $.extend(Attr, _Attr2.default);
+
+    // CharacterData interface
+    $.extend(CharacterData, _CharacterData2.default);
+
+    // CustomEvent interface
+    $.extend(CustomEvent, _CustomEvent2.default);
+    _CustomEvent2.default.prototype = CustomEvent.prototype;
+    window.CustomEvent = _CustomEvent2.default;
+
+    // Document interface
+    $.extend(Document, _Document2.default);
+
+    // DOMTokenList interface
+    if ('DOMTokenList' in window) {
+        // TODO: what about IE9?
+        $.extend(DOMTokenList, _DOMTokenList2.default);
+    }
+
+    // Element interface
+    $.extend(Element, _Element2.default);
+
+    // Event interface
+    $.extend(Event, _Event2.default);
+    $.extend(FocusEvent, _Event.hasRelatedTarget);
+    $.extend(MouseEvent, _Event.hasRelatedTarget);
+    _Event2.default.prototype = Event.prototype;
+    window.Event = _Event2.default;
+
+    // EventTarget
+    if ('EventTarget' in Window) {
+        $.extend(EventTarget, (0, _EventTarget2.default)(EventTarget));
+    } else {
+        // In IE, EventTarget is not exposed and Window's
+        // EventTarget methods are not the same as Node's.
+        $.extend(Window, (0, _EventTarget2.default)(Window));
+        $.extend(Node, (0, _EventTarget2.default)(Node));
+    }
+
+    // HTMLSlotElement interface
+    $.extend('HTMLSlotElement' in window ? HTMLSlotElement : HTMLUnknownElement, _HTMLSlotElement2.default);
+
+    // HTMLTableElement interface
+    $.extend(HTMLTableElement, _HTMLTableElement2.default);
+
+    // HTMLTableRowElement interface
+    $.extend(HTMLTableRowElement, _HTMLTableRowElement2.default);
+
+    // HTMLTableSectionElement interface
+    $.extend(HTMLTableSectionElement, _HTMLTableSectionElement2.default);
+
+    // MutationObserver interface
+    window.MutationObserver = _MutationObserver2.default;
+
+    // NamedNodeMap interface
+    $.extend(NamedNodeMap, _NamedNodeMap2.default);
+
+    // Node interface
+    $.extend(Node, _Node2.default);
+
+    // TODO: implement Range interface
+
+    // Text interface
+    $.extend(Text, _Text2.default);
+
+    // ChildNode mixin
+    $.extend(DocumentType, (0, _ChildNode2.default)(DocumentType));
+    $.extend(Element, (0, _ChildNode2.default)(Element));
+    $.extend(CharacterData, (0, _ChildNode2.default)(CharacterData));
+
+    // DocumentOrShadowRoot mixin
+    $.extend(Document, _DocumentOrShadowRoot2.default);
+    $.extend(_ShadowRoot2.default, _DocumentOrShadowRoot2.default);
+
+    // NonDocumentTypeChildNode mixin
+    $.extend(Element, (0, _NonDocumentTypeChildNode2.default)(Element));
+    $.extend(CharacterData, (0, _NonDocumentTypeChildNode2.default)(CharacterData));
+
+    // NonElementParentNode mixin
+    $.extend(Document, (0, _NonElementParentNode2.default)(Document));
+    $.extend(DocumentFragment, (0, _NonElementParentNode2.default)(DocumentFragment));
+
+    // ParentNode mixin
+    $.extend(Document, (0, _ParentNode2.default)(Document));
+    $.extend(DocumentFragment, (0, _ParentNode2.default)(DocumentFragment));
+    $.extend(Element, (0, _ParentNode2.default)(Element));
+
+    // Slotable mixin
+    $.extend(Element, (0, _Slotable2.default)(Element));
+    $.extend(Text, (0, _Slotable2.default)(Text));
+
+    // Cleanup for IE, Edge
+    delete Node.prototype.attributes;
+    delete HTMLElement.prototype.classList;
+    delete HTMLElement.prototype.children;
+    delete HTMLElement.prototype.parentElement;
+    delete HTMLElement.prototype.innerHTML;
+    delete HTMLElement.prototype.outerHTML;
+    delete HTMLElement.prototype.insertAdjacentText;
+    delete HTMLElement.prototype.insertAdjacentElement;
+    delete HTMLElement.prototype.insertAdjacentHTML;
+}
+
+},{"./interfaces/Attr.js":2,"./interfaces/CharacterData.js":3,"./interfaces/CustomEvent.js":4,"./interfaces/DOMTokenList.js":5,"./interfaces/Document.js":6,"./interfaces/Element.js":7,"./interfaces/Event.js":8,"./interfaces/EventTarget.js":9,"./interfaces/HTMLSlotElement.js":10,"./interfaces/HTMLTableElement.js":11,"./interfaces/HTMLTableRowElement.js":12,"./interfaces/HTMLTableSectionElement.js":13,"./interfaces/MutationObserver.js":14,"./interfaces/NamedNodeMap.js":15,"./interfaces/Node.js":16,"./interfaces/ShadowRoot.js":17,"./interfaces/Text.js":18,"./mixins/ChildNode.js":20,"./mixins/DocumentOrShadowRoot.js":21,"./mixins/NonDocumentTypeChildNode.js":22,"./mixins/NonElementParentNode.js":23,"./mixins/ParentNode.js":24,"./mixins/Slotable.js":25,"./reflect.js":26,"./utils.js":28}],28:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.setImmediate = exports.descriptors = exports.descriptor = exports.slice = undefined;
 exports.makeError = makeError;
 exports.reportError = reportError;
 exports.extend = extend;
 exports.getShadowState = getShadowState;
 exports.setShadowState = setShadowState;
+exports.recursiveGetShadowIncludingTreeOrderDescendants = recursiveGetShadowIncludingTreeOrderDescendants;
 exports.treeOrderRecursiveSelectAll = treeOrderRecursiveSelectAll;
 exports.treeOrderRecursiveSelectFirst = treeOrderRecursiveSelectFirst;
 exports.filterByRoot = filterByRoot;
 exports.isShadowRoot = isShadowRoot;
-exports.isValidCustomElementName = isValidCustomElementName;
 exports.parseHTMLFragment = parseHTMLFragment;
 exports.serializeHTMLFragment = serializeHTMLFragment;
 exports.root = root;
@@ -3777,6 +4806,12 @@ exports.replaceAll = replaceAll;
 exports.preRemove = preRemove;
 exports.remove = remove;
 exports.createMutationObserver = createMutationObserver;
+
+var _customElements = require('./custom-elements.js');
+
+var _customElements2 = _interopRequireDefault(_customElements);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
 
@@ -3839,8 +4874,8 @@ var descriptors = exports.descriptors = {
     }
 };
 
-// TODO: add a note about importing YuzuJS/setImmediate before 
-// this polyfill if better performance is desired.
+// TODO: add a note about importing YuzuJS/setImmediate before this polyfill if better performance is desired.
+// TODO: what about IE9?
 var setImmediate = exports.setImmediate = 'setImmediate' in window ? window.setImmediate : function (callback) {
     for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
         args[_key - 1] = arguments[_key];
@@ -3894,6 +4929,28 @@ function setShadowState(object, state) {
     return object._shadow = state;
 }
 
+function recursiveGetShadowIncludingTreeOrderDescendantsInner(node, context) {
+    // TODO: make sure we are interpreting 'shadow-including preorder' correctly
+    var shadowState = null;
+    var shadowRoot = null;
+    if ((shadowState = getShadowState(node)) && (shadowRoot = shadowState.shadowRoot)) {
+        context.results[context.index++] = shadowRoot;
+        recursiveGetShadowIncludingTreeOrderDescendantsInner(shadowRoot, context);
+    }
+    var childNodes = node.childNodes;
+    context.results.length += childNodes.length;
+    for (var i = 0; i < childNodes.length; i++) {
+        var childNode = childNodes[i];
+        context.results[context.index++] = childNode;
+        recursiveGetShadowIncludingTreeOrderDescendantsInner(childNode, context);
+    }
+}
+
+function recursiveGetShadowIncludingTreeOrderDescendants(node, results) {
+    var context = { results: results, index: results.length };
+    recursiveGetShadowIncludingTreeOrderDescendantsInner(node, context);
+}
+
 function treeOrderRecursiveSelectAll(node, results, match) {
     if (match(node)) {
         results.push(node);
@@ -3942,28 +4999,6 @@ function filterByRoot(node, descendants) {
 
 function isShadowRoot(node) {
     return node.nodeName === '#shadow-root';
-}
-
-// https://html.spec.whatwg.org/multipage/scripting.html#valid-custom-element-name
-
-function isValidCustomElementName(localName) {
-    switch (localName) {
-        case "annotation-xml":
-        case "color-profile":
-        case "font-face":
-        case "font-face-src":
-        case "font-face-uri":
-        case "font-face-format":
-        case "font-face-name":
-        case "missing-glyph":
-            return false;
-    }
-
-    // For now, to reduce complexity, we are leaving the unicode sets out...
-    // TODO: Consider adding 'full' support (for Unicode)
-    var regex = /[a-z](-|\.|[0-9]|_|[a-z])+-(-|\.|[0-9]|_|[a-z])+/g;
-
-    return regex.test(localName);
 }
 
 // https://www.w3.org/TR/DOM-Parsing/
@@ -4210,6 +5245,9 @@ function clone(node, document, cloneChildren) {
     // specifications and pass copy, node, document and the clone children 
     // flag if set, as parameters.
     var copy = descriptors.Node.cloneNode.value.call(node, false);
+    if (_customElements2.default.isInstalled()) {
+        _customElements2.default.tryToUpgradeElement(copy);
+    }
 
     // 6. If the clone children flag is set, clone all the children of node 
     // and append them to copy, with document as specified and the clone 
@@ -4236,8 +5274,17 @@ function adopt(node, document) {
         remove(node, parent);
     }
 
-    // Skip (CustomElements, native)
     // 3. If document is not the same as oldDocument, run these substeps:
+    if (document != oldDocument && _customElements2.default.isInstalled()) {
+        var inclusiveDescendants = [node];
+        recursiveGetShadowIncludingTreeOrderDescendants(node, inclusiveDescendants);
+        for (var i = 0; i < inclusiveDescendants.length; i++) {
+            var _inclusiveDescendant = inclusiveDescendants[i];
+            if (_customElements2.default.isCustom(_inclusiveDescendant)) {
+                _customElements2.default.enqueueCallbackReaction(_inclusiveDescendant, 'adoptedCallback', [oldDocument, document]);
+            }
+        }
+    }
 }
 
 // https://dom.spec.whatwg.org/#interface-documentfragment
@@ -4390,18 +5437,22 @@ function changeAttribute(attribute, element, value) {
     var name = attribute.localName;
     var namespace = attribute.namespaceURI;
     var oldValue = descriptors.Attr.value.get.call(attribute);
+    var newValue = value;
 
     // 1. Queue a mutation record...
     queueMutationRecord('attributes', element, { name: name, namespace: namespace, oldValue: oldValue });
 
-    // Skip (CustomElements)
     // 2. If element is custom...
+    if (_customElements2.default.isInstalled() && _customElements2.default.isCustom(element)) {
+        var _args = [name, oldValue, newValue, namespace];
+        _customElements2.default.enqueueCallbackReaction(element, 'attributeChangedCallback', _args);
+    }
 
     // 3. Run the attribute change steps...
-    attributeChangeSteps(element, name, oldValue, value, namespace);
+    attributeChangeSteps(element, name, oldValue, newValue, namespace);
 
     // 4. Set attribute's value...
-    descriptors.Attr.value.set.call(attribute, value);
+    descriptors.Attr.value.set.call(attribute, newValue);
 }
 
 function appendAttribute(attribute, element) {
@@ -4410,15 +5461,19 @@ function appendAttribute(attribute, element) {
     var name = attribute.localName;
     var namespace = attribute.namespaceURI;
     var oldValue = null;
+    var newValue = descriptors.Attr.value.get.call(attribute);
 
     // 1. Queue a mutation record...
     queueMutationRecord('attributes', element, { name: name, namespace: namespace, oldValue: oldValue });
 
-    // Skip (CustomElements)
     // 2. If element is custom...
+    if (_customElements2.default.isInstalled() && _customElements2.default.isCustom(element)) {
+        var _args2 = [name, oldValue, newValue, namespace];
+        _customElements2.default.enqueueCallbackReaction(element, 'attributeChangedCallback', _args2);
+    }
 
     // 3. Run the attribute change steps...
-    attributeChangeSteps(element, name, oldValue, attribute.value, namespace);
+    attributeChangeSteps(element, name, oldValue, newValue, namespace);
 
     // 4. Append the attribute to the element’s attribute list.
     descriptors.Element.setAttributeNodeNS.value.call(element, attribute);
@@ -4433,15 +5488,19 @@ function removeAttribute(attribute, element) {
     var name = attribute.localName;
     var namespace = attribute.namespaceURI;
     var oldValue = descriptors.Attr.value.get.call(attribute);
+    var newValue = null;
 
     // 1. Queue a mutation record...
     queueMutationRecord('attributes', element, { name: name, namespace: namespace, oldValue: oldValue });
 
-    // Skip (CustomElements)
     // 2. If element is custom...
+    if (_customElements2.default.isInstalled() && _customElements2.default.isCustom(element)) {
+        var _args3 = [name, oldValue, newValue, namespace];
+        _customElements2.default.enqueueCallbackReaction(element, 'attributeChangedCallback', _args3);
+    }
 
     // 3. Run the attribute change steps...
-    attributeChangeSteps(element, name, oldValue, value, namespace);
+    attributeChangeSteps(element, name, oldValue, null, namespace);
 
     // 4. Remove attribute from the element’s attribute list.
     descriptors.Element.removeAttributeNode.value.call(element, attribute);
@@ -4457,15 +5516,19 @@ function replaceAttribute(oldAttr, newAttr, element) {
     var name = attribute.localName;
     var namespace = attribute.namespaceURI;
     var oldValue = descriptors.Attr.value.get.call(attribute);
+    var newValue = descriptors.Attr.value.get.call(newAttr);
 
     // 1. Queue a mutation record...
     queueMutationRecord('attributes', element, { name: name, namespace: namespace, oldValue: oldValue });
 
-    // Skip (CustomElements)
     // 2. If element is custom...
+    if (_customElements2.default.isInstalled() && _customElements2.default.isCustom(element)) {
+        var _args4 = [name, oldValue, newValue, namespace];
+        _customElements2.default.enqueueCallbackReaction(element, 'attributeChangedCallback', _args4);
+    }
 
     // 3. Run the attribute change steps...
-    attributeChangeSteps(element, name, oldValue, value, namespace);
+    attributeChangeSteps(element, name, oldValue, newValue, namespace);
 
     // 4. Replace oldAttr by newAttr in the element’s attribute list.
     descriptors.Element.setAttributeNodeNS.value.call(element, newAttr);
@@ -4901,6 +5964,7 @@ function insert(node, parent, child, suppressObservers) {
     var parentState = getShadowState(parent);
     var parentIsShadow = isShadowRoot(parent);
     var hasShadowStateChildNodes = parentState && parentState.childNodes;
+    var parentIsConnected = parent.isConnected;
     for (var _i6 = 0; _i6 < nodes.length; _i6++) {
         var _node = nodes[_i6];
         // 1. Insert node into parent before child or at the end of parent if child is null.
@@ -4946,9 +6010,36 @@ function insert(node, parent, child, suppressObservers) {
         }
         assignSlotablesForATree(_node, inclusiveSlotDescendants);
 
-        // Skip (CustomElements)
+        if (!_customElements2.default.isInstalled()) {
+            continue;
+        }
+
         // 5. For each shadow-including inclusive descendant inclusiveDescendant of node, 
         // in shadow-including tree order, run these subsubsteps:
+        var inclusiveDescendants = [_node];
+        recursiveGetShadowIncludingTreeOrderDescendants(_node, inclusiveDescendants);
+        for (var j = 0; j < inclusiveDescendants.length; j++) {
+            var _inclusiveDescendant2 = inclusiveDescendants[j];
+            // Skip (other)
+            // 1. Run the insertion steps with inclusiveDescendant
+
+            // 2. If inclusiveDescendant is connected, then:
+            // PERF: obviously the descendant is connected if the inserted node
+            // is connected, and obviously the inserted node is connected if
+            // the parent being inserted to is connected.
+            if (parentIsConnected) {
+                // 1. If inclusiveDescendant is custom, then enqueue a custom element 
+                // callback reaction with inclusiveDescendant, callback name 
+                // "connectedCallback", and an empty argument list.
+                if (_customElements2.default.isCustom(_inclusiveDescendant2)) {
+                    _customElements2.default.enqueueCallbackReaction(_inclusiveDescendant2, 'connectedCallback', []);
+                }
+                // 2. Otherwise, try to upgrade inclusiveDescendant.
+                else {
+                        _customElements2.default.tryToUpgradeElement(_inclusiveDescendant2);
+                    }
+            }
+        }
     }
 
     // 7. If suppress observers flag is unset, queue a mutation record of "childList" for parent 
@@ -5018,7 +6109,12 @@ function replace(child, node, parent) {
     }
 
     // 13. Let nodes be node’s children if node is a DocumentFragment node, and a list containing solely node otherwise.
-    var nodes = node instanceof DocumentFragment ? node.childNodes : [node];
+    var nodes = void 0;
+    if (node instanceof DocumentFragment) {
+        nodes = slice(node.childNodes);
+    } else {
+        nodes = [node];
+    }
 
     // 14. Insert node into parent before reference child with the suppress observers flag set.
     insert(node, parent, referenceChild, true);
@@ -5144,13 +6240,30 @@ function remove(node, parent, suppressObservers) {
     // Skip (other)
     // 13. Run the removing steps with node and parent.
 
-    // Skip (CustomElements)
-    // 14. If node is custom, then enqueue a custom element callback reaction 
-    // with node, callback name "disconnectedCallback", and an empty argument list.
+    if (_customElements2.default.isInstalled()) {
+        // 14. If node is custom, then enqueue a custom element callback reaction 
+        // with node, callback name "disconnectedCallback", and an empty argument list.
+        if (_customElements2.default.isCustom(node)) {
+            _customElements2.default.enqueueCallbackReaction(node, 'disconnectedCallback', []);
+        }
 
-    // Skip (CustomElements)
-    // 15. For each shadow-including descendant descendant of node, in 
-    // shadow-including tree order, run these substeps:
+        // 15. For each shadow-including descendant descendant of node, in 
+        // shadow-including tree order, run these substeps:
+        var descendants = [];
+        recursiveGetShadowIncludingTreeOrderDescendants(node, descendants);
+        for (var i = 0; i < descendants.length; i++) {
+            var _descendant = descendants[i];
+            // Skip (other)
+            // 1. Run the removing steps with descendant.
+
+            // 2. If descendant is custom, then enqueue a custom element 
+            // callback reaction with descendant, callback name "disconnectedCallback", 
+            // and an empty argument list.
+            if (_customElements2.default.isCustom(_descendant)) {
+                _customElements2.default.enqueueCallbackReaction(_descendant, 'disconnectedCallback', []);
+            }
+        }
+    }
 
     // 16. For each inclusive ancestor inclusiveAncestor of parent...
     var inclusiveAncestor = parent;
@@ -5160,13 +6273,15 @@ function remove(node, parent, suppressObservers) {
         var ancestorState = getShadowState(inclusiveAncestor);
         if (ancestorState && ancestorState.observers) {
             var ancestorObservers = ancestorState.observers;
-            for (var i = 0; i < ancestorObservers.length; i++) {
-                var ancestorObserver = ancestorObservers[i];
-                if (ancestorObserver.options.subtree) {
-                    // ..append a transient registered observer whose observer and options are 
+            for (var _i7 = 0; _i7 < ancestorObservers.length; _i7++) {
+                var registeredObserver = ancestorObservers[_i7];
+                if (registeredObserver.options.subtree) {
+                    // ...append a transient registered observer whose observer and options are 
                     // identical to those of registered and source which is registered to node’s 
                     // list of registered observers.
-                    var transientObserver = createTransientObserver(ancestorObserver, node);
+                    var observer = registeredObserver.instance;
+                    var options = registeredObserver.options;
+                    var transientObserver = createTransientObserver(observer, node, options);
                     mutationObservers.push(transientObserver);
                 }
             }
@@ -5226,11 +6341,11 @@ function createMutationObserver(callback) {
     };
 }
 
-function createTransientObserver(observer, options, node) {
+function createTransientObserver(observer, node, options) {
     var transientObserver = {
         observer: observer,
         callback: observer.callback,
-        options: observer.options,
+        options: options,
         queue: [],
         node: node,
         disconnect: function disconnect() {
@@ -5245,7 +6360,7 @@ function createTransientObserver(observer, options, node) {
     };
 
     var nodeObservers = getOrCreateNodeObservers(node);
-    nodeObservers.append({ instance: transientObserver, options: options });
+    nodeObservers.push({ instance: transientObserver, options: options });
 
     return transientObserver;
 }
@@ -5284,7 +6399,7 @@ function queueMutationRecord(type, target, details) {
         // observer’s options as options) in node’s list of registered 
         // observers...
         for (var j = 0; j < nodeState.observers.length; j++) {
-            var registeredObserver = nodeState.observers[i];
+            var registeredObserver = nodeState.observers[j];
             var options = registeredObserver.options;
             // ...run these substeps:
             // 1. If none of the following are true:
@@ -5331,8 +6446,8 @@ function queueMutationRecord(type, target, details) {
     }
 
     // 4. Then, for each observer in interested observers, run these substeps:
-    for (var _i7 = 0; _i7 < interestedObservers.length; _i7++) {
-        var _observer = interestedObservers[_i7];
+    for (var _i8 = 0; _i8 < interestedObservers.length; _i8++) {
+        var _observer = interestedObservers[_i8];
         // 1. Let record be a new MutationRecord object with its type set to type and target set to target.
         var record = {
             type: type,
@@ -5367,7 +6482,7 @@ function queueMutationRecord(type, target, details) {
             record.nextSibling = details.nextSibling;
         }
         // 7. If observer has a paired string, set record’s oldValue to observer’s paired string.
-        var pairedString = pairedStrings[_i7];
+        var pairedString = pairedStrings[_i8];
         if (pairedString != null) {
             record.oldValue = pairedString;
         }
@@ -5412,8 +6527,8 @@ function notifyMutationObservers() {
             }
         }
     }
-    for (var _i8 = 0; _i8 < signalList.length; _i8++) {
-        var slot = signalList[_i8];
+    for (var _i9 = 0; _i9 < signalList.length; _i9++) {
+        var slot = signalList[_i9];
         var event = slot.ownerDocument.createEvent('event');
         event.initEvent('slotchange', true, false);
         try {
@@ -5424,4 +6539,4 @@ function notifyMutationObservers() {
     }
 }
 
-},{}]},{},[18]);
+},{"./custom-elements.js":1}]},{},[19]);

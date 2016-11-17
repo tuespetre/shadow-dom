@@ -3,6 +3,8 @@
 
 import * as $ from '../utils.js';
 
+import CustomElements from '../custom-elements.js';
+
 export default class {
 
     get nodeName() {
@@ -24,8 +26,10 @@ export default class {
 
     // TODO: tests
     set innerHTML(value) {
-        const fragment = $.parseHTMLFragment(value, this);
-        $.replaceAll(fragment, this);
+        return CustomElements.executeCEReactions(() => {
+            const fragment = $.parseHTMLFragment(value, this);
+            $.replaceAll(fragment, this);
+        });
     }
 
 }

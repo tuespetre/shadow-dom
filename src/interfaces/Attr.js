@@ -2,6 +2,8 @@
 
 import * as $ from '../utils.js';
 
+import CustomElements from '../custom-elements.js';
+
 export default class {
 
     get value() {
@@ -9,7 +11,9 @@ export default class {
     }
 
     set value(value) {
-        $.setExistingAttributeValue(this, value);
+        return CustomElements.executeCEReactions(() => {
+            $.setExistingAttributeValue(this, value);
+        });
     }
 
 }

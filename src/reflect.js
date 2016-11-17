@@ -415,7 +415,7 @@ function reflectBoolean(attributeName) {
                 return this.hasAttribute(attributeName);
             },
             set: function (value) {
-                if (value == null) {
+                if (value === false) {
                     $.removeAttributeByName(attributeName, this);
                 }
                 else {

@@ -2,6 +2,8 @@
 
 import * as $ from '../utils.js';
 
+import CustomElements from '../custom-elements.js';
+
 export default class {
 
     get length() {
@@ -21,70 +23,78 @@ export default class {
     }
 
     add(...tokens) {
-        validateTokens(tokens);
-        const state = $.getShadowState(this);
-        for (let i = 0; i < tokens.length; i++) {
-            const token = tokens[i];
-            const index = state.tokens.indexOf(token);
-            if (index === -1) {
-                state.tokens.push(token);
+        return CustomElements.executeCEReactions(() => {
+            validateTokens(tokens);
+            const state = $.getShadowState(this);
+            for (let i = 0; i < tokens.length; i++) {
+                const token = tokens[i];
+                const index = state.tokens.indexOf(token);
+                if (index === -1) {
+                    state.tokens.push(token);
+                }
             }
-        }
-        state.tokens.sort();
-        $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
+            state.tokens.sort();
+            $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
+        });
     }
 
     remove(...tokens) {
-        validateTokens(tokens);
-        const state = $.getShadowState(this);
-        for (let i = 0; i < tokens.length; i++) {
-            const token = tokens[i];
-            const index = state.tokens.indexOf(token);
-            if (index !== -1) {
-                state.tokens.splice(index, 1);
+        return CustomElements.executeCEReactions(() => {
+            validateTokens(tokens);
+            const state = $.getShadowState(this);
+            for (let i = 0; i < tokens.length; i++) {
+                const token = tokens[i];
+                const index = state.tokens.indexOf(token);
+                if (index !== -1) {
+                    state.tokens.splice(index, 1);
+                }
             }
-        }
-        $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
+            $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
+        });
     }
 
     toggle(token, force) {
-        validateToken(token);
-        const state = $.getShadowState(this);
-        const index = state.tokens.indexOf(token);
-        if (index !== -1) {
-            if (arguments.length === 1 || force === false) {
-                state.tokens.splice(index, 1);
-                $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
-                return false;
+        return CustomElements.executeCEReactions(() => {
+            validateToken(token);
+            const state = $.getShadowState(this);
+            const index = state.tokens.indexOf(token);
+            if (index !== -1) {
+                if (arguments.length === 1 || force === false) {
+                    state.tokens.splice(index, 1);
+                    $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
+                    return false;
+                }
+                else {
+                    return true;
+                }
             }
             else {
-                return true;
+                if (force === false) {
+                    return false;
+                }
+                else {
+                    state.tokens.push(token);
+                    state.tokens.sort();
+                    $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
+                    return true;
+                }
             }
-        }
-        else {
-            if (force === false) {
-                return false;
-            }
-            else {
-                state.tokens.push(token);
-                state.tokens.sort();
-                $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
-                return true;
-            }
-        }
+        });
     }
 
     replace(token, newToken) {
-        validateToken(token);
-        validateToken(newToken);
-        const state = $.getShadowState(this);
-        const index = state.tokens.indexOf(token);
-        if (index === -1) {
-            return;
-        }
-        state.tokens[index] = newToken;
-        state.tokens.sort();
-        $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
+        return CustomElements.executeCEReactions(() => {
+            validateToken(token);
+            validateToken(newToken);
+            const state = $.getShadowState(this);
+            const index = state.tokens.indexOf(token);
+            if (index === -1) {
+                return;
+            }
+            state.tokens[index] = newToken;
+            state.tokens.sort();
+            $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
+        });
     }
 
     get value() {
@@ -93,9 +103,11 @@ export default class {
     }
 
     set value(value) {
-        const state = $.getShadowState(this);
-        $.setAttributeValue(state.element, state.localName, value);
-        state.tokens = $.slice(this);
+        return CustomElements.executeCEReactions(() => {
+            const state = $.getShadowState(this);
+            $.setAttributeValue(state.element, state.localName, value);
+            state.tokens = $.slice(this);
+        });
     }
 
 }

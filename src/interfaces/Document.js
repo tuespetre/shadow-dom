@@ -2,6 +2,8 @@
 
 import * as $ from '../utils.js';
 
+import CustomElements from '../custom-elements.js';
+
 export default class {
 
     // TODO: tests
@@ -24,11 +26,20 @@ export default class {
 
     // TODO: tests
     importNode(node, deep) {
-        if (node.nodeType === Node.DOCUMENT_NODE || $.isShadowRoot(node)) {
-            throw $.makeError('NotSupportedError');
-        }
+        return CustomElements.executeCEReactions(() => {
+            if (node.nodeType === Node.DOCUMENT_NODE || $.isShadowRoot(node)) {
+                throw $.makeError('NotSupportedError');
+            }
 
-        return $.clone(node, this, deep);
+            return $.clone(node, this, deep);
+        });
+    }
+
+    // TODO: tests
+    adoptNode(node) {
+        return CustomElements.executeCEReactions(() => {
+            return $.adopt(node, this);
+        });
     }
 
 }

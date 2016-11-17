@@ -2,6 +2,8 @@
 
 import * as $ from '../utils.js';
 
+import CustomElements from '../custom-elements.js';
+
 import $ShadowRoot from '../interfaces/ShadowRoot.js';
 
 export default class {
@@ -18,49 +20,63 @@ export default class {
 
     // TODO: tests
     setAttribute(qualifiedName, value) {
-        let attribute = $.descriptors.Element.attributes.get.call(this).getNamedItem(qualifiedName);
-        if (!attribute) {
-            attribute = this.ownerDocument.createAttribute(qualifiedName);
-            $.descriptors.Attr.value.set.call(attribute, value);
-            $.appendAttribute(attribute, this);
-            return;
-        }
-        $.changeAttribute(attribute, this, value);
+        return CustomElements.executeCEReactions(() => {
+            let attribute = $.descriptors.Element.attributes.get.call(this).getNamedItem(qualifiedName);
+            if (!attribute) {
+                attribute = this.ownerDocument.createAttribute(qualifiedName);
+                $.descriptors.Attr.value.set.call(attribute, value);
+                $.appendAttribute(attribute, this);
+                return;
+            }
+            $.changeAttribute(attribute, this, value);
+        });
     }
 
     // TODO: tests
     setAttributeNS(namespace, qualifiedName, value) {
-        const dummy = document.createAttributeNS(namespace, qualifiedName);
-        $.setAttributeValue(this, dummy.localName, value, dummy.prefix, dummy.namespaceURI);
+        return CustomElements.executeCEReactions(() => {
+            const dummy = document.createAttributeNS(namespace, qualifiedName);
+            $.setAttributeValue(this, dummy.localName, value, dummy.prefix, dummy.namespaceURI);
+        });
     }
 
     // TODO: tests
     removeAttribute(qualifiedName) {
-        $.removeAttributeByName(qualifiedName, this);
+        return CustomElements.executeCEReactions(() => {
+            $.removeAttributeByName(qualifiedName, this);
+        });
     }
 
     // TODO: tests
     removeAttributeNS(namespace, localName) {
-        $.removeAttributeByNamespace(namespace, localName, this);
+        return CustomElements.executeCEReactions(() => {
+            $.removeAttributeByNamespace(namespace, localName, this);
+        });
     }
 
     // TODO: tests
     setAttributeNode(attr) {
-        return $.setAttribute(attr, this);
+        return CustomElements.executeCEReactions(() => {
+            return $.setAttribute(attr, this);
+        });
     }
 
     // TODO: tests
     setAttributeNodeNS(attr) {
-        return $.setAttribute(attr, this);
+        return CustomElements.executeCEReactions(() => {
+            return $.setAttribute(attr, this);
+        });
     }
 
     // TODO: tests
     removeAttributeNode(attr) {
-        if (attr.ownerElement !== this) {
-            throw $.makeError('NotFoundError');
-        }
-        $.removeAttribute(attr, this);
-        return attr;
+        return CustomElements.executeCEReactions(() => {
+            if (attr.ownerElement !== this) {
+                throw $.makeError('NotFoundError');
+            }
+            $.removeAttribute(attr, this);
+            return attr;
+        });
     }
 
     attachShadow(init) {
@@ -80,7 +96,7 @@ export default class {
             case "nav": case "p": case "section": case "span":
                 break;
             default:
-                if ($.isValidCustomElementName(this.localName)) {
+                if (CustomElements.isValidCustomElementName(this.localName)) {
                     break;
                 }
                 throw $.makeError('NotSupportedError');
@@ -168,8 +184,10 @@ export default class {
 
     // TODO: tests
     insertAdjacentElement(where, element) {
-        // https://dom.spec.whatwg.org/#dom-element-insertadjacentelement
-        return $.insertAdjacent(this, where, element);
+        return CustomElements.executeCEReactions(() => {
+            // https://dom.spec.whatwg.org/#dom-element-insertadjacentelement
+            return $.insertAdjacent(this, where, element);
+        });
     }
 
     // TODO: tests
@@ -190,9 +208,17 @@ export default class {
 
     // TODO: MutationObserver tests
     set innerHTML(value) {
-        // https://w3c.github.io/DOM-Parsing/#dom-element-innerhtml
-        const fragment = $.parseHTMLFragment(value, this);
-        $.replaceAll(fragment, this);
+        return CustomElements.executeCEReactions(() => {
+            // https://w3c.github.io/DOM-Parsing/#dom-element-innerhtml
+            const fragment = $.parseHTMLFragment(value, this);
+            const content = this['content'];
+            if (content instanceof DocumentFragment) {
+                $.replaceAll(fragment, content);
+            }
+            else {
+                $.replaceAll(fragment, this);
+            }
+        });
     }
 
     // TODO: tests
@@ -203,27 +229,31 @@ export default class {
 
     // TODO: tests
     set outerHTML(value) {
-        // https://w3c.github.io/DOM-Parsing/#dom-element-outerhtml
-        let parent = this.parentNode;
-        if (parent === null) {
-            return;
-        }
-        if (parent.nodeType === Node.DOCUMENT_NODE) {
-            throw $.makeError('NoModificationAllowedError');
-        }
-        if (parent.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
-            parent = this.ownerDocument.createElement('body');
-        }
-        const fragment = $.parseHTMLFragment(value, parent);
-        $.replace(this, fragment, this.parentNode);
+        return CustomElements.executeCEReactions(() => {
+            // https://w3c.github.io/DOM-Parsing/#dom-element-outerhtml
+            let parent = this.parentNode;
+            if (parent === null) {
+                return;
+            }
+            if (parent.nodeType === Node.DOCUMENT_NODE) {
+                throw $.makeError('NoModificationAllowedError');
+            }
+            if (parent.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+                parent = this.ownerDocument.createElement('body');
+            }
+            const fragment = $.parseHTMLFragment(value, parent);
+            $.replace(this, fragment, this.parentNode);
+        });
     }
 
     // TODO: tests
     insertAdjacentHTML(position, text) {
-        // https://w3c.github.io/DOM-Parsing/#dom-element-insertadjacenthtml
-        // We aren't going to go exactly by the books for this one.
-        const fragment = $.parseHTMLFragment(text, this);
-        $.insertAdjacent(this, position, fragment);
+        return CustomElements.executeCEReactions(() => {
+            // https://w3c.github.io/DOM-Parsing/#dom-element-insertadjacenthtml
+            // We aren't going to go exactly by the books for this one.
+            const fragment = $.parseHTMLFragment(text, this);
+            $.insertAdjacent(this, position, fragment);
+        });
     }
 
 }

@@ -1,3 +1,5 @@
+import CustomElements from './custom-elements.js';
+
 export const slice = array => Array.prototype.slice.call(array);
 
 export const descriptor = (type, name) => Object.getOwnPropertyDescriptor(type.prototype, name);
@@ -53,8 +55,8 @@ export const descriptors = {
     }
 };
 
-// TODO: add a note about importing YuzuJS/setImmediate before 
-// this polyfill if better performance is desired.
+// TODO: add a note about importing YuzuJS/setImmediate before this polyfill if better performance is desired.
+// TODO: what about IE9?
 export const setImmediate = 'setImmediate' in window ? window.setImmediate : function (callback, ...args) {
     return setTimeout(callback, 0, ...args);
 };
@@ -99,6 +101,28 @@ export function getShadowState(object) {
 
 export function setShadowState(object, state) {
     return object._shadow = state;
+}
+
+function recursiveGetShadowIncludingTreeOrderDescendantsInner(node, context) {
+    // TODO: make sure we are interpreting 'shadow-including preorder' correctly
+    let shadowState = null;
+    let shadowRoot = null;
+    if ((shadowState = getShadowState(node)) && (shadowRoot = shadowState.shadowRoot)) {
+        context.results[context.index++] = shadowRoot;
+        recursiveGetShadowIncludingTreeOrderDescendantsInner(shadowRoot, context);
+    }
+    const childNodes = node.childNodes;
+    context.results.length += childNodes.length;
+    for (let i = 0; i < childNodes.length; i++) {
+        const childNode = childNodes[i];
+        context.results[context.index++] = childNode;
+        recursiveGetShadowIncludingTreeOrderDescendantsInner(childNode, context);
+    }
+}
+
+export function recursiveGetShadowIncludingTreeOrderDescendants(node, results) {
+    const context = { results, index: results.length };
+    recursiveGetShadowIncludingTreeOrderDescendantsInner(node, context);
 }
 
 export function treeOrderRecursiveSelectAll(node, results, match) {
@@ -149,28 +173,6 @@ export function filterByRoot(node, descendants) {
 
 export function isShadowRoot(node) {
     return node.nodeName === '#shadow-root';
-}
-
-// https://html.spec.whatwg.org/multipage/scripting.html#valid-custom-element-name
-
-export function isValidCustomElementName(localName) {
-    switch (localName) {
-        case "annotation-xml":
-        case "color-profile":
-        case "font-face":
-        case "font-face-src":
-        case "font-face-uri":
-        case "font-face-format":
-        case "font-face-name":
-        case "missing-glyph":
-            return false;
-    }
-
-    // For now, to reduce complexity, we are leaving the unicode sets out...
-    // TODO: Consider adding 'full' support (for Unicode)
-    const regex = /[a-z](-|\.|[0-9]|_|[a-z])+-(-|\.|[0-9]|_|[a-z])+/g;
-
-    return regex.test(localName);
 }
 
 // https://www.w3.org/TR/DOM-Parsing/
@@ -421,6 +423,9 @@ export function clone(node, document, cloneChildren) {
     // specifications and pass copy, node, document and the clone children 
     // flag if set, as parameters.
     const copy = descriptors.Node.cloneNode.value.call(node, false);
+    if (CustomElements.isInstalled()) {
+        CustomElements.tryToUpgradeElement(copy);
+    }
 
     // 6. If the clone children flag is set, clone all the children of node 
     // and append them to copy, with document as specified and the clone 
@@ -447,8 +452,17 @@ export function adopt(node, document) {
         remove(node, parent);
     }
 
-    // Skip (CustomElements, native)
     // 3. If document is not the same as oldDocument, run these substeps:
+    if (document != oldDocument && CustomElements.isInstalled()) {
+        const inclusiveDescendants = [node];
+        recursiveGetShadowIncludingTreeOrderDescendants(node, inclusiveDescendants);
+        for (let i = 0; i < inclusiveDescendants.length; i++) {
+            let inclusiveDescendant = inclusiveDescendants[i];
+            if (CustomElements.isCustom(inclusiveDescendant)) {
+                CustomElements.enqueueCallbackReaction(inclusiveDescendant, 'adoptedCallback', [oldDocument, document]);
+            }
+        }
+    }
 }
 
 // https://dom.spec.whatwg.org/#interface-documentfragment
@@ -605,18 +619,22 @@ export function changeAttribute(attribute, element, value) {
     const name = attribute.localName;
     const namespace = attribute.namespaceURI;
     const oldValue = descriptors.Attr.value.get.call(attribute);
+    const newValue = value;
 
     // 1. Queue a mutation record...
     queueMutationRecord('attributes', element, { name, namespace, oldValue });
 
-    // Skip (CustomElements)
     // 2. If element is custom...
+    if (CustomElements.isInstalled() && CustomElements.isCustom(element)) {
+        const args = [name, oldValue, newValue, namespace];
+        CustomElements.enqueueCallbackReaction(element, 'attributeChangedCallback', args);
+    }
 
     // 3. Run the attribute change steps...
-    attributeChangeSteps(element, name, oldValue, value, namespace);
+    attributeChangeSteps(element, name, oldValue, newValue, namespace);
 
     // 4. Set attribute's value...
-    descriptors.Attr.value.set.call(attribute, value);
+    descriptors.Attr.value.set.call(attribute, newValue);
 }
 
 export function appendAttribute(attribute, element) {
@@ -625,15 +643,19 @@ export function appendAttribute(attribute, element) {
     const name = attribute.localName;
     const namespace = attribute.namespaceURI;
     const oldValue = null;
+    const newValue = descriptors.Attr.value.get.call(attribute);
 
     // 1. Queue a mutation record...
     queueMutationRecord('attributes', element, { name, namespace, oldValue });
 
-    // Skip (CustomElements)
     // 2. If element is custom...
+    if (CustomElements.isInstalled() && CustomElements.isCustom(element)) {
+        const args = [name, oldValue, newValue, namespace];
+        CustomElements.enqueueCallbackReaction(element, 'attributeChangedCallback', args);
+    }
 
     // 3. Run the attribute change steps...
-    attributeChangeSteps(element, name, oldValue, attribute.value, namespace);
+    attributeChangeSteps(element, name, oldValue, newValue, namespace);
 
     // 4. Append the attribute to the element’s attribute list.
     descriptors.Element.setAttributeNodeNS.value.call(element, attribute);
@@ -648,15 +670,19 @@ export function removeAttribute(attribute, element) {
     const name = attribute.localName;
     const namespace = attribute.namespaceURI;
     const oldValue = descriptors.Attr.value.get.call(attribute);
+    const newValue = null;
 
     // 1. Queue a mutation record...
     queueMutationRecord('attributes', element, { name, namespace, oldValue });
 
-    // Skip (CustomElements)
     // 2. If element is custom...
+    if (CustomElements.isInstalled() && CustomElements.isCustom(element)) {
+        const args = [name, oldValue, newValue, namespace];
+        CustomElements.enqueueCallbackReaction(element, 'attributeChangedCallback', args);
+    }
 
     // 3. Run the attribute change steps...
-    attributeChangeSteps(element, name, oldValue, value, namespace);
+    attributeChangeSteps(element, name, oldValue, null, namespace);
 
     // 4. Remove attribute from the element’s attribute list.
     descriptors.Element.removeAttributeNode.value.call(element, attribute);
@@ -672,15 +698,19 @@ export function replaceAttribute(oldAttr, newAttr, element) {
     const name = attribute.localName;
     const namespace = attribute.namespaceURI;
     const oldValue = descriptors.Attr.value.get.call(attribute);
+    const newValue = descriptors.Attr.value.get.call(newAttr);
 
     // 1. Queue a mutation record...
     queueMutationRecord('attributes', element, { name, namespace, oldValue });
 
-    // Skip (CustomElements)
     // 2. If element is custom...
+    if (CustomElements.isInstalled() && CustomElements.isCustom(element)) {
+        const args = [name, oldValue, newValue, namespace];
+        CustomElements.enqueueCallbackReaction(element, 'attributeChangedCallback', args);
+    }
 
     // 3. Run the attribute change steps...
-    attributeChangeSteps(element, name, oldValue, value, namespace);
+    attributeChangeSteps(element, name, oldValue, newValue, namespace);
 
     // 4. Replace oldAttr by newAttr in the element’s attribute list.
     descriptors.Element.setAttributeNodeNS.value.call(element, newAttr);
@@ -1122,6 +1152,7 @@ export function insert(node, parent, child, suppressObservers) {
     const parentState = getShadowState(parent);
     const parentIsShadow = isShadowRoot(parent);
     const hasShadowStateChildNodes = parentState && parentState.childNodes;
+    const parentIsConnected = parent.isConnected;
     for (let i = 0; i < nodes.length; i++) {
         const node = nodes[i];
         // 1. Insert node into parent before child or at the end of parent if child is null.
@@ -1169,9 +1200,37 @@ export function insert(node, parent, child, suppressObservers) {
         }
         assignSlotablesForATree(node, inclusiveSlotDescendants);
 
-        // Skip (CustomElements)
+
+        if (!CustomElements.isInstalled()) {
+            continue;
+        }
+
         // 5. For each shadow-including inclusive descendant inclusiveDescendant of node, 
         // in shadow-including tree order, run these subsubsteps:
+        const inclusiveDescendants = [node];
+        recursiveGetShadowIncludingTreeOrderDescendants(node, inclusiveDescendants);
+        for (let j = 0; j < inclusiveDescendants.length; j++) {
+            const inclusiveDescendant = inclusiveDescendants[j];
+            // Skip (other)
+            // 1. Run the insertion steps with inclusiveDescendant
+
+            // 2. If inclusiveDescendant is connected, then:
+            // PERF: obviously the descendant is connected if the inserted node
+            // is connected, and obviously the inserted node is connected if
+            // the parent being inserted to is connected.
+            if (parentIsConnected) {
+                // 1. If inclusiveDescendant is custom, then enqueue a custom element 
+                // callback reaction with inclusiveDescendant, callback name 
+                // "connectedCallback", and an empty argument list.
+                if (CustomElements.isCustom(inclusiveDescendant)) {
+                    CustomElements.enqueueCallbackReaction(inclusiveDescendant, 'connectedCallback', []);
+                }
+                // 2. Otherwise, try to upgrade inclusiveDescendant.
+                else {
+                    CustomElements.tryToUpgradeElement(inclusiveDescendant);
+                }
+            }
+        }
     }
 
     // 7. If suppress observers flag is unset, queue a mutation record of "childList" for parent 
@@ -1241,7 +1300,13 @@ export function replace(child, node, parent) {
     }
 
     // 13. Let nodes be node’s children if node is a DocumentFragment node, and a list containing solely node otherwise.
-    const nodes = node instanceof DocumentFragment ? node.childNodes : [node];
+    let nodes;
+    if (node instanceof DocumentFragment) {
+        nodes = slice(node.childNodes);
+    }
+    else {
+        nodes = [node];
+    }
 
     // 14. Insert node into parent before reference child with the suppress observers flag set.
     insert(node, parent, referenceChild, true);
@@ -1370,13 +1435,30 @@ export function remove(node, parent, suppressObservers) {
     // Skip (other)
     // 13. Run the removing steps with node and parent.
 
-    // Skip (CustomElements)
-    // 14. If node is custom, then enqueue a custom element callback reaction 
-    // with node, callback name "disconnectedCallback", and an empty argument list.
+    if (CustomElements.isInstalled()) {
+        // 14. If node is custom, then enqueue a custom element callback reaction 
+        // with node, callback name "disconnectedCallback", and an empty argument list.
+        if (CustomElements.isCustom(node)) {
+            CustomElements.enqueueCallbackReaction(node, 'disconnectedCallback', []);
+        }
 
-    // Skip (CustomElements)
-    // 15. For each shadow-including descendant descendant of node, in 
-    // shadow-including tree order, run these substeps:
+        // 15. For each shadow-including descendant descendant of node, in 
+        // shadow-including tree order, run these substeps:
+        const descendants = [];
+        recursiveGetShadowIncludingTreeOrderDescendants(node, descendants);
+        for (let i = 0; i < descendants.length; i++) {
+            const descendant = descendants[i];
+            // Skip (other)
+            // 1. Run the removing steps with descendant.
+
+            // 2. If descendant is custom, then enqueue a custom element 
+            // callback reaction with descendant, callback name "disconnectedCallback", 
+            // and an empty argument list.
+            if (CustomElements.isCustom(descendant)) {
+                CustomElements.enqueueCallbackReaction(descendant, 'disconnectedCallback', []);
+            }
+        }
+    }
 
     // 16. For each inclusive ancestor inclusiveAncestor of parent...
     let inclusiveAncestor = parent;
@@ -1387,12 +1469,14 @@ export function remove(node, parent, suppressObservers) {
         if (ancestorState && ancestorState.observers) {
             const ancestorObservers = ancestorState.observers;
             for (let i = 0; i < ancestorObservers.length; i++) {
-                const ancestorObserver = ancestorObservers[i];
-                if (ancestorObserver.options.subtree) {
-                    // ..append a transient registered observer whose observer and options are 
+                const registeredObserver = ancestorObservers[i];
+                if (registeredObserver.options.subtree) {
+                    // ...append a transient registered observer whose observer and options are 
                     // identical to those of registered and source which is registered to node’s 
                     // list of registered observers.
-                    const transientObserver = createTransientObserver(ancestorObserver, node);
+                    const observer = registeredObserver.instance;
+                    const options = registeredObserver.options;
+                    const transientObserver = createTransientObserver(observer, node, options);
                     mutationObservers.push(transientObserver);
                 }
             }
@@ -1452,11 +1536,11 @@ export function createMutationObserver(callback) {
     };
 }
 
-function createTransientObserver(observer, options, node) {
+function createTransientObserver(observer, node, options) {
     const transientObserver = {
         observer: observer,
         callback: observer.callback,
-        options: observer.options,
+        options: options,
         queue: [],
         node: node,
         disconnect: function () {
@@ -1471,7 +1555,7 @@ function createTransientObserver(observer, options, node) {
     };
 
     const nodeObservers = getOrCreateNodeObservers(node);
-    nodeObservers.append({ instance: transientObserver, options });
+    nodeObservers.push({ instance: transientObserver, options });
 
     return transientObserver;
 }
@@ -1510,7 +1594,7 @@ function queueMutationRecord(type, target, details) {
         // observer’s options as options) in node’s list of registered 
         // observers...
         for (let j = 0; j < nodeState.observers.length; j++) {
-            const registeredObserver = nodeState.observers[i];
+            const registeredObserver = nodeState.observers[j];
             const options = registeredObserver.options;
             // ...run these substeps:
             // 1. If none of the following are true:
