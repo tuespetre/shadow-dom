@@ -42,8 +42,11 @@ var setImmediate = 'setImmediate' in window ? window.setImmediate : function (ca
     return setTimeout.apply(undefined, [callback, 0].concat(args));
 };
 
-// TODO: what about IE9, IE10 + others?
-var setPrototypeOf = Object.setPrototypeOf || function () {
+var setPrototypeOf = function () {
+    if (Object.setPrototypeOf) {
+        return Object.setPrototypeOf;
+    }
+
     var test = {};
     var proto = {};
     test.__proto__ = proto;
@@ -53,7 +56,15 @@ var setPrototypeOf = Object.setPrototypeOf || function () {
             return object;
         };
     }
-    return function (object, proto) {};
+
+    return function (object, proto) {
+        var names = Object.getOwnPropertyNames(proto);
+        for (var i = 0; i < names.length; i++) {
+            var name = names[i];
+            var descriptor = Object.getOwnPropertyDescriptor(proto, name);
+            Object.defineProperty(object, name, descriptor);
+        }
+    };
 }();
 
 // Installation/uninstallation
