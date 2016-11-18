@@ -4,10 +4,6 @@ import * as $ from '../utils.js';
 
 export default function (base) {
 
-    const native = {
-        querySelectorAll: $.descriptor(base, 'querySelectorAll')
-    };
-
     return class {
 
         getElementById(id) {

@@ -1073,6 +1073,7 @@ var _class = function () {
             return _customElements2.default.executeCEReactions(function () {
                 var state = $.getShadowState(_this5);
                 $.setAttributeValue(state.element, state.localName, value);
+                // TODO: Remove usage of slice in favor of direct parse
                 state.tokens = $.slice(_this5);
             });
         }
@@ -2897,7 +2898,12 @@ var _class = function () {
             if (nodeState) {
                 var childNodes = nodeState.childNodes;
                 if (childNodes) {
-                    return childNodes.slice();
+                    var childNodesLength = childNodes.length;
+                    var result = new Array(childNodesLength);
+                    for (var i = 0; i < childNodesLength; i++) {
+                        result[i] = childNodes[i];
+                    }
+                    return result;
                 }
             }
 
@@ -3642,10 +3648,6 @@ var _createClass = function () { function defineProperties(target, props) { for 
 
 exports.default = function (base) {
 
-    var native = {
-        querySelectorAll: $.descriptor(base, 'querySelectorAll')
-    };
-
     return function () {
         function _class() {
             _classCallCheck(this, _class);
@@ -3813,14 +3815,16 @@ exports.default = function (base) {
                     childNodes = this.childNodes;
                 }
 
-                var elements = [];
-
-                for (var i = 0; i < childNodes.length; i++) {
+                var childNodesLength = childNodes.length;
+                var elements = new Array(childNodesLength);
+                var pushed = 0;
+                for (var i = 0; i < childNodesLength; i++) {
                     var node = childNodes[i];
                     if (node.nodeType == Node.ELEMENT_NODE) {
-                        elements.push(node);
+                        elements[pushed++] = node;
                     }
                 }
+                elements.length = pushed;
 
                 return elements;
             }
@@ -3943,8 +3947,7 @@ exports.default = function (base) {
         _createClass(_class, [{
             key: 'assignedSlot',
             get: function get() {
-                // spec implementation is:
-                // return $.findASlot(this, true);
+                // spec implementation is to run 'find a slot'
                 // this uses an alternative (see https://github.com/whatwg/dom/issues/369)
                 var shadowState = $.getShadowState(this);
                 if (shadowState) {
@@ -4756,7 +4759,6 @@ exports.reportError = reportError;
 exports.extend = extend;
 exports.getShadowState = getShadowState;
 exports.setShadowState = setShadowState;
-exports.recursiveGetShadowIncludingTreeOrderDescendants = recursiveGetShadowIncludingTreeOrderDescendants;
 exports.treeOrderRecursiveSelectAll = treeOrderRecursiveSelectAll;
 exports.treeOrderRecursiveSelectFirst = treeOrderRecursiveSelectFirst;
 exports.filterByRoot = filterByRoot;
@@ -4782,7 +4784,6 @@ exports.retarget = retarget;
 exports.changeAttribute = changeAttribute;
 exports.appendAttribute = appendAttribute;
 exports.removeAttribute = removeAttribute;
-exports.replaceAttribute = replaceAttribute;
 exports.setAttribute = setAttribute;
 exports.setAttributeValue = setAttributeValue;
 exports.removeAttributeByName = removeAttributeByName;
@@ -4790,14 +4791,7 @@ exports.removeAttributeByNamespace = removeAttributeByNamespace;
 exports.insertAdjacent = insertAdjacent;
 exports.setExistingAttributeValue = setExistingAttributeValue;
 exports.replaceData = replaceData;
-exports.findASlot = findASlot;
-exports.findSlotables = findSlotables;
 exports.findFlattenedSlotables = findFlattenedSlotables;
-exports.assignSlotables = assignSlotables;
-exports.assignSlotablesForATree = assignSlotablesForATree;
-exports.assignASlot = assignASlot;
-exports.signalASlotChange = signalASlotChange;
-exports.ensurePreInsertionValidity = ensurePreInsertionValidity;
 exports.preInsert = preInsert;
 exports.insert = insert;
 exports.append = append;
@@ -4812,8 +4806,6 @@ var _customElements = require('./custom-elements.js');
 var _customElements2 = _interopRequireDefault(_customElements);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
 
 var slice = exports.slice = function slice(array) {
     return Array.prototype.slice.call(array);
@@ -4842,7 +4834,6 @@ var descriptors = exports.descriptors = {
         getElementsByTagNameNS: descriptor(Element, 'getElementsByTagNameNS'),
         getElementsByClassName: descriptor(Element, 'getElementsByClassName'),
         innerHTML: descriptor(Element, 'innerHTML') || descriptor(HTMLElement, 'innerHTML'),
-        querySelectorAll: descriptor(Element, 'querySelectorAll'),
         setAttribute: descriptor(Element, 'setAttribute'),
         setAttributeNodeNS: descriptor(Element, 'setAttributeNodeNS'),
         removeAttributeNode: descriptor(Element, 'removeAttributeNode')
@@ -4866,7 +4857,6 @@ var descriptors = exports.descriptors = {
         previousSibling: descriptor(Node, 'previousSibling'),
         nextSibling: descriptor(Node, 'nextSibling'),
         nodeValue: descriptor(Node, 'nodeValue'),
-        textContent: descriptor(Node, 'textContent'),
         cloneNode: descriptor(Node, 'cloneNode'),
         insertBefore: descriptor(Node, 'insertBefore'),
         removeChild: descriptor(Node, 'removeChild'),
@@ -4929,31 +4919,37 @@ function setShadowState(object, state) {
     return object._shadow = state;
 }
 
-function recursiveGetShadowIncludingTreeOrderDescendantsInner(node, context) {
-    // TODO: make sure we are interpreting 'shadow-including preorder' correctly
+function forEachShadowIncludingDescendant(node, action) {
     var shadowState = null;
     var shadowRoot = null;
     if ((shadowState = getShadowState(node)) && (shadowRoot = shadowState.shadowRoot)) {
-        context.results[context.index++] = shadowRoot;
-        recursiveGetShadowIncludingTreeOrderDescendantsInner(shadowRoot, context);
+        action(shadowRoot);
+        forEachShadowIncludingInclusiveDescendant(shadowRoot, action);
     }
     var childNodes = node.childNodes;
-    context.results.length += childNodes.length;
     for (var i = 0; i < childNodes.length; i++) {
         var childNode = childNodes[i];
-        context.results[context.index++] = childNode;
-        recursiveGetShadowIncludingTreeOrderDescendantsInner(childNode, context);
+        action(childNode);
+        forEachShadowIncludingInclusiveDescendant(childNode, action);
     }
 }
 
-function recursiveGetShadowIncludingTreeOrderDescendants(node, results) {
-    var context = { results: results, index: results.length };
-    recursiveGetShadowIncludingTreeOrderDescendantsInner(node, context);
+function forEachShadowIncludingInclusiveDescendant(node, action) {
+    action(node);
+    var shadowState = null;
+    var shadowRoot = null;
+    if ((shadowState = getShadowState(node)) && (shadowRoot = shadowState.shadowRoot)) {
+        forEachShadowIncludingInclusiveDescendant(shadowRoot, action);
+    }
+    var childNodes = node.childNodes;
+    for (var i = 0; i < childNodes.length; i++) {
+        forEachShadowIncludingInclusiveDescendant(childNodes[i], action);
+    }
 }
 
 function treeOrderRecursiveSelectAll(node, results, match) {
     if (match(node)) {
-        results.push(node);
+        results[results.length] = node;
     }
     var firstChild = node.firstChild;
     if (firstChild) {
@@ -5065,9 +5061,9 @@ function serializeHTMLFragment(node) {
                 s += '<' + tagName;
                 var attributes = descriptors.Element.attributes.get.call(currentNode);
                 for (var j = 0; j < attributes.length; j++) {
-                    var _attribute = attributes[j];
-                    s += ' ' + serializeAttributeName(_attribute);
-                    s += '="' + escapeString(_attribute.value) + '"';
+                    var attribute = attributes[j];
+                    s += ' ' + serializeAttributeName(attribute);
+                    s += '="' + escapeString(attribute.value) + '"';
                 }
                 s += '>';
                 switch (currentNode.localName) {
@@ -5253,7 +5249,7 @@ function clone(node, document, cloneChildren) {
     // and append them to copy, with document as specified and the clone 
     // children flag being set.
     if (cloneChildren === true) {
-        var childNodes = slice(node.childNodes);
+        var childNodes = node.childNodes;
         for (var i = 0; i < childNodes.length; i++) {
             append(childNodes[i].cloneNode(true), copy);
         }
@@ -5276,14 +5272,11 @@ function adopt(node, document) {
 
     // 3. If document is not the same as oldDocument, run these substeps:
     if (document != oldDocument && _customElements2.default.isInstalled()) {
-        var inclusiveDescendants = [node];
-        recursiveGetShadowIncludingTreeOrderDescendants(node, inclusiveDescendants);
-        for (var i = 0; i < inclusiveDescendants.length; i++) {
-            var _inclusiveDescendant = inclusiveDescendants[i];
-            if (_customElements2.default.isCustom(_inclusiveDescendant)) {
-                _customElements2.default.enqueueCallbackReaction(_inclusiveDescendant, 'adoptedCallback', [oldDocument, document]);
+        forEachShadowIncludingInclusiveDescendant(node, function (inclusiveDescendant) {
+            if (_customElements2.default.isCustom(inclusiveDescendant)) {
+                _customElements2.default.enqueueCallbackReaction(inclusiveDescendant, 'adoptedCallback', [oldDocument, document]);
             }
-        }
+        });
     }
 }
 
@@ -5378,10 +5371,10 @@ function retarget(nodeA, nodeB) {
 
 // https://dom.spec.whatwg.org/#interface-element
 
-function updateSlotName(element, localName, oldValue, value, namespace) {
+function updateSlotName(element, localName, oldValue, value, nameSpace) {
     // https://dom.spec.whatwg.org/#slot-name
     if (element.localName === 'slot') {
-        if (localName === 'name' && namespace == null) {
+        if (localName === 'name' && nameSpace == null) {
             if (value === oldValue) {
                 return;
             }
@@ -5401,9 +5394,9 @@ function updateSlotName(element, localName, oldValue, value, namespace) {
     }
 }
 
-function updateSlotableName(element, localName, oldValue, value, namespace) {
+function updateSlotableName(element, localName, oldValue, value, nameSpace) {
     // https://dom.spec.whatwg.org/#slotable-name
-    if (localName === 'slot' && namespace == null) {
+    if (localName === 'slot' && nameSpace == null) {
         if (value === oldValue) {
             return;
         }
@@ -5426,30 +5419,30 @@ function updateSlotableName(element, localName, oldValue, value, namespace) {
     }
 }
 
-function attributeChangeSteps(element, localName, oldValue, value, namespace) {
-    updateSlotName(element, localName, oldValue, value, namespace);
-    updateSlotableName(element, localName, oldValue, value, namespace);
+function attributeChangeSteps(element, localName, oldValue, value, nameSpace) {
+    updateSlotName(element, localName, oldValue, value, nameSpace);
+    updateSlotableName(element, localName, oldValue, value, nameSpace);
 }
 
 function changeAttribute(attribute, element, value) {
     // https://dom.spec.whatwg.org/#concept-element-attributes-change
 
     var name = attribute.localName;
-    var namespace = attribute.namespaceURI;
+    var nameSpace = attribute.namespaceURI;
     var oldValue = descriptors.Attr.value.get.call(attribute);
     var newValue = value;
 
     // 1. Queue a mutation record...
-    queueMutationRecord('attributes', element, { name: name, namespace: namespace, oldValue: oldValue });
+    queueMutationRecord('attributes', element, name, nameSpace, oldValue);
 
     // 2. If element is custom...
     if (_customElements2.default.isInstalled() && _customElements2.default.isCustom(element)) {
-        var _args = [name, oldValue, newValue, namespace];
+        var _args = [name, oldValue, newValue, nameSpace];
         _customElements2.default.enqueueCallbackReaction(element, 'attributeChangedCallback', _args);
     }
 
     // 3. Run the attribute change steps...
-    attributeChangeSteps(element, name, oldValue, newValue, namespace);
+    attributeChangeSteps(element, name, oldValue, newValue, nameSpace);
 
     // 4. Set attribute's value...
     descriptors.Attr.value.set.call(attribute, newValue);
@@ -5459,21 +5452,21 @@ function appendAttribute(attribute, element) {
     // https://dom.spec.whatwg.org/#concept-element-attributes-append
 
     var name = attribute.localName;
-    var namespace = attribute.namespaceURI;
+    var nameSpace = attribute.namespaceURI;
     var oldValue = null;
     var newValue = descriptors.Attr.value.get.call(attribute);
 
     // 1. Queue a mutation record...
-    queueMutationRecord('attributes', element, { name: name, namespace: namespace, oldValue: oldValue });
+    queueMutationRecord('attributes', element, name, nameSpace, oldValue);
 
     // 2. If element is custom...
     if (_customElements2.default.isInstalled() && _customElements2.default.isCustom(element)) {
-        var _args2 = [name, oldValue, newValue, namespace];
+        var _args2 = [name, oldValue, newValue, nameSpace];
         _customElements2.default.enqueueCallbackReaction(element, 'attributeChangedCallback', _args2);
     }
 
     // 3. Run the attribute change steps...
-    attributeChangeSteps(element, name, oldValue, newValue, namespace);
+    attributeChangeSteps(element, name, oldValue, newValue, nameSpace);
 
     // 4. Append the attribute to the element’s attribute list.
     descriptors.Element.setAttributeNodeNS.value.call(element, attribute);
@@ -5486,21 +5479,21 @@ function removeAttribute(attribute, element) {
     // https://dom.spec.whatwg.org/#concept-element-attributes-remove
 
     var name = attribute.localName;
-    var namespace = attribute.namespaceURI;
+    var nameSpace = attribute.namespaceURI;
     var oldValue = descriptors.Attr.value.get.call(attribute);
     var newValue = null;
 
     // 1. Queue a mutation record...
-    queueMutationRecord('attributes', element, { name: name, namespace: namespace, oldValue: oldValue });
+    queueMutationRecord('attributes', element, name, nameSpace, oldValue);
 
     // 2. If element is custom...
     if (_customElements2.default.isInstalled() && _customElements2.default.isCustom(element)) {
-        var _args3 = [name, oldValue, newValue, namespace];
+        var _args3 = [name, oldValue, newValue, nameSpace];
         _customElements2.default.enqueueCallbackReaction(element, 'attributeChangedCallback', _args3);
     }
 
     // 3. Run the attribute change steps...
-    attributeChangeSteps(element, name, oldValue, null, namespace);
+    attributeChangeSteps(element, name, oldValue, null, nameSpace);
 
     // 4. Remove attribute from the element’s attribute list.
     descriptors.Element.removeAttributeNode.value.call(element, attribute);
@@ -5513,22 +5506,22 @@ function replaceAttribute(oldAttr, newAttr, element) {
     // Used by 'set an attribute'
     // https://dom.spec.whatwg.org/#concept-element-attributes-replace
 
-    var name = attribute.localName;
-    var namespace = attribute.namespaceURI;
-    var oldValue = descriptors.Attr.value.get.call(attribute);
+    var name = oldAttr.localName;
+    var nameSpace = oldAttr.namespaceURI;
+    var oldValue = descriptors.Attr.value.get.call(oldAttr);
     var newValue = descriptors.Attr.value.get.call(newAttr);
 
     // 1. Queue a mutation record...
-    queueMutationRecord('attributes', element, { name: name, namespace: namespace, oldValue: oldValue });
+    queueMutationRecord('attributes', element, name, nameSpace, oldValue);
 
     // 2. If element is custom...
     if (_customElements2.default.isInstalled() && _customElements2.default.isCustom(element)) {
-        var _args4 = [name, oldValue, newValue, namespace];
+        var _args4 = [name, oldValue, newValue, nameSpace];
         _customElements2.default.enqueueCallbackReaction(element, 'attributeChangedCallback', _args4);
     }
 
     // 3. Run the attribute change steps...
-    attributeChangeSteps(element, name, oldValue, newValue, namespace);
+    attributeChangeSteps(element, name, oldValue, newValue, nameSpace);
 
     // 4. Replace oldAttr by newAttr in the element’s attribute list.
     descriptors.Element.setAttributeNodeNS.value.call(element, newAttr);
@@ -5578,9 +5571,9 @@ function removeAttributeByName(qualifiedName, element) {
     return attr;
 }
 
-function removeAttributeByNamespace(namespace, localName, element) {
+function removeAttributeByNamespace(nameSpace, localName, element) {
     var attributes = descriptors.Element.attributes.get.call(element);
-    var attr = attributes.getNamedItemNS(namespace, localName);
+    var attr = attributes.getNamedItemNS(nameSpace, localName);
     if (attr) {
         removeAttribute(attr, element);
     }
@@ -5639,7 +5632,7 @@ function replaceData(node, offset, count, data) {
     if (offset + count > length) {
         count = length - offset;
     }
-    queueMutationRecord('characterData', node, { oldValue: oldValue });
+    queueMutationRecord('characterData', node, null, null, oldValue);
     dataDescriptor.set.call(node, oldValue.slice(0, offset) + data + oldValue.slice(offset + count));
     // TODO: (Range)
 }
@@ -5687,19 +5680,24 @@ function findSlotables(slot) {
     // To find slotables for a given slot slot, run these steps:
 
     // 1. Let result be an empty list.
-    var result = [];
+    // PERF: allocations later on in algorithm
+    var result = void 0;
 
     // 2. If slot’s root is not a shadow root, then return result.
     var slotRoot = root(slot);
     if (!isShadowRoot(slotRoot)) {
-        return result;
+        // PERF: 'an empty list' from step 1
+        return [];
     }
 
     // 3. Let host be slot’s root’s host.
     var host = slotRoot.host;
 
     // 4. For each slotable child of host, slotable, in tree order, run these substeps:
-    var slotableChildren = slice(host.childNodes);
+    var slotableChildren = host.childNodes;
+    // PERF: allocation of result
+    result = new Array(slotableChildren.length);
+    var pushed = 0;
     for (var i = 0; i < slotableChildren.length; i++) {
         var slotable = slotableChildren[i];
         if (slotable.nodeType === Node.ELEMENT_NODE || slotable.nodeType === Node.TEXT_NODE) {
@@ -5707,10 +5705,12 @@ function findSlotables(slot) {
             var foundSlot = findASlot(slotable);
             // 2. If foundSlot is slot, then append slotable to result.
             if (foundSlot === slot) {
-                result.push(slotable);
+                result[pushed++] = slotable;
             }
         }
     }
+    // PERF: set the actual length
+    result.length = pushed;
 
     // 5. Return result.
     return result;
@@ -5728,13 +5728,17 @@ function findFlattenedSlotables(slot) {
 
     // 3. If slotables is the empty list, then append each slotable child of slot, in tree order, to slotables.
     if (slotables.length === 0) {
-        var slotableChildren = slice(slot.childNodes);
-        for (var i = 0; i < slotableChildren.length; i++) {
+        var slotableChildren = slot.childNodes;
+        var slotableChildrenLength = slotableChildren.length;
+        slotables.length = slotableChildrenLength;
+        var slotablesPushed = 0;
+        for (var i = 0; i < slotableChildrenLength; i++) {
             var slotableChild = slotableChildren[i];
             if (slotableChild.nodeType === Node.ELEMENT_NODE || slotableChild.nodeType === Node.TEXT_NODE) {
-                slotables.push(slotableChild);
+                slotables[slotablesPushed++] = slotableChild;
             }
         }
+        slotables.length = slotablesPushed;
     }
 
     // 4. For each node in slotables, run these substeps:
@@ -5743,9 +5747,13 @@ function findFlattenedSlotables(slot) {
         // 1. If node is a slot, run these subsubsteps:
         if (node.localName === 'slot') {
             var temporaryResult = findFlattenedSlotables(node);
-            result.splice.apply(result, [result.length, 0].concat(_toConsumableArray(temporaryResult)));
+            var resultLength = resultLength;
+            result.length += temporaryResult.length;
+            for (var j = 0; j < temporaryResult.length; j++) {
+                result[resultLength + j] = temporaryResult[k];
+            }
         } else {
-            result.push(node);
+            result[result.length] = node;
         }
     }
 
@@ -5790,7 +5798,12 @@ function assignSlotables(slot, suppressSignaling) {
 
     // 4a. If we haven't tracked them yet, track the slot's logical children
     if (!slotState.childNodes) {
-        slotState.childNodes = slice(descriptors.Node.childNodes.get.call(slot));
+        var slotChildNodes = descriptors.Node.childNodes.get.call(slot);
+        var slotChildNodesLength = slotChildNodes.length;
+        slotState.childNodes = new Array(slotChildNodesLength);
+        for (var _i4 = 0; _i4 < slotChildNodesLength; _i4++) {
+            slotState.childNodes[_i4] = slotChildNodes[_i4];
+        }
     }
 
     // function call avoiding closure for performance.
@@ -5818,8 +5831,8 @@ function renderSlotablesAsync(slot) {
     // 4d. Append the fallback content, if no slots
     if (!slotables.length) {
         var childNodes = slotState.childNodes;
-        for (var _i4 = 0; _i4 < childNodes.length; _i4++) {
-            descriptors.Node.appendChild.value.call(slot, childNodes[_i4]);
+        for (var _i5 = 0; _i5 < childNodes.length; _i5++) {
+            descriptors.Node.appendChild.value.call(slot, childNodes[_i5]);
         }
     }
 }
@@ -5831,12 +5844,12 @@ function assignSlotablesForATree(tree, noSignalSlots) {
     var slots = [];
 
     if (tree.localName === 'slot') {
-        slots.push(tree);
+        slots[0] = tree;
     }
 
-    if (tree.hasChildNodes()) {
-        slots.push.apply(slots, _toConsumableArray(tree.querySelectorAll('slot')));
-    }
+    treeOrderRecursiveSelectAll(tree, slots, function (descendant) {
+        return descendant.localName === 'slot';
+    });
 
     for (var i = 0; i < slots.length; i++) {
         var slot = slots[i];
@@ -5951,11 +5964,11 @@ function insert(node, parent, child, suppressObservers) {
         for (var i = 0; i < count; i++) {
             nodes[i] = nodeChildNodes[i];
         }
-        for (var _i5 = 0; _i5 < count; _i5++) {
-            remove(nodes[_i5], node, true);
+        for (var _i6 = 0; _i6 < count; _i6++) {
+            remove(nodes[_i6], node, true);
         }
         // 5. If node is a DocumentFragment node, queue a mutation record of "childList" for node with removedNodes nodes.
-        queueMutationRecord('childList', node, { removedNodes: nodes });
+        queueMutationRecord('childList', node, null, null, null, null, nodes);
     } else {
         nodes[0] = node;
     }
@@ -5963,17 +5976,19 @@ function insert(node, parent, child, suppressObservers) {
     // 6. For each node in nodes, in tree order, run these substeps:
     var parentState = getShadowState(parent);
     var parentIsShadow = isShadowRoot(parent);
-    var hasShadowStateChildNodes = parentState && parentState.childNodes;
+    var parentStateChildNodes = parentState ? parentState.childNodes : null;
     var parentIsConnected = parent.isConnected;
-    for (var _i6 = 0; _i6 < nodes.length; _i6++) {
-        var _node = nodes[_i6];
+    for (var _i7 = 0; _i7 < count; _i7++) {
+        var _node = nodes[_i7];
         // 1. Insert node into parent before child or at the end of parent if child is null.
-        if (hasShadowStateChildNodes) {
+        if (parentStateChildNodes) {
             if (child) {
-                var childIndex = parentState.childNodes.indexOf(child);
-                parentState.childNodes.splice(childIndex, 0, _node);
+                var childIndex = parentStateChildNodes.indexOf(child);
+                // TODO: PERF: Probably not worth the readability sacrifice to manually 
+                // roll a splice algorithm here, but will come back to this later
+                parentStateChildNodes.splice(childIndex, 0, _node);
             } else {
-                parentState.childNodes.push(_node);
+                parentStateChildNodes.push(_node);
             }
             var nodeState = getShadowState(_node) || setShadowState(_node, {});
             nodeState.parentNode = parent;
@@ -5992,7 +6007,7 @@ function insert(node, parent, child, suppressObservers) {
 
         // 3. If parent is a slot whose assigned nodes is the empty list, 
         // then run signal a slot change for parent.
-        if (parent.localName === 'slot' && parent.assignedNodes().length === 0) {
+        if (parent.localName === 'slot' && (!parentState || !parentState.assignedNodes || parentState.assignedNodes.length === 0)) {
             // 3a. Physically append the child into the slot.
             descriptors.Node.appendChild.value.call(parent, _node);
             // 3b. Do what the spec said
@@ -6003,54 +6018,43 @@ function insert(node, parent, child, suppressObservers) {
         // each inclusive descendant of node that is a slot.
         var inclusiveSlotDescendants = [];
         if (_node.localName === 'slot') {
-            inclusiveSlotDescendants.push(_node);
+            inclusiveSlotDescendants[0] = _node;
         }
-        if (_node.hasChildNodes()) {
-            inclusiveSlotDescendants.push.apply(inclusiveSlotDescendants, _toConsumableArray(_node.querySelectorAll('slot')));
-        }
+        treeOrderRecursiveSelectAll(_node, inclusiveSlotDescendants, function (descendant) {
+            return descendant.localName === 'slot';
+        });
         assignSlotablesForATree(_node, inclusiveSlotDescendants);
 
-        if (!_customElements2.default.isInstalled()) {
+        if (!_customElements2.default.isInstalled() || !parentIsConnected) {
             continue;
         }
 
         // 5. For each shadow-including inclusive descendant inclusiveDescendant of node, 
         // in shadow-including tree order, run these subsubsteps:
-        var inclusiveDescendants = [_node];
-        recursiveGetShadowIncludingTreeOrderDescendants(_node, inclusiveDescendants);
-        for (var j = 0; j < inclusiveDescendants.length; j++) {
-            var _inclusiveDescendant2 = inclusiveDescendants[j];
+        forEachShadowIncludingInclusiveDescendant(_node, function (inclusiveDescendant) {
             // Skip (other)
             // 1. Run the insertion steps with inclusiveDescendant
-
-            // 2. If inclusiveDescendant is connected, then:
-            // PERF: obviously the descendant is connected if the inserted node
-            // is connected, and obviously the inserted node is connected if
-            // the parent being inserted to is connected.
-            if (parentIsConnected) {
-                // 1. If inclusiveDescendant is custom, then enqueue a custom element 
-                // callback reaction with inclusiveDescendant, callback name 
-                // "connectedCallback", and an empty argument list.
-                if (_customElements2.default.isCustom(_inclusiveDescendant2)) {
-                    _customElements2.default.enqueueCallbackReaction(_inclusiveDescendant2, 'connectedCallback', []);
-                }
-                // 2. Otherwise, try to upgrade inclusiveDescendant.
-                else {
-                        _customElements2.default.tryToUpgradeElement(_inclusiveDescendant2);
-                    }
+            // PERF: moved this check out of the loop.
+            // 2. If inclusiveDescendant is connected, then...
+            // 1. If inclusiveDescendant is custom, then enqueue a custom element 
+            // callback reaction with inclusiveDescendant, callback name 
+            // "connectedCallback", and an empty argument list.
+            if (_customElements2.default.isCustom(inclusiveDescendant)) {
+                _customElements2.default.enqueueCallbackReaction(inclusiveDescendant, 'connectedCallback', []);
             }
-        }
+            // 2. Otherwise, try to upgrade inclusiveDescendant.
+            else {
+                    _customElements2.default.tryToUpgradeElement(inclusiveDescendant);
+                }
+        });
     }
 
     // 7. If suppress observers flag is unset, queue a mutation record of "childList" for parent 
     // with addedNodes nodes, nextSibling child, and previousSibling child’s previous sibling or 
     // parent’s last child if child is null.
     if (!suppressObservers) {
-        queueMutationRecord('childList', parent, {
-            addedNodes: nodes,
-            nextSibling: child,
-            previousSibling: child ? child.previousSibling : parent.lastChild
-        });
+        var previousSibling = child ? child.previousSibling : parent.lastChild;
+        queueMutationRecord('childList', parent, null, null, null, nodes, null, previousSibling, child);
     }
 }
 
@@ -6103,7 +6107,7 @@ function replace(child, node, parent) {
     var childParent = child.parentNode;
     if (childParent != null) {
         // 1. Set removedNodes to a list solely containing child.
-        removedNodes.push(child);
+        removedNodes[0] = child;
         // 2. Remove child from its parent with the suppress observers flag set.
         remove(child, parent, true);
     }
@@ -6111,7 +6115,12 @@ function replace(child, node, parent) {
     // 13. Let nodes be node’s children if node is a DocumentFragment node, and a list containing solely node otherwise.
     var nodes = void 0;
     if (node instanceof DocumentFragment) {
-        nodes = slice(node.childNodes);
+        var childNodes = node.childNodes;
+        var childNodesLength = childNodes.length;
+        nodes = new Array(childNodesLength);
+        for (var i = 0; i < childNodesLength; i++) {
+            nodes[i] = childNodes[i];
+        }
     } else {
         nodes = [node];
     }
@@ -6121,12 +6130,7 @@ function replace(child, node, parent) {
 
     // 15. Queue a mutation record of "childList" for target parent with addedNodes nodes, 
     // removedNodes removedNodes, nextSibling reference child, and previousSibling previousSibling.
-    queueMutationRecord('childList', parent, {
-        addedNodes: nodes,
-        removedNodes: removedNodes,
-        nextSibling: referenceChild,
-        previousSibling: previousSibling
-    });
+    queueMutationRecord('childList', parent, null, null, null, nodes, removedNodes, previousSibling, referenceChild);
 }
 
 function replaceAll(node, parent) {
@@ -6139,14 +6143,32 @@ function replaceAll(node, parent) {
     }
 
     // 2. Let removedNodes be parent’s children.
-    var removedNodes = slice(parent.childNodes);
+    var parentChildNodes = parent.childNodes;
+    var removedNodesCount = parentChildNodes.length;
+    var removedNodes = new Array(removedNodesCount);
+    for (var i = 0; i < removedNodesCount; i++) {
+        removedNodes[i] = parentChildNodes[i];
+    }
 
-    // 3. Let addedNodes be the empty list if node is null, node’s children if node is a DocumentFragment node, and a list containing node otherwise.
-    var addedNodes = node === null ? [] : node.nodeType === Node.DOCUMENT_FRAGMENT_NODE ? slice(node.childNodes) : [node];
+    // 3. Let addedNodes be the empty list if node is null, node’s children if 
+    // node is a DocumentFragment node, and a list containing node otherwise.
+    var addedNodes = void 0;
+    if (node == null) {
+        addedNodes = [];
+    } else if (node.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+        var nodeChildNodes = node.childNodes;
+        var nodeChildNodesLength = nodeChildNodes.length;
+        addedNodes = new Array(nodeChildNodesLength);
+        for (var _i8 = 0; _i8 < nodeChildNodesLength; _i8++) {
+            addedNodes[_i8] = nodeChildNodes[_i8];
+        }
+    } else {
+        addedNodes = [node];
+    }
 
     // 4. Remove all parent’s children, in tree order, with the suppress observers flag set.
-    for (var i = 0; i < removedNodes.length; i++) {
-        remove(removedNodes[i], parent, true);
+    for (var _i9 = 0; _i9 < removedNodesCount; _i9++) {
+        remove(removedNodes[_i9], parent, true);
     }
 
     // 5. If node is not null, insert node into parent before null with the suppress observers flag set.
@@ -6155,7 +6177,7 @@ function replaceAll(node, parent) {
     }
 
     // 6. Queue a mutation record of "childList" for parent with addedNodes addedNodes and removedNodes removedNodes.
-    queueMutationRecord('childList', parent, { addedNodes: addedNodes, removedNodes: removedNodes });
+    queueMutationRecord('childList', parent, null, null, null, addedNodes, removedNodes);
 }
 
 function preRemove(child, parent) {
@@ -6217,18 +6239,18 @@ function remove(node, parent, suppressObservers) {
 
     // 11. If parent is a slot whose assigned nodes is the empty list,
     // then run signal a slot change for parent.
-    if (parent.localName === 'slot' && parent.assignedNodes().length === 0) {
+    if (parent.localName === 'slot' && (!parentState || !parentState.assignedNodes || parentState.assignedNodes.length === 0)) {
         signalASlotChange(parent);
     }
 
     // 12. If node has an inclusive descendant that is a slot, then:
     var inclusiveSlotDescendants = [];
     if (node.localName === 'slot') {
-        inclusiveSlotDescendants.push(node);
+        inclusiveSlotDescendants[0] = node;
     }
-    if (node.hasChildNodes()) {
-        inclusiveSlotDescendants.push.apply(inclusiveSlotDescendants, _toConsumableArray(node.querySelectorAll('slot')));
-    }
+    treeOrderRecursiveSelectAll(node, inclusiveSlotDescendants, function (descendant) {
+        return descendant.localName === 'slot';
+    });
     if (inclusiveSlotDescendants.length) {
         // 1. Run assign slotables for a tree with parent’s tree.
         assignSlotablesForATree(parent);
@@ -6249,20 +6271,17 @@ function remove(node, parent, suppressObservers) {
 
         // 15. For each shadow-including descendant descendant of node, in 
         // shadow-including tree order, run these substeps:
-        var descendants = [];
-        recursiveGetShadowIncludingTreeOrderDescendants(node, descendants);
-        for (var i = 0; i < descendants.length; i++) {
-            var _descendant = descendants[i];
+        forEachShadowIncludingDescendant(node, function (descendant) {
             // Skip (other)
             // 1. Run the removing steps with descendant.
 
             // 2. If descendant is custom, then enqueue a custom element 
             // callback reaction with descendant, callback name "disconnectedCallback", 
             // and an empty argument list.
-            if (_customElements2.default.isCustom(_descendant)) {
-                _customElements2.default.enqueueCallbackReaction(_descendant, 'disconnectedCallback', []);
+            if (_customElements2.default.isCustom(descendant)) {
+                _customElements2.default.enqueueCallbackReaction(descendant, 'disconnectedCallback', []);
             }
-        }
+        });
     }
 
     // 16. For each inclusive ancestor inclusiveAncestor of parent...
@@ -6273,8 +6292,8 @@ function remove(node, parent, suppressObservers) {
         var ancestorState = getShadowState(inclusiveAncestor);
         if (ancestorState && ancestorState.observers) {
             var ancestorObservers = ancestorState.observers;
-            for (var _i7 = 0; _i7 < ancestorObservers.length; _i7++) {
-                var registeredObserver = ancestorObservers[_i7];
+            for (var i = 0; i < ancestorObservers.length; i++) {
+                var registeredObserver = ancestorObservers[i];
                 if (registeredObserver.options.subtree) {
                     // ...append a transient registered observer whose observer and options are 
                     // identical to those of registered and source which is registered to node’s 
@@ -6293,17 +6312,17 @@ function remove(node, parent, suppressObservers) {
     // for parent with removedNodes a list solely containing node, nextSibling 
     // oldNextSibling, and previousSibling oldPreviousSibling.
     if (!suppressObservers) {
-        queueMutationRecord('childList', parent, {
-            removedNodes: [node],
-            nextSibling: oldNextSibling,
-            previousSibling: oldPreviousSibling
-        });
+        queueMutationRecord('childList', parent, null, null, null, null, [node], oldPreviousSibling, oldNextSibling);
     }
 }
 
 // https://dom.spec.whatwg.org/#mutation-observers
 
 // TODO: test everything that queues mutation records
+
+// TODO: move mutation observers into a separately installed feature.
+// It should be installed automatically when ShadowDOM is installed,
+// with an option to opt out if desired for performance
 
 function getOrCreateNodeObservers(node) {
     var nodeState = getShadowState(node) || setShadowState(node, {});
@@ -6371,7 +6390,7 @@ var mutationObservers = [];
 var signalSlotList = [];
 var theEmptyList = Object.freeze([]);
 
-function queueMutationRecord(type, target, details) {
+function queueMutationRecord(type, target, name, nameSpace, oldValue, addedNodes, removedNodes, previousSibling, nextSibling) {
     // PERF: This is an out-of-spec optimization
     if (mutationObservers.length === 0) {
         return;
@@ -6412,7 +6431,7 @@ function queueMutationRecord(type, target, details) {
                 }
                 // if options' attributeFilter is present, and options' attributeFilter
                 // does not contain name or namespace is non-null
-                if (options.attributeFilter && (options.attributeFilter.indexOf(details.name) === -1 || details.namespace != null)) {
+                if (options.attributeFilter && (options.attributeFilter.indexOf(name) === -1 || nameSpace != null)) {
                     continue;
                 }
             }
@@ -6435,7 +6454,7 @@ function queueMutationRecord(type, target, details) {
             // or type is "characterData" and options’ characterDataOldValue is true, 
             // set the paired string of registered observer’s observer in interested observers to oldValue.
             if (type === 'attributes' && options.attributeOldValue || type === 'characterData' && options.characterDataOldValue) {
-                pairedStrings[index] = details.oldValue;
+                pairedStrings[index] = oldValue;
             }
         }
     }
@@ -6446,8 +6465,8 @@ function queueMutationRecord(type, target, details) {
     }
 
     // 4. Then, for each observer in interested observers, run these substeps:
-    for (var _i8 = 0; _i8 < interestedObservers.length; _i8++) {
-        var _observer = interestedObservers[_i8];
+    for (var _i10 = 0; _i10 < interestedObservers.length; _i10++) {
+        var _observer = interestedObservers[_i10];
         // 1. Let record be a new MutationRecord object with its type set to type and target set to target.
         var record = {
             type: type,
@@ -6461,36 +6480,31 @@ function queueMutationRecord(type, target, details) {
             oldValue: null
         };
         // 2. If name and namespace are given, set record’s attributeName to name, and record’s attributeNamespace to namespace.
-        if ('name' in details) {
-            record.attributeName = details.name;
-            record.attributeNamespace = details.namespace;
+        if (name) {
+            record.attributeName = name;
+            record.attributeNamespace = nameSpace;
         }
         // 3. If addedNodes is given, set record’s addedNodes to addedNodes.
-        if ('addedNodes' in details) {
-            record.addedNodes = Object.freeze(details.addedNodes);
+        if (addedNodes) {
+            record.addedNodes = Object.freeze(addedNodes);
         }
         // 4. If removedNodes is given, set record’s removedNodes to removedNodes.
-        if ('removedNodes' in details) {
-            record.removedNodes = Object.freeze(details.removedNodes);
+        if (removedNodes) {
+            record.removedNodes = Object.freeze(removedNodes);
         }
         // 5. If previousSibling is given, set record’s previousSibling to previousSibling.
-        if ('previousSibling' in details) {
-            record.previousSibling = details.previousSibling;
+        if (previousSibling) {
+            record.previousSibling = previousSibling;
         }
         // 6. If nextSibling is given, set record’s nextSibling to nextSibling.
-        if ('nextSibling' in details) {
-            record.nextSibling = details.nextSibling;
+        if (nextSibling) {
+            record.nextSibling = nextSibling;
         }
         // 7. If observer has a paired string, set record’s oldValue to observer’s paired string.
-        var pairedString = pairedStrings[_i8];
-        if (pairedString != null) {
-            record.oldValue = pairedString;
-        }
+        record.oldValue = pairedStrings[_i10];
         // 8. Append record to observer’s record queue.
         Object.freeze(record);
         _observer.queue.push(record);
-
-        // TODO: consider setting prototype to MutationRecord.prototype
     }
 
     // 5. Queue a mutation observer compound microtask.
@@ -6507,10 +6521,14 @@ function queueMutationObserverCompoundMicrotask() {
 
 function notifyMutationObservers() {
     mutationObserverCompoundMicrotaskQueuedFlag = false;
-    var notifyList = mutationObservers.slice();
+    var mutationObserversLength = mutationObservers.length;
+    var notifyList = new Array(mutationObserversLength);
+    for (var i = 0; i < mutationObserversLength; i++) {
+        notifyList[i] = mutationObservers[i];
+    }
     var signalList = signalSlotList.splice(0, signalSlotList.length);
-    for (var i = 0; i < notifyList.length; i++) {
-        var observer = notifyList[i];
+    for (var _i11 = 0; _i11 < notifyList.length; _i11++) {
+        var observer = notifyList[_i11];
         var queue = observer.queue.splice(0, observer.queue.length);
         for (var j = mutationObservers.length - 1; j >= 0; j--) {
             var transientObserver = mutationObservers[j];
@@ -6527,8 +6545,8 @@ function notifyMutationObservers() {
             }
         }
     }
-    for (var _i9 = 0; _i9 < signalList.length; _i9++) {
-        var slot = signalList[_i9];
+    for (var _i12 = 0; _i12 < signalList.length; _i12++) {
+        var slot = signalList[_i12];
         var event = slot.ownerDocument.createEvent('event');
         event.initEvent('slotchange', true, false);
         try {

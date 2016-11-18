@@ -106,6 +106,7 @@ export default class {
         return CustomElements.executeCEReactions(() => {
             const state = $.getShadowState(this);
             $.setAttributeValue(state.element, state.localName, value);
+            // TODO: Remove usage of slice in favor of direct parse
             state.tokens = $.slice(this);
         });
     }

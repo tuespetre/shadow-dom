@@ -3,9 +3,6 @@
 suite('ParentNode', function () {
 
     var assert = chai.assert;
-    var slice = function (list) {
-        return Array.prototype.slice.call(list);
-    };
 
     suite('Getters for Element (without shadow root)', function () {
         getterSuite(function () {
@@ -82,7 +79,7 @@ suite('ParentNode', function () {
 
             test('returns expected elements', function () {
                 var scenario = new Scenario();
-                assert.sameMembers(slice(scenario.object.children), scenario.expected.children);
+                assert.sameMembers(Array.prototype.slice.call(scenario.object.children), scenario.expected.children);
             });
 
         });

@@ -30,14 +30,16 @@ export default function (base) {
                 childNodes = this.childNodes;
             }
 
-            const elements = [];
-
-            for (let i = 0; i < childNodes.length; i++) {
+            const childNodesLength = childNodes.length;
+            const elements = new Array(childNodesLength);
+            let pushed = 0;
+            for (let i = 0; i < childNodesLength; i++) {
                 const node = childNodes[i];
                 if (node.nodeType == Node.ELEMENT_NODE) {
-                    elements.push(node);
+                    elements[pushed++] = node;
                 }
             }
+            elements.length = pushed;
 
             return elements;
         }

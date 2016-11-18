@@ -53,7 +53,12 @@ export default class {
         if (nodeState) {
             const childNodes = nodeState.childNodes;
             if (childNodes) {
-                return childNodes.slice();
+                const childNodesLength = childNodes.length;
+                const result = new Array(childNodesLength);
+                for (let i = 0; i < childNodesLength; i++) {
+                    result[i] = childNodes[i];
+                }
+                return result;
             }
         }
 

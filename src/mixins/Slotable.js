@@ -7,8 +7,7 @@ export default function (base) {
     return class {
 
         get assignedSlot() {
-            // spec implementation is:
-            // return $.findASlot(this, true);
+            // spec implementation is to run 'find a slot'
             // this uses an alternative (see https://github.com/whatwg/dom/issues/369)
             const shadowState = $.getShadowState(this);
             if (shadowState) {
