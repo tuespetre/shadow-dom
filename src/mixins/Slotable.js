@@ -4,7 +4,7 @@ import * as $ from '../utils.js';
 
 export default function (base) {
 
-    return class {
+    return {
 
         get assignedSlot() {
             // spec implementation is to run 'find a slot'
@@ -18,7 +18,7 @@ export default function (base) {
                 return slot;
             }
             return null;            
-        }
+        },
 
     };
 

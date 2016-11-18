@@ -13,7 +13,7 @@ export default function (base) {
         childElementCount: $.descriptor(base, 'childElementCount'),
     };
 
-    return class {
+    return {
 
         get children() {
             let childNodes;
@@ -42,7 +42,7 @@ export default function (base) {
             elements.length = pushed;
 
             return elements;
-        }
+        },
 
         get firstElementChild() {
             let childNodes;
@@ -67,7 +67,7 @@ export default function (base) {
             }
 
             return null;
-        }
+        },
 
         get lastElementChild() {
             let childNodes;
@@ -92,7 +92,7 @@ export default function (base) {
             }
 
             return null;
-        }
+        },
 
         get childElementCount() {
             let childNodes;
@@ -119,7 +119,7 @@ export default function (base) {
             }
 
             return count;
-        }
+        },
 
         // TODO: tests
         prepend(...nodes) {
@@ -135,7 +135,7 @@ export default function (base) {
                 // first child. Rethrow any exceptions.
                 $.preInsert(node, this, this.firstChild);
             });
-        }
+        },
 
         // TODO: tests
         append(...nodes) {
@@ -150,7 +150,7 @@ export default function (base) {
                 // 2. Append node to context object. Rethrow any exceptions.
                 $.append(node, this);
             });
-        }
+        },
 
         // TODO: tests
         querySelector(selectors) {
@@ -161,7 +161,7 @@ export default function (base) {
             }
 
             return null;
-        }
+        },
 
         // TODO: tests
         querySelectorAll(selectors) {
@@ -184,7 +184,7 @@ export default function (base) {
             });
 
             return results;
-        }
+        },
 
     };
 

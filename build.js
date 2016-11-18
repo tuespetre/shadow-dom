@@ -32,7 +32,9 @@ const uglifyOptions = {
 };
 
 const unminified = browserify('./src/main.js')
-    .transform('babelify', { presets: ['es2015'] })
+    .transform('babelify', { 
+        presets: ['es2015'],
+    })
     .bundle()
     .pipe(fs.createWriteStream(files.unminified, 'utf8'));
 
@@ -41,7 +43,10 @@ unminified.on('finish', () => {
 });
 
 const minified = browserify('./src/main.js', { debug: true })
-    .transform('babelify', { presets: ['es2015'], sourceMaps: false })
+    .transform('babelify', { 
+        presets: ['es2015'],
+        sourceMaps: false 
+    })
     .transform('uglifyify', uglifyOptions)
     .bundle()
     .pipe(exorcist(files.map))

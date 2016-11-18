@@ -2,7 +2,7 @@
 
 import * as $ from '../utils.js';
 
-export default class {
+export default {
 
     // TODO: tests
     deleteRow(index) {
@@ -11,6 +11,6 @@ export default class {
             throw $.makeError('IndexSizeError');
         }
         this.rows[index].remove();
-    }
+    },
 
 }

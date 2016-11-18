@@ -60,8 +60,6 @@ function install() {
     $.extend(CharacterData, $CharacterData);
 
     // CustomEvent interface
-    $.extend(CustomEvent, $CustomEvent);
-    $CustomEvent.prototype = CustomEvent.prototype;
     window.CustomEvent = $CustomEvent;
 
     // Document interface

@@ -10,7 +10,7 @@ export default function (base) {
         dispatchEvent: base.prototype.dispatchEvent
     };
 
-    return class {
+    return {
 
         addEventListener(type, callback, options) {
             if (typeof (callback) !== 'function') {
@@ -23,7 +23,7 @@ export default function (base) {
             if (typeof options === 'boolean') {
                 capture = options;
             }
-            else if (typeof options === 'object') {
+            else if (typeof options !== 'undefined') {
                 capture = options.capture === true;
                 listener.once = options.once === true;
                 // we don't do anything with passive.
@@ -36,7 +36,7 @@ export default function (base) {
 
             collection.addListener(this, listener);
             collection.attach(native.addEventListener);
-        }
+        },
 
         removeEventListener(type, callback, options) {
             if (typeof (callback) !== 'function') {
@@ -49,7 +49,7 @@ export default function (base) {
             if (typeof options === 'boolean') {
                 capture = options;
             }
-            else if (typeof options === 'object') {
+            else if (typeof options !== 'undefined') {
                 capture = options.capture === true;
             }
 
@@ -64,95 +64,95 @@ export default function (base) {
             if (collection.empty) {
                 collection.detach(native.removeEventListener);
             }
-        }
+        },
 
     };
 
 }
 
-class EventListenerCollection {
+const EventListenerCollection = function (target, type, capture) {
+    this.target = target;
+    this.type = type;
+    this.capture = capture;
 
-    static get(target, type, capture) {
+    this.hostListeners = [];
+    this.shadowListeners = [];
+
+    this.callback = event => {
+        let shadowRoot = null;
         let targetState = $.getShadowState(target);
-        let nativeTarget = target;
-        let nativeTargetState = targetState;
-        if (targetState && targetState.host) {
-            nativeTarget = targetState.host;
-            nativeTargetState = $.getShadowState(nativeTarget);
+        if (targetState) {
+            shadowRoot = targetState.shadowRoot;
         }
-        if (!nativeTargetState || !nativeTargetState.listeners) {
-            return null;
+        switch (event.eventPhase) {
+            case Event.prototype.CAPTURING_PHASE:
+                this.invokeListeners(event, this.target, this.hostListeners);
+                if (shadowRoot) {
+                    this.invokeListeners(event, shadowRoot, this.shadowListeners);
+                }
+                break;
+            case Event.prototype.AT_TARGET:
+                const nativeTarget = $.descriptors.Event.target.get.call(event);
+                this.invokeListeners(event, nativeTarget, this.getListeners(nativeTarget));
+                break;
+            case Event.prototype.BUBBLING_PHASE:
+                if (shadowRoot) {
+                    this.invokeListeners(event, shadowRoot, this.shadowListeners);
+                }
+                this.invokeListeners(event, this.target, this.hostListeners);
+                break;
         }
-        const collections = nativeTargetState.listeners;
-        for (let i = 0; i < collections.length; i++) {
-            const collection = collections[i];
-            if (collection.target === nativeTarget &&
-                collection.type === type &&
-                collection.capture === capture) {
-                return collection;
-            }
-        }
+    };
+};
+
+EventListenerCollection.get = function (target, type, capture) {
+    let targetState = $.getShadowState(target);
+    let nativeTarget = target;
+    let nativeTargetState = targetState;
+    if (targetState && targetState.host) {
+        nativeTarget = targetState.host;
+        nativeTargetState = $.getShadowState(nativeTarget);
+    }
+    if (!nativeTargetState || !nativeTargetState.listeners) {
         return null;
     }
-
-    static create(target, type, capture) {
-        let targetState = $.getShadowState(target);
-        let nativeTarget = target;
-        let nativeTargetState = targetState;
-        if (targetState && targetState.host) {
-            nativeTarget = targetState.host;
-            nativeTargetState = $.getShadowState(nativeTarget);
+    const collections = nativeTargetState.listeners;
+    for (let i = 0; i < collections.length; i++) {
+        const collection = collections[i];
+        if (collection.target === nativeTarget &&
+            collection.type === type &&
+            collection.capture === capture) {
+            return collection;
         }
-        if (!nativeTargetState) {
-            nativeTargetState = $.setShadowState(nativeTarget, { listeners: [] });
-        }
-        else if (!nativeTargetState.listeners) {
-            nativeTargetState.listeners = [];
-        }
-        const collection = new EventListenerCollection(nativeTarget, type, capture);
-        nativeTargetState.listeners.push(collection);
-        return collection;
     }
+    return null;
+};
 
-    constructor(target, type, capture) {
-        this.target = target;
-        this.type = type;
-        this.capture = capture;
-
-        this.hostListeners = [];
-        this.shadowListeners = [];
-
-        this.callback = event => {
-            let shadowRoot = null;
-            let targetState = $.getShadowState(target);
-            if (targetState) {
-                shadowRoot = targetState.shadowRoot;
-            }
-            switch (event.eventPhase) {
-                case Event.prototype.CAPTURING_PHASE:
-                    this.invokeListeners(event, this.target, this.hostListeners);
-                    if (shadowRoot) {
-                        this.invokeListeners(event, shadowRoot, this.shadowListeners);
-                    }
-                    break;
-                case Event.prototype.AT_TARGET:
-                    const nativeTarget = $.descriptors.Event.target.get.call(event);
-                    this.invokeListeners(event, nativeTarget, this.getListeners(nativeTarget));
-                    break;
-                case Event.prototype.BUBBLING_PHASE:
-                    if (shadowRoot) {
-                        this.invokeListeners(event, shadowRoot, this.shadowListeners);
-                    }
-                    this.invokeListeners(event, this.target, this.hostListeners);
-                    break;
-            }
-        };
+EventListenerCollection.create = function (target, type, capture) {
+    let targetState = $.getShadowState(target);
+    let nativeTarget = target;
+    let nativeTargetState = targetState;
+    if (targetState && targetState.host) {
+        nativeTarget = targetState.host;
+        nativeTargetState = $.getShadowState(nativeTarget);
     }
+    if (!nativeTargetState) {
+        nativeTargetState = $.setShadowState(nativeTarget, { listeners: [] });
+    }
+    else if (!nativeTargetState.listeners) {
+        nativeTargetState.listeners = [];
+    }
+    const collection = new EventListenerCollection(nativeTarget, type, capture);
+    nativeTargetState.listeners.push(collection);
+    return collection;
+};
+
+EventListenerCollection.prototype = {
 
     get empty() {
         return this.hostListeners.length === 0
             && this.shadowListeners.length === 0;
-    }
+    },
 
     getListeners(target) {
         let targetState = $.getShadowState(target);
@@ -160,7 +160,7 @@ class EventListenerCollection {
             return this.shadowListeners;
         }
         return this.hostListeners;
-    }
+    },
 
     addListener(target, listener) {
         const listeners = this.getListeners(target);
@@ -172,7 +172,7 @@ class EventListenerCollection {
         }
 
         listeners.push(listener);
-    }
+    },
 
     removeListener(target, listener) {
         const listeners = this.getListeners(target);
@@ -184,7 +184,7 @@ class EventListenerCollection {
                 break;
             }
         }
-    }
+    },
 
     invokeListeners(event, currentTarget, listeners) {
         const eventState = $.getShadowState(event) || $.setShadowState(event, {});
@@ -232,15 +232,15 @@ class EventListenerCollection {
                 }
             }
         }
-    }
+    },
 
     attach(descriptor) {
         descriptor.call(this.target, this.type, this.callback, this.capture);
-    }
+    },
 
     detach(descriptor) {
         descriptor.call(this.target, this.type, this.callback, this.capture);
-    }
+    },
 
 }
 
@@ -355,7 +355,7 @@ function getTheParent(node, event, path) {
         }
         else if ($.isShadowRoot(node)) {
             if (!event.composed) {
-                const [item] = path[0];
+                const item = path[0][0];
                 if ($.root(item) === node) {
                     return null;
                 }
@@ -370,7 +370,8 @@ function getTheParent(node, event, path) {
 
 function calculateRelatedTarget(currentTarget, path) {
     for (let i = 0; i < path.length; i++) {
-        const [item, , relatedTarget] = path[i];
+        const item = path[i][0];
+        const relatedTarget = path[i][2];
         if (item === currentTarget) {
             return relatedTarget;
         }
@@ -380,10 +381,10 @@ function calculateRelatedTarget(currentTarget, path) {
 
 function calculateTarget(currentTarget, path) {
     for (let i = 0; i < path.length; i++) {
-        const [item] = path[i];
+        const item = path[i][0];
         if (item === currentTarget) {
             for (let j = i; j >= 0; j--) {
-                const [, target] = path[j];
+                const target = path[j][1];
                 if (target != null) {
                     return target;
                 }

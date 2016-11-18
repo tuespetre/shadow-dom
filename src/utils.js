@@ -80,14 +80,15 @@ export function reportError(error) {
 
 export function extend(object, ...mixins) {
     for (let i = 0; i < mixins.length; i++) {
-        const mixin = mixins[i].prototype;
-        const names = Object.getOwnPropertyNames(mixin);
+        const mixin = mixins[i];
+        const prototype = mixin.prototype || mixin;
+        const names = Object.getOwnPropertyNames(prototype);
         for (let j = 0; j < names.length; j++) {
             const name = names[j];
             if (name === 'constructor') {
                 continue;
             }
-            const descriptor = Object.getOwnPropertyDescriptor(mixin, name);
+            const descriptor = Object.getOwnPropertyDescriptor(prototype, name);
             Object.defineProperty(object.prototype || object, name, descriptor);
         }
     }

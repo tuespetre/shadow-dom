@@ -2,7 +2,7 @@
 
 import * as $ from '../utils.js';
 
-export default class {
+export default {
 
     // TODO: tests
     get name() {
@@ -11,7 +11,7 @@ export default class {
         }
 
         return this.getAttribute('name');
-    }
+    },
 
     // TODO: tests
     set name(value) {
@@ -20,7 +20,7 @@ export default class {
         }
 
         $.setAttributeValue(this, 'name', value);
-    }
+    },
 
     // TODO: tests
     assignedNodes(options) {
@@ -43,6 +43,6 @@ export default class {
 
         // 2. Return the result of finding flattened slotables with this element.
         return $.findFlattenedSlotables(this);
-    }
+    },
 
 }

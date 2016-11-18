@@ -6,7 +6,7 @@ import CustomElements from '../custom-elements.js';
 
 export default function (base) {
 
-    return class {
+    return {
 
         // TODO: tests
         before(...nodes) {
@@ -46,7 +46,7 @@ export default function (base) {
                 // Rethrow any exceptions.
                 $.preInsert(node, parent, viablePreviousSibling);
             });
-        }
+        },
 
         // TODO: tests
         after(...nodes) {
@@ -77,7 +77,7 @@ export default function (base) {
                 // any exceptions.
                 $.preInsert(node, parent, viableNextSibling);
             });
-        }
+        },
 
         // TODO: tests
         replaceWith(...nodes) {
@@ -115,7 +115,7 @@ export default function (base) {
                     $.preInsert(node, parent, viableNextSibling);
                 }
             });
-        }
+        },
 
         // TODO: tests
         remove() {            
@@ -133,7 +133,7 @@ export default function (base) {
                 // 2. Remove the context object from context object’s parent.
                 $.remove(this, parent);
             });
-        }
+        },
 
     };
 

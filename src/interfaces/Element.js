@@ -6,7 +6,7 @@ import CustomElements from '../custom-elements.js';
 
 import $ShadowRoot from '../interfaces/ShadowRoot.js';
 
-export default class {
+export default {
 
     // TODO: tests
     get attributes() {
@@ -16,7 +16,7 @@ export default class {
             $.setShadowState(attributes, { element: this });
         }
         return attributes;
-    }
+    },
 
     // TODO: tests
     setAttribute(qualifiedName, value) {
@@ -30,7 +30,7 @@ export default class {
             }
             $.changeAttribute(attribute, this, value);
         });
-    }
+    },
 
     // TODO: tests
     setAttributeNS(namespace, qualifiedName, value) {
@@ -38,35 +38,35 @@ export default class {
             const dummy = document.createAttributeNS(namespace, qualifiedName);
             $.setAttributeValue(this, dummy.localName, value, dummy.prefix, dummy.namespaceURI);
         });
-    }
+    },
 
     // TODO: tests
     removeAttribute(qualifiedName) {
         return CustomElements.executeCEReactions(() => {
             $.removeAttributeByName(qualifiedName, this);
         });
-    }
+    },
 
     // TODO: tests
     removeAttributeNS(namespace, localName) {
         return CustomElements.executeCEReactions(() => {
             $.removeAttributeByNamespace(namespace, localName, this);
         });
-    }
+    },
 
     // TODO: tests
     setAttributeNode(attr) {
         return CustomElements.executeCEReactions(() => {
             return $.setAttribute(attr, this);
         });
-    }
+    },
 
     // TODO: tests
     setAttributeNodeNS(attr) {
         return CustomElements.executeCEReactions(() => {
             return $.setAttribute(attr, this);
         });
-    }
+    },
 
     // TODO: tests
     removeAttributeNode(attr) {
@@ -77,7 +77,7 @@ export default class {
             $.removeAttribute(attr, this);
             return attr;
         });
-    }
+    },
 
     attachShadow(init) {
         // https://dom.spec.whatwg.org/#dom-element-attachshadow
@@ -137,7 +137,7 @@ export default class {
         hostState.childNodes = savedChildNodes;
 
         return shadow;
-    }
+    },
 
     get shadowRoot() {
         // https://dom.spec.whatwg.org/#dom-element-shadowroot
@@ -150,7 +150,7 @@ export default class {
             }
         }
         return shadowRoot;
-    }
+    },
 
     // TODO: tests
     closest(selectors) {
@@ -162,25 +162,25 @@ export default class {
             }
         }
         while (element = element.parentElement);
-    }
+    },
 
     // TODO: tests
     getElementsByTagName(qualifiedName) {
         const results = $.descriptors.Element.getElementsByTagName.value.call(this, qualifiedName);
         return $.filterByRoot(this, results);
-    }
+    },
 
     // TODO: tests
     getElementsByTagNameNS(ns, localName) {
         const results = $.descriptors.Element.getElementsByTagNameNS.value.call(this, ns, localName);
         return $.filterByRoot(this, results);
-    }
+    },
 
     // TODO: tests
     getElementsByClassName(names) {
         const results = $.descriptors.Element.getElementsByClassName.value.call(this, name);
         return $.filterByRoot(this, results);
-    }
+    },
 
     // TODO: tests
     insertAdjacentElement(where, element) {
@@ -188,7 +188,7 @@ export default class {
             // https://dom.spec.whatwg.org/#dom-element-insertadjacentelement
             return $.insertAdjacent(this, where, element);
         });
-    }
+    },
 
     // TODO: tests
     insertAdjacentText(where, data) {
@@ -196,7 +196,7 @@ export default class {
         const text = this.ownerDocument.createTextNode(data);
         $.insertAdjacent(this, where, text);
         return;
-    }
+    },
 
     // https://w3c.github.io/DOM-Parsing/#extensions-to-the-element-interface
 
@@ -204,7 +204,7 @@ export default class {
     get innerHTML() {
         // https://w3c.github.io/DOM-Parsing/#dom-element-innerhtml
         return $.serializeHTMLFragment(this);
-    }
+    },
 
     // TODO: MutationObserver tests
     set innerHTML(value) {
@@ -219,13 +219,13 @@ export default class {
                 $.replaceAll(fragment, this);
             }
         });
-    }
+    },
 
     // TODO: tests
     get outerHTML() {
         // https://w3c.github.io/DOM-Parsing/#dom-element-outerhtml
         return $.serializeHTMLFragment({ childNodes: [this] });
-    }
+    },
 
     // TODO: tests
     set outerHTML(value) {
@@ -244,7 +244,7 @@ export default class {
             const fragment = $.parseHTMLFragment(value, parent);
             $.replace(this, fragment, this.parentNode);
         });
-    }
+    },
 
     // TODO: tests
     insertAdjacentHTML(position, text) {
@@ -254,6 +254,6 @@ export default class {
             const fragment = $.parseHTMLFragment(text, this);
             $.insertAdjacent(this, position, fragment);
         });
-    }
+    },
 
-}
+};

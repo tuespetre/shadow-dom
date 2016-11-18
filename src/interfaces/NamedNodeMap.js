@@ -4,7 +4,7 @@ import * as $ from '../utils.js';
 
 import CustomElements from '../custom-elements.js';
 
-export default class {
+export default {
 
     // TODO: tests
     setNamedItem(attr) {
@@ -12,7 +12,7 @@ export default class {
             const shadowState = $.getShadowState(this);
             return $.setAttribute(attr, shadowState.element);
         });
-    }
+    },
     
     // TODO: tests
     setNamedItemNS(attr) {
@@ -20,7 +20,7 @@ export default class {
             const shadowState = $.getShadowState(this);
             return $.setAttribute(attr, shadowState.element);
         });
-    }
+    },
 
     // TODO: tests
     removeNamedItem(qualifiedName) {
@@ -32,7 +32,7 @@ export default class {
             }
             return attr;
         });
-    }
+    },
 
     // TODO: tests
     removeNamedItemNS(namespace, localName) {
@@ -44,6 +44,6 @@ export default class {
             }
             return attr;
         });
-    }
+    },
 
 }

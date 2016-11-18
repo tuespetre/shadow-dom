@@ -4,15 +4,6 @@
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-
-var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
-
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
 // https://html.spec.whatwg.org/multipage/scripting.html#custom-elements
 
 // TODO: CEReactions annotations for Range in the DOM spec
@@ -455,122 +446,111 @@ function lookupCustomElementDefinition(document, nameSpace, localName, is) {
     return null;
 }
 
-var CustomElementRegistry = function () {
-    function CustomElementRegistry() {
-        _classCallCheck(this, CustomElementRegistry);
+function CustomElementRegistry() {
+    setPrivateState(this, {
+        definitions: [],
+        elementDefinitionIsRunning: false,
+        whenDefinedPromiseMap: {}
+    });
+}
 
-        setPrivateState(this, {
-            definitions: [],
-            elementDefinitionIsRunning: false,
-            whenDefinedPromiseMap: {}
-        });
-    }
-
-    _createClass(CustomElementRegistry, [{
-        key: 'define',
-        value: function define(name, constructor, options) {
-            var privateState = getPrivateState(this);
-            if (constructor !== constructor.prototype.constructor) {
-                throw new TypeError('The passed argument must be a constructor');
-            }
-            if (!isValidCustomElementName(name)) {
-                throw makeDOMException('SyntaxError');
-            }
-            // TODO: check for already defined name
-            // TODO: check for already defined constructor
-            var localName = name;
-            var extensionOf = options ? options.extends : null;
-            var htmlConstructor = window.HTMLElement;
-            if (extensionOf != null) {
-                if (isValidCustomElementName(extensionOf)) {
-                    throw makeDOMException('NotSupportedError');
-                }
-                var testElement = originalCreateElement.call(window.document, extensionOf);
-                if (testElement instanceof HTMLUnknownElement) {
-                    // TODO: check for HTMLUnknownElement
-                }
-                localName = extensionOf;
-                htmlConstructor = Object.getPrototypeOf(testElement).constructor;
-            }
-            if (privateState.elementDefinitionIsRunning) {
+CustomElementRegistry.prototype = {
+    define: function define(name, constructor, options) {
+        var privateState = getPrivateState(this);
+        if (constructor !== constructor.prototype.constructor) {
+            throw new TypeError('The passed argument must be a constructor');
+        }
+        if (!isValidCustomElementName(name)) {
+            throw makeDOMException('SyntaxError');
+        }
+        // TODO: check for already defined name
+        // TODO: check for already defined constructor
+        var localName = name;
+        var extensionOf = options ? options.extends : null;
+        var htmlConstructor = window.HTMLElement;
+        if (extensionOf != null) {
+            if (isValidCustomElementName(extensionOf)) {
                 throw makeDOMException('NotSupportedError');
             }
-            privateState.elementDefinitionIsRunning = true;
-            var caught = null;
-            var observedAttributes = [];
-            var lifecycleCallbacks = void 0;
-            var nativeInterface = void 0;
-            try {
-                var prototype = constructor.prototype;
-                if ((typeof prototype === 'undefined' ? 'undefined' : _typeof(prototype)) !== 'object') {
-                    throw new TypeError('Invalid prototype');
-                }
-                lifecycleCallbacks = {
-                    'connectedCallback': getCallback(prototype, 'connectedCallback'),
-                    'disconnectedCallback': getCallback(prototype, 'disconnectedCallback'),
-                    'adoptedCallback': getCallback(prototype, 'adoptedCallback'),
-                    'attributeChangedCallback': getCallback(prototype, 'attributeChangedCallback')
-                };
-                if (lifecycleCallbacks['attributeChangedCallback']) {
-                    var observedAttributesIterable = constructor.observedAttributes;
-                    if (observedAttributesIterable) {
-                        observedAttributes = observedAttributesIterable.slice();
-                    }
-                }
-            } catch (error) {
-                caught = error;
+            var testElement = originalCreateElement.call(window.document, extensionOf);
+            if (testElement instanceof HTMLUnknownElement) {
+                // TODO: check for HTMLUnknownElement
             }
-            privateState.elementDefinitionIsRunning = false;
-            if (caught) {
-                throw caught;
+            localName = extensionOf;
+            htmlConstructor = Object.getPrototypeOf(testElement).constructor;
+        }
+        if (privateState.elementDefinitionIsRunning) {
+            throw makeDOMException('NotSupportedError');
+        }
+        privateState.elementDefinitionIsRunning = true;
+        var caught = null;
+        var observedAttributes = [];
+        var lifecycleCallbacks = void 0;
+        var nativeInterface = void 0;
+        try {
+            var prototype = constructor.prototype;
+            if (!(prototype instanceof Object)) {
+                throw new TypeError('Invalid prototype');
             }
-            var definition = {
-                name: name,
-                localName: localName,
-                constructor: constructor,
-                observedAttributes: observedAttributes,
-                lifecycleCallbacks: lifecycleCallbacks,
-                constructionStack: [],
-                htmlConstructor: htmlConstructor
+            lifecycleCallbacks = {
+                'connectedCallback': getCallback(prototype, 'connectedCallback'),
+                'disconnectedCallback': getCallback(prototype, 'disconnectedCallback'),
+                'adoptedCallback': getCallback(prototype, 'adoptedCallback'),
+                'attributeChangedCallback': getCallback(prototype, 'attributeChangedCallback')
             };
-            privateState.definitions.push(definition);
-            var document = window.document;
-            treeOrderShadowInclusiveForEach(document, function (node) {
-                if (node.nodeType === Node.ELEMENT_NODE && node.namespaceURI === htmlNamespace && node.localName === localName) {
-                    if (extensionOf) {
-                        var nodeState = getPrivateState(node);
-                        if (nodeState.isValue !== extensionOf) {
-                            return;
-                        }
-                    }
-                    enqueueUpgradeReaction(element, definition);
-                }
-            });
-            // 16. when-defined promise map
-            // TODO: impl
-        }
-    }, {
-        key: 'get',
-        value: function get(name) {
-            var privateState = getPrivateState(this);
-            for (var i = 0; i < privateState.definitions.length; i++) {
-                var definition = privateState.definitions[i];
-                if (definition.name === name) {
-                    return definition.constructor;
+            if (lifecycleCallbacks['attributeChangedCallback']) {
+                var observedAttributesIterable = constructor.observedAttributes;
+                if (observedAttributesIterable) {
+                    observedAttributes = observedAttributesIterable.slice();
                 }
             }
-            return undefined;
+        } catch (error) {
+            caught = error;
         }
-    }, {
-        key: 'whenDefined',
-        value: function whenDefined(name) {
-            // TODO: impl
-            throw new Error('Not implemented yet');
+        privateState.elementDefinitionIsRunning = false;
+        if (caught) {
+            throw caught;
         }
-    }]);
-
-    return CustomElementRegistry;
-}();
+        var definition = {
+            name: name,
+            localName: localName,
+            constructor: constructor,
+            observedAttributes: observedAttributes,
+            lifecycleCallbacks: lifecycleCallbacks,
+            constructionStack: [],
+            htmlConstructor: htmlConstructor
+        };
+        privateState.definitions.push(definition);
+        var document = window.document;
+        treeOrderShadowInclusiveForEach(document, function (node) {
+            if (node.nodeType === Node.ELEMENT_NODE && node.namespaceURI === htmlNamespace && node.localName === localName) {
+                if (extensionOf) {
+                    var nodeState = getPrivateState(node);
+                    if (nodeState.isValue !== extensionOf) {
+                        return;
+                    }
+                }
+                enqueueUpgradeReaction(element, definition);
+            }
+        });
+        // 16. when-defined promise map
+        // TODO: impl
+    },
+    get: function get(name) {
+        var privateState = getPrivateState(this);
+        for (var i = 0; i < privateState.definitions.length; i++) {
+            var definition = privateState.definitions[i];
+            if (definition.name === name) {
+                return definition.constructor;
+            }
+        }
+        return undefined;
+    },
+    whenDefined: function whenDefined(name) {
+        // TODO: impl
+        throw new Error('Not implemented yet');
+    }
+};
 
 function upgradeElement(element, definition) {
     // https://html.spec.whatwg.org/multipage/scripting.html#concept-upgrade-an-element
@@ -687,10 +667,8 @@ function invokeReactions(queue) {
         var reactions = getPrivateState(_element2).reactionQueue;
         while (reactions.length) {
             try {
-                var _reactions$splice = reactions.splice(0, 1),
-                    _reactions$splice2 = _slicedToArray(_reactions$splice, 1),
-                    reaction = _reactions$splice2[0];
-
+                var splicedOut = reactions.splice(0, 1);
+                var reaction = splicedOut[0];
                 switch (reaction.type) {
                     case upgradeReactionType:
                         upgradeElement(_element2, reaction.definition);
@@ -780,8 +758,6 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // https://dom.spec.whatwg.org/#interface-attr
-
 var _utils = require('../utils.js');
 
 var $ = _interopRequireWildcard(_utils);
@@ -794,31 +770,23 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+// https://dom.spec.whatwg.org/#interface-attr
 
-var _class = function () {
-    function _class() {
-        _classCallCheck(this, _class);
+exports.default = {
+
+    get value() {
+        return $.descriptors.Attr.value.get.call(this);
+    },
+
+    set value(value) {
+        var _this = this;
+
+        return _customElements2.default.executeCEReactions(function () {
+            $.setExistingAttributeValue(_this, value);
+        });
     }
 
-    _createClass(_class, [{
-        key: 'value',
-        get: function get() {
-            return $.descriptors.Attr.value.get.call(this);
-        },
-        set: function set(value) {
-            var _this = this;
-
-            return _customElements2.default.executeCEReactions(function () {
-                $.setExistingAttributeValue(_this, value);
-            });
-        }
-    }]);
-
-    return _class;
-}();
-
-exports.default = _class;
+};
 
 },{"../custom-elements.js":1,"../utils.js":28}],3:[function(require,module,exports){
 'use strict';
@@ -827,59 +795,39 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // https://dom.spec.whatwg.org/#interface-characterdata
-
 var _utils = require('../utils.js');
 
 var $ = _interopRequireWildcard(_utils);
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+var getData = $.descriptors.CharacterData.data.get; // https://dom.spec.whatwg.org/#interface-characterdata
 
-var getData = $.descriptors.CharacterData.data.get;
+exports.default = {
 
-var _class = function () {
-    function _class() {
-        _classCallCheck(this, _class);
+    get data() {
+        return getData.call(this);
+    },
+
+    set data(value) {
+        var length = getData.call(this).length;
+        $.replaceData(this, 0, length, value);
+    },
+
+    appendData: function appendData(data) {
+        var length = getData.call(this).length;
+        $.replaceData(this, length, 0, data);
+    },
+    insertData: function insertData(offset, data) {
+        $.replaceData(this, offset, 0, data);
+    },
+    deleteData: function deleteData(offset, count) {
+        $.replaceData(this, offset, count, '');
+    },
+    replaceData: function replaceData(offset, count, data) {
+        $.replaceData(this, offset, count, data);
     }
-
-    _createClass(_class, [{
-        key: 'appendData',
-        value: function appendData(data) {
-            var length = getData.call(this).length;
-            $.replaceData(this, length, 0, data);
-        }
-    }, {
-        key: 'insertData',
-        value: function insertData(offset, data) {
-            $.replaceData(this, offset, 0, data);
-        }
-    }, {
-        key: 'deleteData',
-        value: function deleteData(offset, count) {
-            $.replaceData(this, offset, count, '');
-        }
-    }, {
-        key: 'replaceData',
-        value: function replaceData(offset, count, data) {
-            $.replaceData(this, offset, count, data);
-        }
-    }, {
-        key: 'data',
-        get: function get() {
-            return getData.call(this);
-        },
-        set: function set(value) {
-            var length = getData.call(this).length;
-            $.replaceData(this, 0, length, value);
-        }
-    }]);
-
-    return _class;
-}();
-
-exports.default = _class;
+};
 
 },{"../utils.js":28}],4:[function(require,module,exports){
 'use strict';
@@ -887,6 +835,7 @@ exports.default = _class;
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+exports.default = $CustomEvent;
 
 var _utils = require('../utils.js');
 
@@ -894,11 +843,7 @@ var $ = _interopRequireWildcard(_utils);
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } } // https://dom.spec.whatwg.org/#interface-customevent
-
-var _class = function _class(type, init) {
-    _classCallCheck(this, _class);
-
+function $CustomEvent(type, init) {
     var bubbles = false;
     var cancelable = false;
     var composed = false;
@@ -913,9 +858,9 @@ var _class = function _class(type, init) {
     event.initCustomEvent(type, bubbles, cancelable, detail);
     $.setShadowState(event, { composed: composed });
     return event;
-};
+} // https://dom.spec.whatwg.org/#interface-customevent
 
-exports.default = _class;
+$CustomEvent.prototype = window.CustomEvent.prototype;
 
 },{"../utils.js":28}],5:[function(require,module,exports){
 'use strict';
@@ -923,9 +868,6 @@ exports.default = _class;
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // https://dom.spec.whatwg.org/#interface-domtokenlist
-
 exports.getOrCreateDOMTokenList = getOrCreateDOMTokenList;
 
 var _utils = require('../utils.js');
@@ -940,149 +882,128 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+// https://dom.spec.whatwg.org/#interface-domtokenlist
 
-var _class = function () {
-    function _class() {
-        _classCallCheck(this, _class);
-    }
+exports.default = {
 
-    _createClass(_class, [{
-        key: 'item',
+    get length() {
+        var state = $.getShadowState(this);
+        return state.tokens.length;
+    },
 
+    // TODO: Caveat about indexer expressions?
+    item: function item(index) {
+        var state = $.getShadowState(this);
+        return index >= state.tokens.length ? null : state.tokens[index];
+    },
+    contains: function contains(token) {
+        var state = $.getShadowState(this);
+        return state.tokens.indexOf(token) !== -1;
+    },
+    add: function add() {
+        var _this = this;
 
-        // TODO: Caveat about indexer expressions?
-        value: function item(index) {
-            var state = $.getShadowState(this);
-            return index >= state.tokens.length ? null : state.tokens[index];
+        for (var _len = arguments.length, tokens = Array(_len), _key = 0; _key < _len; _key++) {
+            tokens[_key] = arguments[_key];
         }
-    }, {
-        key: 'contains',
-        value: function contains(token) {
-            var state = $.getShadowState(this);
-            return state.tokens.indexOf(token) !== -1;
-        }
-    }, {
-        key: 'add',
-        value: function add() {
-            var _this = this;
 
-            for (var _len = arguments.length, tokens = Array(_len), _key = 0; _key < _len; _key++) {
-                tokens[_key] = arguments[_key];
-            }
-
-            return _customElements2.default.executeCEReactions(function () {
-                validateTokens(tokens);
-                var state = $.getShadowState(_this);
-                for (var i = 0; i < tokens.length; i++) {
-                    var token = tokens[i];
-                    var index = state.tokens.indexOf(token);
-                    if (index === -1) {
-                        state.tokens.push(token);
-                    }
-                }
-                state.tokens.sort();
-                $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
-            });
-        }
-    }, {
-        key: 'remove',
-        value: function remove() {
-            var _this2 = this;
-
-            for (var _len2 = arguments.length, tokens = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-                tokens[_key2] = arguments[_key2];
-            }
-
-            return _customElements2.default.executeCEReactions(function () {
-                validateTokens(tokens);
-                var state = $.getShadowState(_this2);
-                for (var i = 0; i < tokens.length; i++) {
-                    var token = tokens[i];
-                    var index = state.tokens.indexOf(token);
-                    if (index !== -1) {
-                        state.tokens.splice(index, 1);
-                    }
-                }
-                $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
-            });
-        }
-    }, {
-        key: 'toggle',
-        value: function toggle(token, force) {
-            var _this3 = this,
-                _arguments = arguments;
-
-            return _customElements2.default.executeCEReactions(function () {
-                validateToken(token);
-                var state = $.getShadowState(_this3);
-                var index = state.tokens.indexOf(token);
-                if (index !== -1) {
-                    if (_arguments.length === 1 || force === false) {
-                        state.tokens.splice(index, 1);
-                        $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
-                        return false;
-                    } else {
-                        return true;
-                    }
-                } else {
-                    if (force === false) {
-                        return false;
-                    } else {
-                        state.tokens.push(token);
-                        state.tokens.sort();
-                        $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
-                        return true;
-                    }
-                }
-            });
-        }
-    }, {
-        key: 'replace',
-        value: function replace(token, newToken) {
-            var _this4 = this;
-
-            return _customElements2.default.executeCEReactions(function () {
-                validateToken(token);
-                validateToken(newToken);
-                var state = $.getShadowState(_this4);
+        return _customElements2.default.executeCEReactions(function () {
+            validateTokens(tokens);
+            var state = $.getShadowState(_this);
+            for (var i = 0; i < tokens.length; i++) {
+                var token = tokens[i];
                 var index = state.tokens.indexOf(token);
                 if (index === -1) {
-                    return;
+                    state.tokens.push(token);
                 }
-                state.tokens[index] = newToken;
-                state.tokens.sort();
-                $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
-            });
-        }
-    }, {
-        key: 'length',
-        get: function get() {
-            var state = $.getShadowState(this);
-            return state.tokens.length;
-        }
-    }, {
-        key: 'value',
-        get: function get() {
-            var state = $.getShadowState(this);
-            return state.element.getAttribute(state.localName) || '';
-        },
-        set: function set(value) {
-            var _this5 = this;
+            }
+            state.tokens.sort();
+            $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
+        });
+    },
+    remove: function remove() {
+        var _this2 = this;
 
-            return _customElements2.default.executeCEReactions(function () {
-                var state = $.getShadowState(_this5);
-                $.setAttributeValue(state.element, state.localName, value);
-                // TODO: Remove usage of slice in favor of direct parse
-                state.tokens = $.slice(_this5);
-            });
+        for (var _len2 = arguments.length, tokens = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+            tokens[_key2] = arguments[_key2];
         }
-    }]);
 
-    return _class;
-}();
+        return _customElements2.default.executeCEReactions(function () {
+            validateTokens(tokens);
+            var state = $.getShadowState(_this2);
+            for (var i = 0; i < tokens.length; i++) {
+                var token = tokens[i];
+                var index = state.tokens.indexOf(token);
+                if (index !== -1) {
+                    state.tokens.splice(index, 1);
+                }
+            }
+            $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
+        });
+    },
+    toggle: function toggle(token, force) {
+        var _this3 = this,
+            _arguments = arguments;
 
-exports.default = _class;
+        return _customElements2.default.executeCEReactions(function () {
+            validateToken(token);
+            var state = $.getShadowState(_this3);
+            var index = state.tokens.indexOf(token);
+            if (index !== -1) {
+                if (_arguments.length === 1 || force === false) {
+                    state.tokens.splice(index, 1);
+                    $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
+                    return false;
+                } else {
+                    return true;
+                }
+            } else {
+                if (force === false) {
+                    return false;
+                } else {
+                    state.tokens.push(token);
+                    state.tokens.sort();
+                    $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
+                    return true;
+                }
+            }
+        });
+    },
+    replace: function replace(token, newToken) {
+        var _this4 = this;
+
+        return _customElements2.default.executeCEReactions(function () {
+            validateToken(token);
+            validateToken(newToken);
+            var state = $.getShadowState(_this4);
+            var index = state.tokens.indexOf(token);
+            if (index === -1) {
+                return;
+            }
+            state.tokens[index] = newToken;
+            state.tokens.sort();
+            $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
+        });
+    },
+
+
+    get value() {
+        var state = $.getShadowState(this);
+        return state.element.getAttribute(state.localName) || '';
+    },
+
+    set value(value) {
+        var _this5 = this;
+
+        return _customElements2.default.executeCEReactions(function () {
+            var state = $.getShadowState(_this5);
+            $.setAttributeValue(state.element, state.localName, value);
+            // TODO: Remove usage of slice in favor of direct parse
+            state.tokens = $.slice(_this5);
+        });
+    }
+
+};
 
 
 function validateTokens(tokens) {
@@ -1128,8 +1049,6 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // https://dom.spec.whatwg.org/#interface-document
-
 var _utils = require('../utils.js');
 
 var $ = _interopRequireWildcard(_utils);
@@ -1142,74 +1061,54 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+// https://dom.spec.whatwg.org/#interface-document
 
-var _class = function () {
-    function _class() {
-        _classCallCheck(this, _class);
+exports.default = {
+
+    // TODO: tests
+    getElementsByTagName: function getElementsByTagName(qualifiedName) {
+        var results = $.descriptors.Document.getElementsByTagName.value.call(this, qualifiedName);
+        return $.filterByRoot(this, results);
+    },
+
+
+    // TODO: tests
+    getElementsByTagNameNS: function getElementsByTagNameNS(ns, localName) {
+        var results = $.descriptors.Document.getElementsByTagNameNS.value.call(this, ns, localName);
+        return $.filterByRoot(this, results);
+    },
+
+
+    // TODO: tests
+    getElementsByClassName: function getElementsByClassName(names) {
+        var results = $.descriptors.Document.getElementsByClassName.value.call(this, name);
+        return $.filterByRoot(this, results);
+    },
+
+
+    // TODO: tests
+    importNode: function importNode(node, deep) {
+        var _this = this;
+
+        return _customElements2.default.executeCEReactions(function () {
+            if (node.nodeType === Node.DOCUMENT_NODE || $.isShadowRoot(node)) {
+                throw $.makeError('NotSupportedError');
+            }
+
+            return $.clone(node, _this, deep);
+        });
+    },
+
+
+    // TODO: tests
+    adoptNode: function adoptNode(node) {
+        var _this2 = this;
+
+        return _customElements2.default.executeCEReactions(function () {
+            return $.adopt(node, _this2);
+        });
     }
-
-    _createClass(_class, [{
-        key: 'getElementsByTagName',
-
-
-        // TODO: tests
-        value: function getElementsByTagName(qualifiedName) {
-            var results = $.descriptors.Document.getElementsByTagName.value.call(this, qualifiedName);
-            return $.filterByRoot(this, results);
-        }
-
-        // TODO: tests
-
-    }, {
-        key: 'getElementsByTagNameNS',
-        value: function getElementsByTagNameNS(ns, localName) {
-            var results = $.descriptors.Document.getElementsByTagNameNS.value.call(this, ns, localName);
-            return $.filterByRoot(this, results);
-        }
-
-        // TODO: tests
-
-    }, {
-        key: 'getElementsByClassName',
-        value: function getElementsByClassName(names) {
-            var results = $.descriptors.Document.getElementsByClassName.value.call(this, name);
-            return $.filterByRoot(this, results);
-        }
-
-        // TODO: tests
-
-    }, {
-        key: 'importNode',
-        value: function importNode(node, deep) {
-            var _this = this;
-
-            return _customElements2.default.executeCEReactions(function () {
-                if (node.nodeType === Node.DOCUMENT_NODE || $.isShadowRoot(node)) {
-                    throw $.makeError('NotSupportedError');
-                }
-
-                return $.clone(node, _this, deep);
-            });
-        }
-
-        // TODO: tests
-
-    }, {
-        key: 'adoptNode',
-        value: function adoptNode(node) {
-            var _this2 = this;
-
-            return _customElements2.default.executeCEReactions(function () {
-                return $.adopt(node, _this2);
-            });
-        }
-    }]);
-
-    return _class;
-}();
-
-exports.default = _class;
+};
 
 },{"../custom-elements.js":1,"../utils.js":28}],7:[function(require,module,exports){
 'use strict';
@@ -1217,8 +1116,6 @@ exports.default = _class;
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // https://dom.spec.whatwg.org/#interface-element
 
 var _utils = require('../utils.js');
 
@@ -1236,342 +1133,288 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+exports.default = {
 
-var _class = function () {
-    function _class() {
-        _classCallCheck(this, _class);
-    }
-
-    _createClass(_class, [{
-        key: 'setAttribute',
-
-
-        // TODO: tests
-        value: function setAttribute(qualifiedName, value) {
-            var _this = this;
-
-            return _customElements2.default.executeCEReactions(function () {
-                var attribute = $.descriptors.Element.attributes.get.call(_this).getNamedItem(qualifiedName);
-                if (!attribute) {
-                    attribute = _this.ownerDocument.createAttribute(qualifiedName);
-                    $.descriptors.Attr.value.set.call(attribute, value);
-                    $.appendAttribute(attribute, _this);
-                    return;
-                }
-                $.changeAttribute(attribute, _this, value);
-            });
+    // TODO: tests
+    get attributes() {
+        var attributes = $.descriptors.Element.attributes.get.call(this);
+        var shadowState = $.getShadowState(attributes);
+        if (!shadowState) {
+            $.setShadowState(attributes, { element: this });
         }
+        return attributes;
+    },
 
-        // TODO: tests
+    // TODO: tests
+    setAttribute: function setAttribute(qualifiedName, value) {
+        var _this = this;
 
-    }, {
-        key: 'setAttributeNS',
-        value: function setAttributeNS(namespace, qualifiedName, value) {
-            var _this2 = this;
-
-            return _customElements2.default.executeCEReactions(function () {
-                var dummy = document.createAttributeNS(namespace, qualifiedName);
-                $.setAttributeValue(_this2, dummy.localName, value, dummy.prefix, dummy.namespaceURI);
-            });
-        }
-
-        // TODO: tests
-
-    }, {
-        key: 'removeAttribute',
-        value: function removeAttribute(qualifiedName) {
-            var _this3 = this;
-
-            return _customElements2.default.executeCEReactions(function () {
-                $.removeAttributeByName(qualifiedName, _this3);
-            });
-        }
-
-        // TODO: tests
-
-    }, {
-        key: 'removeAttributeNS',
-        value: function removeAttributeNS(namespace, localName) {
-            var _this4 = this;
-
-            return _customElements2.default.executeCEReactions(function () {
-                $.removeAttributeByNamespace(namespace, localName, _this4);
-            });
-        }
-
-        // TODO: tests
-
-    }, {
-        key: 'setAttributeNode',
-        value: function setAttributeNode(attr) {
-            var _this5 = this;
-
-            return _customElements2.default.executeCEReactions(function () {
-                return $.setAttribute(attr, _this5);
-            });
-        }
-
-        // TODO: tests
-
-    }, {
-        key: 'setAttributeNodeNS',
-        value: function setAttributeNodeNS(attr) {
-            var _this6 = this;
-
-            return _customElements2.default.executeCEReactions(function () {
-                return $.setAttribute(attr, _this6);
-            });
-        }
-
-        // TODO: tests
-
-    }, {
-        key: 'removeAttributeNode',
-        value: function removeAttributeNode(attr) {
-            var _this7 = this;
-
-            return _customElements2.default.executeCEReactions(function () {
-                if (attr.ownerElement !== _this7) {
-                    throw $.makeError('NotFoundError');
-                }
-                $.removeAttribute(attr, _this7);
-                return attr;
-            });
-        }
-    }, {
-        key: 'attachShadow',
-        value: function attachShadow(init) {
-            // https://dom.spec.whatwg.org/#dom-element-attachshadow
-            if (!init || init.mode !== 'open' && init.mode !== 'closed') {
-                throw $.makeError('TypeError');
+        return _customElements2.default.executeCEReactions(function () {
+            var attribute = $.descriptors.Element.attributes.get.call(_this).getNamedItem(qualifiedName);
+            if (!attribute) {
+                attribute = _this.ownerDocument.createAttribute(qualifiedName);
+                $.descriptors.Attr.value.set.call(attribute, value);
+                $.appendAttribute(attribute, _this);
+                return;
             }
+            $.changeAttribute(attribute, _this, value);
+        });
+    },
 
-            if (this.namespaceURI !== 'http://www.w3.org/1999/xhtml') {
-                throw $.makeError('NotSupportedError');
+
+    // TODO: tests
+    setAttributeNS: function setAttributeNS(namespace, qualifiedName, value) {
+        var _this2 = this;
+
+        return _customElements2.default.executeCEReactions(function () {
+            var dummy = document.createAttributeNS(namespace, qualifiedName);
+            $.setAttributeValue(_this2, dummy.localName, value, dummy.prefix, dummy.namespaceURI);
+        });
+    },
+
+
+    // TODO: tests
+    removeAttribute: function removeAttribute(qualifiedName) {
+        var _this3 = this;
+
+        return _customElements2.default.executeCEReactions(function () {
+            $.removeAttributeByName(qualifiedName, _this3);
+        });
+    },
+
+
+    // TODO: tests
+    removeAttributeNS: function removeAttributeNS(namespace, localName) {
+        var _this4 = this;
+
+        return _customElements2.default.executeCEReactions(function () {
+            $.removeAttributeByNamespace(namespace, localName, _this4);
+        });
+    },
+
+
+    // TODO: tests
+    setAttributeNode: function setAttributeNode(attr) {
+        var _this5 = this;
+
+        return _customElements2.default.executeCEReactions(function () {
+            return $.setAttribute(attr, _this5);
+        });
+    },
+
+
+    // TODO: tests
+    setAttributeNodeNS: function setAttributeNodeNS(attr) {
+        var _this6 = this;
+
+        return _customElements2.default.executeCEReactions(function () {
+            return $.setAttribute(attr, _this6);
+        });
+    },
+
+
+    // TODO: tests
+    removeAttributeNode: function removeAttributeNode(attr) {
+        var _this7 = this;
+
+        return _customElements2.default.executeCEReactions(function () {
+            if (attr.ownerElement !== _this7) {
+                throw $.makeError('NotFoundError');
             }
+            $.removeAttribute(attr, _this7);
+            return attr;
+        });
+    },
+    attachShadow: function attachShadow(init) {
+        // https://dom.spec.whatwg.org/#dom-element-attachshadow
+        if (!init || init.mode !== 'open' && init.mode !== 'closed') {
+            throw $.makeError('TypeError');
+        }
 
-            switch (this.localName) {
-                case "article":case "aside":case "blockquote":case "body":
-                case "div":case "footer":case "h1":case "h2":case "h3":
-                case "h4":case "h5":case "h6":case "header":case "main":
-                case "nav":case "p":case "section":case "span":
+        if (this.namespaceURI !== 'http://www.w3.org/1999/xhtml') {
+            throw $.makeError('NotSupportedError');
+        }
+
+        switch (this.localName) {
+            case "article":case "aside":case "blockquote":case "body":
+            case "div":case "footer":case "h1":case "h2":case "h3":
+            case "h4":case "h5":case "h6":case "header":case "main":
+            case "nav":case "p":case "section":case "span":
+                break;
+            default:
+                if (_customElements2.default.isValidCustomElementName(this.localName)) {
                     break;
-                default:
-                    if (_customElements2.default.isValidCustomElementName(this.localName)) {
-                        break;
-                    }
-                    throw $.makeError('NotSupportedError');
-            }
-
-            if (this.shadowRoot) {
-                throw $.makeError('InvalidStateError');
-            }
-
-            var shadow = this.ownerDocument.createDocumentFragment();
-
-            $.extend(shadow, _ShadowRoot2.default);
-
-            $.setShadowState(shadow, {
-                host: this,
-                mode: init.mode,
-                childNodes: []
-            });
-
-            var originalChildNodes = $.descriptors.Node.childNodes.get.call(this);
-            var removeChild = $.descriptors.Node.removeChild.value;
-            var savedChildNodes = new Array(originalChildNodes.length);
-            var firstChild = void 0;
-            var i = 0;
-            while (firstChild = originalChildNodes[0]) {
-                var childState = $.getShadowState(firstChild) || $.setShadowState(firstChild, {});
-                childState.parentNode = this;
-                savedChildNodes[i++] = firstChild;
-                removeChild.call(this, firstChild);
-            }
-
-            var hostState = $.getShadowState(this);
-            if (!hostState) {
-                hostState = {};
-                $.setShadowState(this, hostState);
-            }
-            hostState.shadowRoot = shadow;
-            hostState.childNodes = savedChildNodes;
-
-            return shadow;
-        }
-    }, {
-        key: 'closest',
-
-
-        // TODO: tests
-        value: function closest(selectors) {
-            var element = this;
-
-            do {
-                if (element.matches(selectors)) {
-                    return element;
                 }
-            } while (element = element.parentElement);
+                throw $.makeError('NotSupportedError');
         }
 
-        // TODO: tests
-
-    }, {
-        key: 'getElementsByTagName',
-        value: function getElementsByTagName(qualifiedName) {
-            var results = $.descriptors.Element.getElementsByTagName.value.call(this, qualifiedName);
-            return $.filterByRoot(this, results);
+        if (this.shadowRoot) {
+            throw $.makeError('InvalidStateError');
         }
 
-        // TODO: tests
+        var shadow = this.ownerDocument.createDocumentFragment();
 
-    }, {
-        key: 'getElementsByTagNameNS',
-        value: function getElementsByTagNameNS(ns, localName) {
-            var results = $.descriptors.Element.getElementsByTagNameNS.value.call(this, ns, localName);
-            return $.filterByRoot(this, results);
+        $.extend(shadow, _ShadowRoot2.default);
+
+        $.setShadowState(shadow, {
+            host: this,
+            mode: init.mode,
+            childNodes: []
+        });
+
+        var originalChildNodes = $.descriptors.Node.childNodes.get.call(this);
+        var removeChild = $.descriptors.Node.removeChild.value;
+        var savedChildNodes = new Array(originalChildNodes.length);
+        var firstChild = void 0;
+        var i = 0;
+        while (firstChild = originalChildNodes[0]) {
+            var childState = $.getShadowState(firstChild) || $.setShadowState(firstChild, {});
+            childState.parentNode = this;
+            savedChildNodes[i++] = firstChild;
+            removeChild.call(this, firstChild);
         }
 
-        // TODO: tests
-
-    }, {
-        key: 'getElementsByClassName',
-        value: function getElementsByClassName(names) {
-            var results = $.descriptors.Element.getElementsByClassName.value.call(this, name);
-            return $.filterByRoot(this, results);
+        var hostState = $.getShadowState(this);
+        if (!hostState) {
+            hostState = {};
+            $.setShadowState(this, hostState);
         }
+        hostState.shadowRoot = shadow;
+        hostState.childNodes = savedChildNodes;
 
-        // TODO: tests
-
-    }, {
-        key: 'insertAdjacentElement',
-        value: function insertAdjacentElement(where, element) {
-            var _this8 = this;
-
-            return _customElements2.default.executeCEReactions(function () {
-                // https://dom.spec.whatwg.org/#dom-element-insertadjacentelement
-                return $.insertAdjacent(_this8, where, element);
-            });
-        }
-
-        // TODO: tests
-
-    }, {
-        key: 'insertAdjacentText',
-        value: function insertAdjacentText(where, data) {
-            // https://dom.spec.whatwg.org/#dom-element-insertadjacenttext
-            var text = this.ownerDocument.createTextNode(data);
-            $.insertAdjacent(this, where, text);
-            return;
-        }
-
-        // https://w3c.github.io/DOM-Parsing/#extensions-to-the-element-interface
-
-        // TODO: more thorough tests of the serialization
-
-    }, {
-        key: 'insertAdjacentHTML',
+        return shadow;
+    },
 
 
-        // TODO: tests
-        value: function insertAdjacentHTML(position, text) {
-            var _this9 = this;
-
-            return _customElements2.default.executeCEReactions(function () {
-                // https://w3c.github.io/DOM-Parsing/#dom-element-insertadjacenthtml
-                // We aren't going to go exactly by the books for this one.
-                var fragment = $.parseHTMLFragment(text, _this9);
-                $.insertAdjacent(_this9, position, fragment);
-            });
-        }
-    }, {
-        key: 'attributes',
-
-
-        // TODO: tests
-        get: function get() {
-            var attributes = $.descriptors.Element.attributes.get.call(this);
-            var shadowState = $.getShadowState(attributes);
-            if (!shadowState) {
-                $.setShadowState(attributes, { element: this });
+    get shadowRoot() {
+        // https://dom.spec.whatwg.org/#dom-element-shadowroot
+        var shadowRoot = null;
+        var shadowState = $.getShadowState(this);
+        if (shadowState) {
+            shadowRoot = shadowState.shadowRoot;
+            if (!shadowRoot || shadowRoot.mode === 'closed') {
+                return null;
             }
-            return attributes;
         }
-    }, {
-        key: 'shadowRoot',
-        get: function get() {
-            // https://dom.spec.whatwg.org/#dom-element-shadowroot
-            var shadowRoot = null;
-            var shadowState = $.getShadowState(this);
-            if (shadowState) {
-                shadowRoot = shadowState.shadowRoot;
-                if (!shadowRoot || shadowRoot.mode === 'closed') {
-                    return null;
-                }
+        return shadowRoot;
+    },
+
+    // TODO: tests
+    closest: function closest(selectors) {
+        var element = this;
+
+        do {
+            if (element.matches(selectors)) {
+                return element;
             }
-            return shadowRoot;
-        }
-    }, {
-        key: 'innerHTML',
-        get: function get() {
+        } while (element = element.parentElement);
+    },
+
+
+    // TODO: tests
+    getElementsByTagName: function getElementsByTagName(qualifiedName) {
+        var results = $.descriptors.Element.getElementsByTagName.value.call(this, qualifiedName);
+        return $.filterByRoot(this, results);
+    },
+
+
+    // TODO: tests
+    getElementsByTagNameNS: function getElementsByTagNameNS(ns, localName) {
+        var results = $.descriptors.Element.getElementsByTagNameNS.value.call(this, ns, localName);
+        return $.filterByRoot(this, results);
+    },
+
+
+    // TODO: tests
+    getElementsByClassName: function getElementsByClassName(names) {
+        var results = $.descriptors.Element.getElementsByClassName.value.call(this, name);
+        return $.filterByRoot(this, results);
+    },
+
+
+    // TODO: tests
+    insertAdjacentElement: function insertAdjacentElement(where, element) {
+        var _this8 = this;
+
+        return _customElements2.default.executeCEReactions(function () {
+            // https://dom.spec.whatwg.org/#dom-element-insertadjacentelement
+            return $.insertAdjacent(_this8, where, element);
+        });
+    },
+
+
+    // TODO: tests
+    insertAdjacentText: function insertAdjacentText(where, data) {
+        // https://dom.spec.whatwg.org/#dom-element-insertadjacenttext
+        var text = this.ownerDocument.createTextNode(data);
+        $.insertAdjacent(this, where, text);
+        return;
+    },
+
+
+    // https://w3c.github.io/DOM-Parsing/#extensions-to-the-element-interface
+
+    // TODO: more thorough tests of the serialization
+    get innerHTML() {
+        // https://w3c.github.io/DOM-Parsing/#dom-element-innerhtml
+        return $.serializeHTMLFragment(this);
+    },
+
+    // TODO: MutationObserver tests
+    set innerHTML(value) {
+        var _this9 = this;
+
+        return _customElements2.default.executeCEReactions(function () {
             // https://w3c.github.io/DOM-Parsing/#dom-element-innerhtml
-            return $.serializeHTMLFragment(this);
-        }
+            var fragment = $.parseHTMLFragment(value, _this9);
+            var content = _this9['content'];
+            if (content instanceof DocumentFragment) {
+                $.replaceAll(fragment, content);
+            } else {
+                $.replaceAll(fragment, _this9);
+            }
+        });
+    },
 
-        // TODO: MutationObserver tests
-        ,
-        set: function set(value) {
-            var _this10 = this;
+    // TODO: tests
+    get outerHTML() {
+        // https://w3c.github.io/DOM-Parsing/#dom-element-outerhtml
+        return $.serializeHTMLFragment({ childNodes: [this] });
+    },
 
-            return _customElements2.default.executeCEReactions(function () {
-                // https://w3c.github.io/DOM-Parsing/#dom-element-innerhtml
-                var fragment = $.parseHTMLFragment(value, _this10);
-                var content = _this10['content'];
-                if (content instanceof DocumentFragment) {
-                    $.replaceAll(fragment, content);
-                } else {
-                    $.replaceAll(fragment, _this10);
-                }
-            });
-        }
+    // TODO: tests
+    set outerHTML(value) {
+        var _this10 = this;
 
-        // TODO: tests
-
-    }, {
-        key: 'outerHTML',
-        get: function get() {
+        return _customElements2.default.executeCEReactions(function () {
             // https://w3c.github.io/DOM-Parsing/#dom-element-outerhtml
-            return $.serializeHTMLFragment({ childNodes: [this] });
-        }
+            var parent = _this10.parentNode;
+            if (parent === null) {
+                return;
+            }
+            if (parent.nodeType === Node.DOCUMENT_NODE) {
+                throw $.makeError('NoModificationAllowedError');
+            }
+            if (parent.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
+                parent = _this10.ownerDocument.createElement('body');
+            }
+            var fragment = $.parseHTMLFragment(value, parent);
+            $.replace(_this10, fragment, _this10.parentNode);
+        });
+    },
 
-        // TODO: tests
-        ,
-        set: function set(value) {
-            var _this11 = this;
+    // TODO: tests
+    insertAdjacentHTML: function insertAdjacentHTML(position, text) {
+        var _this11 = this;
 
-            return _customElements2.default.executeCEReactions(function () {
-                // https://w3c.github.io/DOM-Parsing/#dom-element-outerhtml
-                var parent = _this11.parentNode;
-                if (parent === null) {
-                    return;
-                }
-                if (parent.nodeType === Node.DOCUMENT_NODE) {
-                    throw $.makeError('NoModificationAllowedError');
-                }
-                if (parent.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
-                    parent = _this11.ownerDocument.createElement('body');
-                }
-                var fragment = $.parseHTMLFragment(value, parent);
-                $.replace(_this11, fragment, _this11.parentNode);
-            });
-        }
-    }]);
-
-    return _class;
-}();
-
-exports.default = _class;
+        return _customElements2.default.executeCEReactions(function () {
+            // https://w3c.github.io/DOM-Parsing/#dom-element-insertadjacenthtml
+            // We aren't going to go exactly by the books for this one.
+            var fragment = $.parseHTMLFragment(text, _this11);
+            $.insertAdjacent(_this11, position, fragment);
+        });
+    }
+}; // https://dom.spec.whatwg.org/#interface-element
 
 },{"../custom-elements.js":1,"../interfaces/ShadowRoot.js":17,"../utils.js":28}],8:[function(require,module,exports){
 'use strict';
@@ -1580,8 +1423,7 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 exports.hasRelatedTarget = undefined;
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // https://dom.spec.whatwg.org/#interface-event
+exports.default = $Event;
 
 var _utils = require('../utils.js');
 
@@ -1589,112 +1431,88 @@ var $ = _interopRequireWildcard(_utils);
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
-var _class = function () {
-    function _class(type, init) {
-        _classCallCheck(this, _class);
-
-        var bubbles = false;
-        var cancelable = false;
-        var composed = false;
-        if (init) {
-            bubbles = init.bubbles === true;
-            cancelable = init.cancelable === true;
-            composed = init.composed === true;
-        }
-        var event = document.createEvent('event');
-        event.initEvent(type, bubbles, cancelable);
-        $.setShadowState(event, { composed: composed });
-        return event;
+function $Event(type, init) {
+    var bubbles = false;
+    var cancelable = false;
+    var composed = false;
+    if (init) {
+        bubbles = init.bubbles === true;
+        cancelable = init.cancelable === true;
+        composed = init.composed === true;
     }
+    var event = document.createEvent('event');
+    event.initEvent(type, bubbles, cancelable);
+    $.setShadowState(event, { composed: composed });
+    return event;
+} // https://dom.spec.whatwg.org/#interface-event
 
-    _createClass(_class, [{
-        key: 'stopImmediatePropagation',
-        value: function stopImmediatePropagation() {
-            this.stopPropagation();
-            $.getShadowState(this).stopImmediatePropagationFlag = true;
-        }
-    }, {
-        key: 'composedPath',
-        value: function composedPath() {
-            // https://dom.spec.whatwg.org/#dom-event-composedpath
+$Event.prototype = {
 
-            // 1. Let composedPath be a new empty list.
-            var composedPath = [];
+    get currentTarget() {
+        return $.getShadowState(this).currentTarget;
+    },
 
-            // 2. Let currentTarget be context object’s currentTarget attribute value.
-            var currentTarget = this.currentTarget;
+    get target() {
+        return $.getShadowState(this).target;
+    },
 
-            // 3. For each tuple in context object’s path:
-            var path = $.getShadowState(this).path;
+    stopImmediatePropagation: function stopImmediatePropagation() {
+        this.stopPropagation();
+        $.getShadowState(this).stopImmediatePropagationFlag = true;
+    },
+    composedPath: function composedPath() {
+        // https://dom.spec.whatwg.org/#dom-event-composedpath
 
-            if (path) {
-                var c = 0;
-                for (var i = 0; i < path.length; i++) {
-                    var item = path[i][0];
-                    if (currentTarget instanceof Window) {
-                        if (!(item instanceof Node) || !$.closedShadowHidden(item, $.shadowIncludingRoot(item))) {
-                            composedPath[c++] = item;
-                        }
-                    } else if (currentTarget instanceof Node) {
-                        if (!$.closedShadowHidden(item, currentTarget)) {
-                            composedPath[c++] = item;
-                        }
-                    } else {
+        // 1. Let composedPath be a new empty list.
+        var composedPath = [];
+
+        // 2. Let currentTarget be context object’s currentTarget attribute value.
+        var currentTarget = this.currentTarget;
+
+        // 3. For each tuple in context object’s path:
+        var path = $.getShadowState(this).path;
+
+        if (path) {
+            var c = 0;
+            for (var i = 0; i < path.length; i++) {
+                var item = path[i][0];
+                if (currentTarget instanceof Window) {
+                    if (!(item instanceof Node) || !$.closedShadowHidden(item, $.shadowIncludingRoot(item))) {
                         composedPath[c++] = item;
                     }
+                } else if (currentTarget instanceof Node) {
+                    if (!$.closedShadowHidden(item, currentTarget)) {
+                        composedPath[c++] = item;
+                    }
+                } else {
+                    composedPath[c++] = item;
                 }
             }
+        }
 
-            // 4. return composedPath.
-            return composedPath;
-        }
-    }, {
-        key: 'currentTarget',
-        get: function get() {
-            return $.getShadowState(this).currentTarget;
-        }
-    }, {
-        key: 'target',
-        get: function get() {
-            return $.getShadowState(this).target;
-        }
-    }, {
-        key: 'composed',
-        get: function get() {
-            // TODO: Compare against the actual prototype instead of just the type strings
-            return $.getShadowState(this).composed || builtInComposedEvents.indexOf(this.type) !== -1;
-        }
-    }]);
+        // 4. return composedPath.
+        return composedPath;
+    },
 
-    return _class;
-}();
+
+    get composed() {
+        // TODO: Compare against the actual prototype instead of just the type strings
+        return $.getShadowState(this).composed || builtInComposedEvents.indexOf(this.type) !== -1;
+    }
+
+};
 
 // FocusEvent:
 // relatedTarget will be the element losing or gaining focus
 // MouseEvent:
 // relatedTarget will be the element being moved into or out of
+var hasRelatedTarget = exports.hasRelatedTarget = {
 
-
-exports.default = _class;
-
-var hasRelatedTarget = exports.hasRelatedTarget = function () {
-    function hasRelatedTarget() {
-        _classCallCheck(this, hasRelatedTarget);
+    get relatedTarget() {
+        return $.getShadowState(this).relatedTarget;
     }
 
-    _createClass(hasRelatedTarget, [{
-        key: 'relatedTarget',
-        get: function get() {
-            return $.getShadowState(this).relatedTarget;
-        }
-    }]);
-
-    return hasRelatedTarget;
-}();
-
-;
+};
 
 var builtInComposedEvents = [
 // FocusEvent
@@ -1723,12 +1541,6 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _slicedToArray = function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"]) _i["return"](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError("Invalid attempt to destructure non-iterable instance"); } }; }();
-
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // https://dom.spec.whatwg.org/#interface-eventtarget
-
 exports.default = function (base) {
 
     var native = {
@@ -1737,67 +1549,56 @@ exports.default = function (base) {
         dispatchEvent: base.prototype.dispatchEvent
     };
 
-    return function () {
-        function _class() {
-            _classCallCheck(this, _class);
+    return {
+        addEventListener: function addEventListener(type, callback, options) {
+            if (typeof callback !== 'function') {
+                return;
+            }
+
+            var listener = { callback: callback };
+            var capture = false;
+
+            if (typeof options === 'boolean') {
+                capture = options;
+            } else if (typeof options !== 'undefined') {
+                capture = options.capture === true;
+                listener.once = options.once === true;
+                // we don't do anything with passive.
+                listener.passive = options.passive === true;
+            }
+
+            var collection = EventListenerCollection.get(this, type, capture) || EventListenerCollection.create(this, type, capture);
+
+            collection.addListener(this, listener);
+            collection.attach(native.addEventListener);
+        },
+        removeEventListener: function removeEventListener(type, callback, options) {
+            if (typeof callback !== 'function') {
+                return;
+            }
+
+            var listener = { callback: callback };
+            var capture = false;
+
+            if (typeof options === 'boolean') {
+                capture = options;
+            } else if (typeof options !== 'undefined') {
+                capture = options.capture === true;
+            }
+
+            var collection = EventListenerCollection.get(this, type, capture);
+
+            if (!collection) {
+                return;
+            }
+
+            collection.removeListener(this, listener);
+
+            if (collection.empty) {
+                collection.detach(native.removeEventListener);
+            }
         }
-
-        _createClass(_class, [{
-            key: 'addEventListener',
-            value: function addEventListener(type, callback, options) {
-                if (typeof callback !== 'function') {
-                    return;
-                }
-
-                var listener = { callback: callback };
-                var capture = false;
-
-                if (typeof options === 'boolean') {
-                    capture = options;
-                } else if ((typeof options === 'undefined' ? 'undefined' : _typeof(options)) === 'object') {
-                    capture = options.capture === true;
-                    listener.once = options.once === true;
-                    // we don't do anything with passive.
-                    listener.passive = options.passive === true;
-                }
-
-                var collection = EventListenerCollection.get(this, type, capture) || EventListenerCollection.create(this, type, capture);
-
-                collection.addListener(this, listener);
-                collection.attach(native.addEventListener);
-            }
-        }, {
-            key: 'removeEventListener',
-            value: function removeEventListener(type, callback, options) {
-                if (typeof callback !== 'function') {
-                    return;
-                }
-
-                var listener = { callback: callback };
-                var capture = false;
-
-                if (typeof options === 'boolean') {
-                    capture = options;
-                } else if ((typeof options === 'undefined' ? 'undefined' : _typeof(options)) === 'object') {
-                    capture = options.capture === true;
-                }
-
-                var collection = EventListenerCollection.get(this, type, capture);
-
-                if (!collection) {
-                    return;
-                }
-
-                collection.removeListener(this, listener);
-
-                if (collection.empty) {
-                    collection.detach(native.removeEventListener);
-                }
-            }
-        }]);
-
-        return _class;
-    }();
+    };
 };
 
 var _utils = require('../utils.js');
@@ -1806,192 +1607,171 @@ var $ = _interopRequireWildcard(_utils);
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+// https://dom.spec.whatwg.org/#interface-eventtarget
 
-var EventListenerCollection = function () {
-    _createClass(EventListenerCollection, null, [{
-        key: 'get',
-        value: function get(target, type, capture) {
-            var targetState = $.getShadowState(target);
-            var nativeTarget = target;
-            var nativeTargetState = targetState;
-            if (targetState && targetState.host) {
-                nativeTarget = targetState.host;
-                nativeTargetState = $.getShadowState(nativeTarget);
-            }
-            if (!nativeTargetState || !nativeTargetState.listeners) {
-                return null;
-            }
-            var collections = nativeTargetState.listeners;
-            for (var i = 0; i < collections.length; i++) {
-                var collection = collections[i];
-                if (collection.target === nativeTarget && collection.type === type && collection.capture === capture) {
-                    return collection;
-                }
-            }
-            return null;
+var EventListenerCollection = function EventListenerCollection(target, type, capture) {
+    var _this = this;
+
+    this.target = target;
+    this.type = type;
+    this.capture = capture;
+
+    this.hostListeners = [];
+    this.shadowListeners = [];
+
+    this.callback = function (event) {
+        var shadowRoot = null;
+        var targetState = $.getShadowState(target);
+        if (targetState) {
+            shadowRoot = targetState.shadowRoot;
         }
-    }, {
-        key: 'create',
-        value: function create(target, type, capture) {
-            var targetState = $.getShadowState(target);
-            var nativeTarget = target;
-            var nativeTargetState = targetState;
-            if (targetState && targetState.host) {
-                nativeTarget = targetState.host;
-                nativeTargetState = $.getShadowState(nativeTarget);
-            }
-            if (!nativeTargetState) {
-                nativeTargetState = $.setShadowState(nativeTarget, { listeners: [] });
-            } else if (!nativeTargetState.listeners) {
-                nativeTargetState.listeners = [];
-            }
-            var collection = new EventListenerCollection(nativeTarget, type, capture);
-            nativeTargetState.listeners.push(collection);
+        switch (event.eventPhase) {
+            case Event.prototype.CAPTURING_PHASE:
+                _this.invokeListeners(event, _this.target, _this.hostListeners);
+                if (shadowRoot) {
+                    _this.invokeListeners(event, shadowRoot, _this.shadowListeners);
+                }
+                break;
+            case Event.prototype.AT_TARGET:
+                var nativeTarget = $.descriptors.Event.target.get.call(event);
+                _this.invokeListeners(event, nativeTarget, _this.getListeners(nativeTarget));
+                break;
+            case Event.prototype.BUBBLING_PHASE:
+                if (shadowRoot) {
+                    _this.invokeListeners(event, shadowRoot, _this.shadowListeners);
+                }
+                _this.invokeListeners(event, _this.target, _this.hostListeners);
+                break;
+        }
+    };
+};
+
+EventListenerCollection.get = function (target, type, capture) {
+    var targetState = $.getShadowState(target);
+    var nativeTarget = target;
+    var nativeTargetState = targetState;
+    if (targetState && targetState.host) {
+        nativeTarget = targetState.host;
+        nativeTargetState = $.getShadowState(nativeTarget);
+    }
+    if (!nativeTargetState || !nativeTargetState.listeners) {
+        return null;
+    }
+    var collections = nativeTargetState.listeners;
+    for (var i = 0; i < collections.length; i++) {
+        var collection = collections[i];
+        if (collection.target === nativeTarget && collection.type === type && collection.capture === capture) {
             return collection;
         }
-    }]);
-
-    function EventListenerCollection(target, type, capture) {
-        var _this = this;
-
-        _classCallCheck(this, EventListenerCollection);
-
-        this.target = target;
-        this.type = type;
-        this.capture = capture;
-
-        this.hostListeners = [];
-        this.shadowListeners = [];
-
-        this.callback = function (event) {
-            var shadowRoot = null;
-            var targetState = $.getShadowState(target);
-            if (targetState) {
-                shadowRoot = targetState.shadowRoot;
-            }
-            switch (event.eventPhase) {
-                case Event.prototype.CAPTURING_PHASE:
-                    _this.invokeListeners(event, _this.target, _this.hostListeners);
-                    if (shadowRoot) {
-                        _this.invokeListeners(event, shadowRoot, _this.shadowListeners);
-                    }
-                    break;
-                case Event.prototype.AT_TARGET:
-                    var nativeTarget = $.descriptors.Event.target.get.call(event);
-                    _this.invokeListeners(event, nativeTarget, _this.getListeners(nativeTarget));
-                    break;
-                case Event.prototype.BUBBLING_PHASE:
-                    if (shadowRoot) {
-                        _this.invokeListeners(event, shadowRoot, _this.shadowListeners);
-                    }
-                    _this.invokeListeners(event, _this.target, _this.hostListeners);
-                    break;
-            }
-        };
     }
+    return null;
+};
 
-    _createClass(EventListenerCollection, [{
-        key: 'getListeners',
-        value: function getListeners(target) {
-            var targetState = $.getShadowState(target);
-            if (targetState && targetState.host) {
-                return this.shadowListeners;
-            }
-            return this.hostListeners;
+EventListenerCollection.create = function (target, type, capture) {
+    var targetState = $.getShadowState(target);
+    var nativeTarget = target;
+    var nativeTargetState = targetState;
+    if (targetState && targetState.host) {
+        nativeTarget = targetState.host;
+        nativeTargetState = $.getShadowState(nativeTarget);
+    }
+    if (!nativeTargetState) {
+        nativeTargetState = $.setShadowState(nativeTarget, { listeners: [] });
+    } else if (!nativeTargetState.listeners) {
+        nativeTargetState.listeners = [];
+    }
+    var collection = new EventListenerCollection(nativeTarget, type, capture);
+    nativeTargetState.listeners.push(collection);
+    return collection;
+};
+
+EventListenerCollection.prototype = {
+
+    get empty() {
+        return this.hostListeners.length === 0 && this.shadowListeners.length === 0;
+    },
+
+    getListeners: function getListeners(target) {
+        var targetState = $.getShadowState(target);
+        if (targetState && targetState.host) {
+            return this.shadowListeners;
         }
-    }, {
-        key: 'addListener',
-        value: function addListener(target, listener) {
-            var listeners = this.getListeners(target);
+        return this.hostListeners;
+    },
+    addListener: function addListener(target, listener) {
+        var listeners = this.getListeners(target);
+
+        for (var i = 0; i < listeners.length; i++) {
+            if (listener.callback === listeners[i].callback) {
+                return;
+            }
+        }
+
+        listeners.push(listener);
+    },
+    removeListener: function removeListener(target, listener) {
+        var listeners = this.getListeners(target);
+
+        for (var i = 0; i < listeners.length; i++) {
+            var other = listeners[i];
+            if (listener.callback === other.callback) {
+                listeners.splice(i, 1);
+                break;
+            }
+        }
+    },
+    invokeListeners: function invokeListeners(event, currentTarget, listeners) {
+        var eventState = $.getShadowState(event) || $.setShadowState(event, {});
+        var path = eventState.calculatedPath;
+        if (!path) {
+            path = eventState.calculatedPath = calculatePath(event);
+        }
+        // if there is no target, the event is not composed and should be stopped
+        var target = calculateTarget(currentTarget, path);
+        if (!target) {
+            event.stopImmediatePropagation();
+        } else {
+            var relatedTarget = calculateRelatedTarget(currentTarget, path);
+            var remove = void 0;
+
+            eventState.path = path;
+            eventState.currentTarget = currentTarget;
+            eventState.target = target;
+            eventState.relatedTarget = relatedTarget;
 
             for (var i = 0; i < listeners.length; i++) {
-                if (listener.callback === listeners[i].callback) {
-                    return;
+                var listener = listeners[i];
+                var result = listener.callback.call(currentTarget, event);
+                if (listener.once) {
+                    if (!remove) {
+                        remove = [listener];
+                    } else {
+                        remove.push[listener];
+                    }
                 }
-            }
-
-            listeners.push(listener);
-        }
-    }, {
-        key: 'removeListener',
-        value: function removeListener(target, listener) {
-            var listeners = this.getListeners(target);
-
-            for (var i = 0; i < listeners.length; i++) {
-                var other = listeners[i];
-                if (listener.callback === other.callback) {
-                    listeners.splice(i, 1);
+                if (eventState.stopImmediatePropagationFlag) {
                     break;
                 }
             }
-        }
-    }, {
-        key: 'invokeListeners',
-        value: function invokeListeners(event, currentTarget, listeners) {
-            var eventState = $.getShadowState(event) || $.setShadowState(event, {});
-            var path = eventState.calculatedPath;
-            if (!path) {
-                path = eventState.calculatedPath = calculatePath(event);
-            }
-            // if there is no target, the event is not composed and should be stopped
-            var target = calculateTarget(currentTarget, path);
-            if (!target) {
-                event.stopImmediatePropagation();
-            } else {
-                var relatedTarget = calculateRelatedTarget(currentTarget, path);
-                var remove = void 0;
 
-                eventState.path = path;
-                eventState.currentTarget = currentTarget;
-                eventState.target = target;
-                eventState.relatedTarget = relatedTarget;
+            eventState.path = null;
+            eventState.currentTarget = null;
 
-                for (var i = 0; i < listeners.length; i++) {
-                    var listener = listeners[i];
-                    var result = listener.callback.call(currentTarget, event);
-                    if (listener.once) {
-                        if (!remove) {
-                            remove = [listener];
-                        } else {
-                            remove.push[listener];
-                        }
-                    }
-                    if (eventState.stopImmediatePropagationFlag) {
-                        break;
-                    }
-                }
-
-                eventState.path = null;
-                eventState.currentTarget = null;
-
-                if (remove) {
-                    for (var _i = 0; _i < remove.length; _i++) {
-                        var index = listeners.indexOf(remove[_i]);
-                        listeners.splice(index, 1);
-                    }
+            if (remove) {
+                for (var _i = 0; _i < remove.length; _i++) {
+                    var index = listeners.indexOf(remove[_i]);
+                    listeners.splice(index, 1);
                 }
             }
         }
-    }, {
-        key: 'attach',
-        value: function attach(descriptor) {
-            descriptor.call(this.target, this.type, this.callback, this.capture);
-        }
-    }, {
-        key: 'detach',
-        value: function detach(descriptor) {
-            descriptor.call(this.target, this.type, this.callback, this.capture);
-        }
-    }, {
-        key: 'empty',
-        get: function get() {
-            return this.hostListeners.length === 0 && this.shadowListeners.length === 0;
-        }
-    }]);
-
-    return EventListenerCollection;
-}();
+    },
+    attach: function attach(descriptor) {
+        descriptor.call(this.target, this.type, this.callback, this.capture);
+    },
+    detach: function detach(descriptor) {
+        descriptor.call(this.target, this.type, this.callback, this.capture);
+    }
+};
 
 function calculatePath(event) {
     // https://dom.spec.whatwg.org/#concept-event-dispatch
@@ -2103,9 +1883,7 @@ function getTheParent(node, event, path) {
             return node.defaultView;
         } else if ($.isShadowRoot(node)) {
             if (!event.composed) {
-                var _path$ = _slicedToArray(path[0], 1),
-                    item = _path$[0];
-
+                var item = path[0][0];
                 if ($.root(item) === node) {
                     return null;
                 }
@@ -2120,10 +1898,8 @@ function getTheParent(node, event, path) {
 
 function calculateRelatedTarget(currentTarget, path) {
     for (var i = 0; i < path.length; i++) {
-        var _path$i = _slicedToArray(path[i], 3),
-            item = _path$i[0],
-            relatedTarget = _path$i[2];
-
+        var item = path[i][0];
+        var relatedTarget = path[i][2];
         if (item === currentTarget) {
             return relatedTarget;
         }
@@ -2133,14 +1909,10 @@ function calculateRelatedTarget(currentTarget, path) {
 
 function calculateTarget(currentTarget, path) {
     for (var i = 0; i < path.length; i++) {
-        var _path$i2 = _slicedToArray(path[i], 1),
-            item = _path$i2[0];
-
+        var item = path[i][0];
         if (item === currentTarget) {
             for (var j = i; j >= 0; j--) {
-                var _path$j = _slicedToArray(path[j], 2),
-                    target = _path$j[1];
-
+                var target = path[j][1];
                 if (target != null) {
                     return target;
                 }
@@ -2158,75 +1930,55 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // https://html.spec.whatwg.org/multipage/scripting.html#the-slot-element
-
 var _utils = require('../utils.js');
 
 var $ = _interopRequireWildcard(_utils);
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+exports.default = {
 
-var _class = function () {
-    function _class() {
-        _classCallCheck(this, _class);
+    // TODO: tests
+    get name() {
+        if (this.localName !== 'slot') {
+            return;
+        }
+
+        return this.getAttribute('name');
+    },
+
+    // TODO: tests
+    set name(value) {
+        if (this.localName !== 'slot') {
+            return;
+        }
+
+        $.setAttributeValue(this, 'name', value);
+    },
+
+    // TODO: tests
+    assignedNodes: function assignedNodes(options) {
+        if (this.localName !== 'slot') {
+            return;
+        }
+
+        // https://html.spec.whatwg.org/multipage/scripting.html#dom-slot-assignednodes
+        // The assignedNodes(options) method, when invoked, must run these steps:
+
+        // 1. If the value of options's flatten member is false, then return this element's assigned nodes.
+        if (!options || options.flatten !== true) {
+            var assignedNodes = null;
+            var shadowState = $.getShadowState(this);
+            if (shadowState) {
+                assignedNodes = shadowState.assignedNodes;
+            }
+            return assignedNodes || [];
+        }
+
+        // 2. Return the result of finding flattened slotables with this element.
+        return $.findFlattenedSlotables(this);
     }
-
-    _createClass(_class, [{
-        key: 'assignedNodes',
-
-
-        // TODO: tests
-        value: function assignedNodes(options) {
-            if (this.localName !== 'slot') {
-                return;
-            }
-
-            // https://html.spec.whatwg.org/multipage/scripting.html#dom-slot-assignednodes
-            // The assignedNodes(options) method, when invoked, must run these steps:
-
-            // 1. If the value of options's flatten member is false, then return this element's assigned nodes.
-            if (!options || options.flatten !== true) {
-                var assignedNodes = null;
-                var shadowState = $.getShadowState(this);
-                if (shadowState) {
-                    assignedNodes = shadowState.assignedNodes;
-                }
-                return assignedNodes || [];
-            }
-
-            // 2. Return the result of finding flattened slotables with this element.
-            return $.findFlattenedSlotables(this);
-        }
-    }, {
-        key: 'name',
-
-
-        // TODO: tests
-        get: function get() {
-            if (this.localName !== 'slot') {
-                return;
-            }
-
-            return this.getAttribute('name');
-        }
-
-        // TODO: tests
-        ,
-        set: function set(value) {
-            if (this.localName !== 'slot') {
-                return;
-            }
-
-            $.setAttributeValue(this, 'name', value);
-        }
-    }]);
-
-    return _class;
-}();
-
-exports.default = _class;
+}; // https://html.spec.whatwg.org/multipage/scripting.html#the-slot-element
 
 },{"../utils.js":28}],11:[function(require,module,exports){
 'use strict';
@@ -2235,75 +1987,53 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // https://www.w3.org/TR/html5/single-page.html#the-table-element
-
 var _utils = require('../utils.js');
 
 var $ = _interopRequireWildcard(_utils);
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+exports.default = {
 
-var _class = function () {
-    function _class() {
-        _classCallCheck(this, _class);
+    // TODO: tests
+    deleteCaption: function deleteCaption() {
+        var caption = this.caption;
+        if (caption) {
+            $.remove(caption, this);
+        }
+    },
+
+
+    // TODO: tests
+    deleteTHead: function deleteTHead() {
+        var tHead = this.tHead;
+        if (tHead) {
+            $.remove(tHead, this);
+        }
+    },
+
+
+    // TODO: tests
+    deleteTFoot: function deleteTFoot() {
+        var tFoot = this.tFoot;
+        if (tFoot) {
+            $.remove(tFoot, this);
+        }
+    },
+
+
+    // TODO: tests
+    deleteRow: function deleteRow(index) {
+        // https://www.w3.org/TR/html5/single-page.html#dom-table-deleterow
+        if (index === -1) {
+            index = this.rows.length - 1;
+        }
+        if (index < 0 || index >= this.rows.length) {
+            throw $.makeError('IndexSizeError');
+        }
+        this.rows[index].remove();
     }
-
-    _createClass(_class, [{
-        key: 'deleteCaption',
-
-
-        // TODO: tests
-        value: function deleteCaption() {
-            var caption = this.caption;
-            if (caption) {
-                $.remove(caption, this);
-            }
-        }
-
-        // TODO: tests
-
-    }, {
-        key: 'deleteTHead',
-        value: function deleteTHead() {
-            var tHead = this.tHead;
-            if (tHead) {
-                $.remove(tHead, this);
-            }
-        }
-
-        // TODO: tests
-
-    }, {
-        key: 'deleteTFoot',
-        value: function deleteTFoot() {
-            var tFoot = this.tFoot;
-            if (tFoot) {
-                $.remove(tFoot, this);
-            }
-        }
-
-        // TODO: tests
-
-    }, {
-        key: 'deleteRow',
-        value: function deleteRow(index) {
-            // https://www.w3.org/TR/html5/single-page.html#dom-table-deleterow
-            if (index === -1) {
-                index = this.rows.length - 1;
-            }
-            if (index < 0 || index >= this.rows.length) {
-                throw $.makeError('IndexSizeError');
-            }
-            this.rows[index].remove();
-        }
-    }]);
-
-    return _class;
-}();
-
-exports.default = _class;
+}; // https://www.w3.org/TR/html5/single-page.html#the-table-element
 
 },{"../utils.js":28}],12:[function(require,module,exports){
 'use strict';
@@ -2312,42 +2042,26 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // https://www.w3.org/TR/html5/single-page.html#the-tr-element
-
 var _utils = require('../utils.js');
 
 var $ = _interopRequireWildcard(_utils);
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+exports.default = {
 
-var _class = function () {
-    function _class() {
-        _classCallCheck(this, _class);
-    }
-
-    _createClass(_class, [{
-        key: 'deleteCell',
-
-
-        // TODO: tests
-        value: function deleteCell(index) {
-            // https://www.w3.org/TR/html5/single-page.html#dom-tr-deletecell
-            if (index === -1) {
-                index = this.cells.length - 1;
-            }
-            if (index < 0 || index >= this.cells.length) {
-                throw $.makeError('IndexSizeError');
-            }
-            this.cells[index].remove();
+    // TODO: tests
+    deleteCell: function deleteCell(index) {
+        // https://www.w3.org/TR/html5/single-page.html#dom-tr-deletecell
+        if (index === -1) {
+            index = this.cells.length - 1;
         }
-    }]);
-
-    return _class;
-}();
-
-exports.default = _class;
+        if (index < 0 || index >= this.cells.length) {
+            throw $.makeError('IndexSizeError');
+        }
+        this.cells[index].remove();
+    }
+}; // https://www.w3.org/TR/html5/single-page.html#the-tr-element
 
 },{"../utils.js":28}],13:[function(require,module,exports){
 'use strict';
@@ -2356,39 +2070,23 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // https://www.w3.org/TR/html5/single-page.html#the-tbody-element
-
 var _utils = require('../utils.js');
 
 var $ = _interopRequireWildcard(_utils);
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+exports.default = {
 
-var _class = function () {
-    function _class() {
-        _classCallCheck(this, _class);
-    }
-
-    _createClass(_class, [{
-        key: 'deleteRow',
-
-
-        // TODO: tests
-        value: function deleteRow(index) {
-            // https://www.w3.org/TR/html5/single-page.html#dom-tbody-deleterow
-            if (index < 0 || index >= this.rows.length) {
-                throw $.makeError('IndexSizeError');
-            }
-            this.rows[index].remove();
+    // TODO: tests
+    deleteRow: function deleteRow(index) {
+        // https://www.w3.org/TR/html5/single-page.html#dom-tbody-deleterow
+        if (index < 0 || index >= this.rows.length) {
+            throw $.makeError('IndexSizeError');
         }
-    }]);
-
-    return _class;
-}();
-
-exports.default = _class;
+        this.rows[index].remove();
+    }
+}; // https://www.w3.org/TR/html5/single-page.html#the-tbody-element
 
 },{"../utils.js":28}],14:[function(require,module,exports){
 'use strict';
@@ -2396,8 +2094,7 @@ exports.default = _class;
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // https://dom.spec.whatwg.org/#interface-mutationobserver
+exports.default = $MutationObserver;
 
 var _utils = require('../utils.js');
 
@@ -2405,39 +2102,24 @@ var $ = _interopRequireWildcard(_utils);
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+function $MutationObserver(callback) {
+    var observer = $.createMutationObserver(callback);
+    $.setShadowState(this, { observer: observer });
+    observer.interface = this;
+} // https://dom.spec.whatwg.org/#interface-mutationobserver
 
-var _class = function () {
-    function _class(callback) {
-        _classCallCheck(this, _class);
-
-        var observer = $.createMutationObserver(callback);
-        $.setShadowState(this, { observer: observer });
-        observer.interface = this;
+$MutationObserver.prototype = {
+    observe: function observe(target, options) {
+        $.getShadowState(this).observer.observe(target, options);
+    },
+    disconnect: function disconnect() {
+        $.getShadowState(this).observer.disconnect();
+    },
+    takeRecords: function takeRecords() {
+        var records = $.getShadowState(this).observer.queue;
+        return records.splice(0, records.length);
     }
-
-    _createClass(_class, [{
-        key: 'observe',
-        value: function observe(target, options) {
-            $.getShadowState(this).observer.observe(target, options);
-        }
-    }, {
-        key: 'disconnect',
-        value: function disconnect() {
-            $.getShadowState(this).observer.disconnect();
-        }
-    }, {
-        key: 'takeRecords',
-        value: function takeRecords() {
-            var records = $.getShadowState(this).observer.queue;
-            return records.splice(0, records.length);
-        }
-    }]);
-
-    return _class;
-}();
-
-exports.default = _class;
+};
 
 },{"../utils.js":28}],15:[function(require,module,exports){
 'use strict';
@@ -2446,8 +2128,6 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // https://dom.spec.whatwg.org/#interface-namednodemap
-
 var _utils = require('../utils.js');
 
 var $ = _interopRequireWildcard(_utils);
@@ -2460,79 +2140,61 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+// https://dom.spec.whatwg.org/#interface-namednodemap
 
-var _class = function () {
-    function _class() {
-        _classCallCheck(this, _class);
+exports.default = {
+
+    // TODO: tests
+    setNamedItem: function setNamedItem(attr) {
+        var _this = this;
+
+        return _customElements2.default.executeCEReactions(function () {
+            var shadowState = $.getShadowState(_this);
+            return $.setAttribute(attr, shadowState.element);
+        });
+    },
+
+
+    // TODO: tests
+    setNamedItemNS: function setNamedItemNS(attr) {
+        var _this2 = this;
+
+        return _customElements2.default.executeCEReactions(function () {
+            var shadowState = $.getShadowState(_this2);
+            return $.setAttribute(attr, shadowState.element);
+        });
+    },
+
+
+    // TODO: tests
+    removeNamedItem: function removeNamedItem(qualifiedName) {
+        var _this3 = this;
+
+        return _customElements2.default.executeCEReactions(function () {
+            var shadowState = $.getShadowState(_this3);
+            var attr = $.removeAttributeByName(qualifiedName, shadowState.element);
+            if (!attr) {
+                throw $.makeError('NotFoundError');
+            }
+            return attr;
+        });
+    },
+
+
+    // TODO: tests
+    removeNamedItemNS: function removeNamedItemNS(namespace, localName) {
+        var _this4 = this;
+
+        return _customElements2.default.executeCEReactions(function () {
+            var shadowState = $.getShadowState(_this4);
+            var attr = $.removeAttributeByNamespace(namespace, localName, shadowState.element);
+            if (!attr) {
+                throw $.makeError('NotFoundError');
+            }
+            return attr;
+        });
     }
-
-    _createClass(_class, [{
-        key: 'setNamedItem',
-
-
-        // TODO: tests
-        value: function setNamedItem(attr) {
-            var _this = this;
-
-            return _customElements2.default.executeCEReactions(function () {
-                var shadowState = $.getShadowState(_this);
-                return $.setAttribute(attr, shadowState.element);
-            });
-        }
-
-        // TODO: tests
-
-    }, {
-        key: 'setNamedItemNS',
-        value: function setNamedItemNS(attr) {
-            var _this2 = this;
-
-            return _customElements2.default.executeCEReactions(function () {
-                var shadowState = $.getShadowState(_this2);
-                return $.setAttribute(attr, shadowState.element);
-            });
-        }
-
-        // TODO: tests
-
-    }, {
-        key: 'removeNamedItem',
-        value: function removeNamedItem(qualifiedName) {
-            var _this3 = this;
-
-            return _customElements2.default.executeCEReactions(function () {
-                var shadowState = $.getShadowState(_this3);
-                var attr = $.removeAttributeByName(qualifiedName, shadowState.element);
-                if (!attr) {
-                    throw $.makeError('NotFoundError');
-                }
-                return attr;
-            });
-        }
-
-        // TODO: tests
-
-    }, {
-        key: 'removeNamedItemNS',
-        value: function removeNamedItemNS(namespace, localName) {
-            var _this4 = this;
-
-            return _customElements2.default.executeCEReactions(function () {
-                var shadowState = $.getShadowState(_this4);
-                var attr = $.removeAttributeByNamespace(namespace, localName, shadowState.element);
-                if (!attr) {
-                    throw $.makeError('NotFoundError');
-                }
-                return attr;
-            });
-        }
-    }]);
-
-    return _class;
-}();
-
-exports.default = _class;
+};
 
 },{"../custom-elements.js":1,"../utils.js":28}],16:[function(require,module,exports){
 'use strict';
@@ -2541,8 +2203,6 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // https://dom.spec.whatwg.org/#interface-node
-
 var _utils = require('../utils.js');
 
 var $ = _interopRequireWildcard(_utils);
@@ -2555,513 +2215,459 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+// https://dom.spec.whatwg.org/#interface-node
 
-var _class = function () {
-    function _class() {
-        _classCallCheck(this, _class);
-    }
+exports.default = {
 
-    _createClass(_class, [{
-        key: 'getRootNode',
-        value: function getRootNode(options) {
-            var composed = options && options.composed === true;
-            return composed ? $.shadowIncludingRoot(this) : $.root(this);
+    get isConnected() {
+        return $.shadowIncludingRoot(this).nodeType === Node.DOCUMENT_NODE;
+    },
+
+    getRootNode: function getRootNode(options) {
+        var composed = options && options.composed === true;
+        return composed ? $.shadowIncludingRoot(this) : $.root(this);
+    },
+
+
+    get parentNode() {
+        var parentNode = void 0;
+        var nodeState = $.getShadowState(this);
+        if (nodeState) {
+            parentNode = nodeState.parentNode;
         }
-    }, {
-        key: 'hasChildNodes',
 
+        return parentNode || $.descriptors.Node.parentNode.get.call(this);
+    },
 
-        // TODO: tests
-        value: function hasChildNodes() {
-            var nodeState = $.getShadowState(this);
-            if (nodeState) {
-                var childNodes = nodeState.childNodes;
-                if (childNodes) {
-                    return childNodes.length > 0;
-                }
+    get parentElement() {
+        var parentNode = this.parentNode;
+        if (parentNode && parentNode.nodeType === Node.ELEMENT_NODE) {
+            return parentNode;
+        }
+
+        return null;
+    },
+
+    // TODO: tests
+    hasChildNodes: function hasChildNodes() {
+        var nodeState = $.getShadowState(this);
+        if (nodeState) {
+            var childNodes = nodeState.childNodes;
+            if (childNodes) {
+                return childNodes.length > 0;
             }
-
-            return $.descriptors.Node.hasChildNodes.value.call(this);
         }
 
-        // TODO: tests
-
-    }, {
-        key: 'normalize',
+        return $.descriptors.Node.hasChildNodes.value.call(this);
+    },
 
 
-        // TODO: tests
-        value: function normalize() {
-            var _this = this;
-
-            return _customElements2.default.executeCEReactions(function () {
-                // https://dom.spec.whatwg.org/#dom-node-normalize
-                // The normalize() method, when invoked, must run these steps 
-                // for each descendant exclusive Text node node of context object:
-                var childNodes = _this.childNodes;
-                var dataDescriptor = $.descriptors.CharacterData.data;
-                for (var i = 0; i < childNodes.length; i++) {
-                    var childNode = childNodes[i];
-                    if (childNode.nodeType === Node.TEXT_NODE) {
-                        var length = dataDescriptor.get.call(childNode).length;
-                        if (length === 0) {
-                            $.remove(childNode, _this);
-                            continue;
-                        }
-                        var data = '';
-                        var contiguousTextNodes = new Array(childNodes.length);
-                        var contiguousCount = 0;
-                        var next = childNode;
-                        while (next = next.nextSibling && next.nodeType === Node.TEXT_NODE) {
-                            data += dataDescriptor.get.call(next);
-                            contiguousTextNodes[contiguousCount++] = next;
-                        }
-                        $.replaceData(childNode, length, 0, data);
-                        // TODO: (Range)
-                        for (var j = 0; j < contiguousCount; j++) {
-                            $.remove(contiguousTextNodes[j], _this);
-                        }
-                    } else {
-                        childNode.normalize();
-                    }
+    // TODO: tests
+    get childNodes() {
+        var nodeState = $.getShadowState(this);
+        if (nodeState) {
+            var childNodes = nodeState.childNodes;
+            if (childNodes) {
+                var childNodesLength = childNodes.length;
+                var result = new Array(childNodesLength);
+                for (var i = 0; i < childNodesLength; i++) {
+                    result[i] = childNodes[i];
                 }
-            });
+                return result;
+            }
         }
 
-        // TODO: tests
+        return $.descriptors.Node.childNodes.get.call(this);
+    },
 
-    }, {
-        key: 'cloneNode',
-        value: function cloneNode(deep) {
-            var _this2 = this;
-
-            return _customElements2.default.executeCEReactions(function () {
-                // https://dom.spec.whatwg.org/#dom-node-clonenode
-                // The cloneNode(deep) method, when invoked, must run these steps:
-
-                // 1. If context object is a shadow root, then throw a NotSupportedError.
-                if ($.isShadowRoot(_this2)) {
-                    throw $.makeError('NotSupportedError');
+    // TODO: tests
+    get firstChild() {
+        var nodeState = $.getShadowState(this);
+        if (nodeState) {
+            var childNodes = nodeState.childNodes;
+            if (childNodes) {
+                if (childNodes.length) {
+                    return childNodes[0];
                 }
-
-                // 2. Return a clone of the context object, with the clone children flag set if deep is true.
-                return $.clone(_this2, undefined, deep);
-            });
+                return null;
+            }
         }
 
-        // TODO: tests
+        return $.descriptors.Node.firstChild.get.call(this);
+    },
 
-    }, {
-        key: 'isEqualNode',
-        value: function isEqualNode(other) {
-            // https://dom.spec.whatwg.org/#dom-node-isequalnode
-            // https://dom.spec.whatwg.org/#concept-node-equals
-            if (!other) {
-                return false;
+    // TODO: tests
+    get lastChild() {
+        var nodeState = $.getShadowState(this);
+        if (nodeState) {
+            var childNodes = nodeState.childNodes;
+            if (childNodes) {
+                if (childNodes.length) {
+                    return childNodes[childNodes.length - 1];
+                }
+                return null;
             }
+        }
 
-            if (this.nodeType !== other.nodeType) {
-                return false;
+        return $.descriptors.Node.lastChild.get.call(this);
+    },
+
+    // TODO: tests
+    get previousSibling() {
+        var nodeState = $.getShadowState(this);
+        if (nodeState) {
+            var parentNode = nodeState.parentNode;
+            if (parentNode) {
+                var childNodes = $.getShadowState(parentNode).childNodes;
+                var siblingIndex = childNodes.indexOf(this) - 1;
+                return siblingIndex < 0 ? null : childNodes[siblingIndex];
             }
+        }
 
-            var thisAttributes = void 0;
-            var otherAttributes = void 0;
+        return $.descriptors.Node.previousSibling.get.call(this);
+    },
 
-            switch (this.nodeType) {
-                case Node.DOCUMENT_TYPE_NODE:
-                    if (this.name !== other.name || this.publicId !== other.publicId || this.systemId !== other.systemId) {
-                        return false;
-                    }
-                    break;
-                case Node.ELEMENT_NODE:
-                    if (this.namespaceURI !== other.namespaceURI || this.prefix !== other.prefix || this.localName !== other.localName) {
-                        return false;
-                    }
-                    thisAttributes = $.descriptors.Element.attributes.get.call(this);
-                    otherAttributes = $.descriptors.Element.attributes.get.call(other);
-                    if (thisAttributes.length != otherAttributes.length) {
-                        return false;
-                    }
-                    break;
+    // TODO: tests
+    get nextSibling() {
+        var nodeState = $.getShadowState(this);
+        if (nodeState) {
+            var parentNode = nodeState.parentNode;
+            if (parentNode) {
+                var childNodes = $.getShadowState(parentNode).childNodes;
+                var siblingIndex = childNodes.indexOf(this) + 1;
+                return siblingIndex === childNodes.length ? null : childNodes[siblingIndex];
+            }
+        }
+
+        return $.descriptors.Node.nextSibling.get.call(this);
+    },
+
+    // TODO: consider creating a raw property descriptor
+    // that uses the native get instead of a pass-through function
+    get nodeValue() {
+        return $.descriptors.Node.nodeValue.get.call(this);
+    },
+
+    // TODO: MutationObserver tests
+    set nodeValue(value) {
+        var _this = this;
+
+        return _customElements2.default.executeCEReactions(function () {
+            switch (_this.nodeType) {
                 case Node.ATTRIBUTE_NODE:
-                    if (this.namespaceURI !== other.namespaceURI || this.localName !== other.localName || this.value !== other.value) {
-                        return false;
-                    }
-                    break;
-                case Node.PROCESSING_INSTRUCTION_NODE:
-                    if (this.target !== other.target || this.data !== other.data) {
-                        return false;
-                    }
+                    $.setExistingAttributeValue(_this, value);
                     break;
                 case Node.TEXT_NODE:
+                case Node.PROCESSING_INSTRUCTION_NODE:
                 case Node.COMMENT_NODE:
-                    if (this.data !== other.data) {
-                        return false;
-                    }
+                    var length = $.descriptors.CharacterData.data.get.call(_this).length;
+                    $.replaceData(_this, 0, length, value);
                     break;
             }
+        });
+    },
 
-            if (this.nodeType == Node.ELEMENT_NODE) {
-                for (var i = 0; i < thisAttributes.length; i++) {
-                    var attr1 = thisAttributes[i];
-                    var attr2 = otherAttributes[attr1.name];
-                    if (attr1.value !== attr2.value) {
-                        return false;
-                    }
-                }
-            }
-
-            var childNodes1 = this.childNodes;
-            var childNodes2 = other.childNodes;
-            if (childNodes1.length !== other.childNodes.length) {
-                return false;
-            }
-
-            for (var _i = 0; _i < childNodes1.length; _i++) {
-                if (!childNodes1[_i].isEqualNode(childNodes2[_i])) {
-                    return false;
-                }
-            }
-
-            return true;
+    get textContent() {
+        switch (this.nodeType) {
+            case Node.DOCUMENT_FRAGMENT_NODE:
+            case Node.ELEMENT_NODE:
+                return elementTextContent(this);
+            case Node.ATTRIBUTE_NODE:
+                return $.descriptors.Attr.value.get.call(this);
+            case Node.TEXT_NODE:
+            case Node.PROCESSING_INSTRUCTION_NODE:
+            case Node.COMMENT_NODE:
+                return $.descriptors.CharacterData.data.get.call(this);
+            default:
+                return null;
         }
+    },
 
-        // TODO: tests
+    // TODO: MutationObserver tests
+    set textContent(value) {
+        var _this2 = this;
 
-    }, {
-        key: 'compareDocumentPosition',
-        value: function compareDocumentPosition(other) {
-            // https://dom.spec.whatwg.org/#dom-node-comparedocumentposition
-
-            if (this === other) {
-                return 0;
-            }
-
-            var node1 = other;
-            var node2 = this;
-            var attr1 = null;
-            var attr2 = null;
-
-            if (node1.nodeType == Document.prototype.ATTRIBUTE_NODE) {
-                attr1 = node1;
-                node1 = attr1.ownerElement;
-            }
-
-            if (node2.nodeType == Document.prototype.ATTRIBUTE_NODE) {
-                attr2 = node2;
-                node2 = attr2.ownerElement;
-
-                if (attr1 && node1 && node2 === node1) {
-                    var attrs = node2.atttributes;
-                    for (var i = 0; i < attrs.length; i++) {
-                        var attr = attrs[i];
-                        if (attr.isEqualNode(attr1)) {
-                            return Document.prototype.DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC + Document.prototype.DOCUMENT_POSITION_PRECEDING;
-                        } else if (attr.isEqualNode(attr2)) {
-                            return Document.prototype.DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC + Document.prototype.DOCUMENT_POSITION_FOLLOWING;
-                        }
+        return _customElements2.default.executeCEReactions(function () {
+            switch (_this2.nodeType) {
+                case Node.DOCUMENT_FRAGMENT_NODE:
+                case Node.ELEMENT_NODE:
+                    var node = null;
+                    if (value !== '') {
+                        node = _this2.ownerDocument.createTextNode(value);
                     }
+                    $.replaceAll(node, _this2);
+                    break;
+                case Node.ATTRIBUTE_NODE:
+                    $.setExistingAttributeValue(_this2, value);
+                    break;
+                case Node.TEXT_NODE:
+                case Node.PROCESSING_INSTRUCTION_NODE:
+                case Node.COMMENT_NODE:
+                    $.replaceData(_this2, 0, _this2.data.length, value);
+                    break;
+            }
+        });
+    },
+
+    // TODO: tests
+    normalize: function normalize() {
+        var _this3 = this;
+
+        return _customElements2.default.executeCEReactions(function () {
+            // https://dom.spec.whatwg.org/#dom-node-normalize
+            // The normalize() method, when invoked, must run these steps 
+            // for each descendant exclusive Text node node of context object:
+            var childNodes = _this3.childNodes;
+            var dataDescriptor = $.descriptors.CharacterData.data;
+            for (var i = 0; i < childNodes.length; i++) {
+                var childNode = childNodes[i];
+                if (childNode.nodeType === Node.TEXT_NODE) {
+                    var length = dataDescriptor.get.call(childNode).length;
+                    if (length === 0) {
+                        $.remove(childNode, _this3);
+                        continue;
+                    }
+                    var data = '';
+                    var contiguousTextNodes = new Array(childNodes.length);
+                    var contiguousCount = 0;
+                    var next = childNode;
+                    while (next = next.nextSibling && next.nodeType === Node.TEXT_NODE) {
+                        data += dataDescriptor.get.call(next);
+                        contiguousTextNodes[contiguousCount++] = next;
+                    }
+                    $.replaceData(childNode, length, 0, data);
+                    // TODO: (Range)
+                    for (var j = 0; j < contiguousCount; j++) {
+                        $.remove(contiguousTextNodes[j], _this3);
+                    }
+                } else {
+                    childNode.normalize();
                 }
             }
+        });
+    },
 
-            if (!node1 || !node2 || $.root(node1) !== $.root(node2)) {
-                return Document.prototype.DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC + Document.prototype.DOCUMENT_POSITION_FOLLOWING + Document.prototype.DOCUMENT_POSITION_DISCONNECTED;
+
+    // TODO: tests
+    cloneNode: function cloneNode(deep) {
+        var _this4 = this;
+
+        return _customElements2.default.executeCEReactions(function () {
+            // https://dom.spec.whatwg.org/#dom-node-clonenode
+            // The cloneNode(deep) method, when invoked, must run these steps:
+
+            // 1. If context object is a shadow root, then throw a NotSupportedError.
+            if ($.isShadowRoot(_this4)) {
+                throw $.makeError('NotSupportedError');
             }
 
-            if (ancestorOf(node2, node1) || node1 === node2 && attr2) {
-                return Document.prototype.DOCUMENT_POSITION_CONTAINS + Document.prototype.DOCUMENT_POSITION_PRECEDING;
-            }
+            // 2. Return a clone of the context object, with the clone children flag set if deep is true.
+            return $.clone(_this4, undefined, deep);
+        });
+    },
 
-            if (ancestorOf(node1, node2) || node1 === node2 && attr1) {
-                return Document.prototype.DOCUMENT_POSITION_CONTAINS + Document.prototype.DOCUMENT_POSITION_FOLLOWING;
-            }
 
-            if (preceding(node1, node2)) {
-                return Document.prototype.DOCUMENT_POSITION_PRECEDING;
-            }
-
-            return Document.prototype.DOCUMENT_POSITION_FOLLOWING;
-        }
-
-        // TODO: tests
-
-    }, {
-        key: 'contains',
-        value: function contains(node) {
-            // https://dom.spec.whatwg.org/#dom-node-contains
-
-            var parent = node.parentNode;
-
-            if (!parent) {
-                return false;
-            }
-
-            do {
-                if (parent === this) {
-                    return true;
-                }
-            } while (parent = parent.parentNode);
-
+    // TODO: tests
+    isEqualNode: function isEqualNode(other) {
+        // https://dom.spec.whatwg.org/#dom-node-isequalnode
+        // https://dom.spec.whatwg.org/#concept-node-equals
+        if (!other) {
             return false;
         }
 
-        // TODO: tests
-
-    }, {
-        key: 'insertBefore',
-        value: function insertBefore(node, child) {
-            var _this3 = this;
-
-            return _customElements2.default.executeCEReactions(function () {
-                // https://dom.spec.whatwg.org/#dom-node-insertbefore
-                // The insertBefore(node, child) method, when invoked, must return the result 
-                // of pre-inserting node into context object before child.
-                return $.preInsert(node, _this3, child);
-            });
+        if (this.nodeType !== other.nodeType) {
+            return false;
         }
 
-        // TODO: tests
+        var thisAttributes = void 0;
+        var otherAttributes = void 0;
 
-    }, {
-        key: 'appendChild',
-        value: function appendChild(node) {
-            var _this4 = this;
-
-            return _customElements2.default.executeCEReactions(function () {
-                // https://dom.spec.whatwg.org/#dom-node-appendchild
-                // The appendChild(node) method, when invoked, must return the result of 
-                // appending node to context object.
-                return $.append(node, _this4);
-            });
+        switch (this.nodeType) {
+            case Node.DOCUMENT_TYPE_NODE:
+                if (this.name !== other.name || this.publicId !== other.publicId || this.systemId !== other.systemId) {
+                    return false;
+                }
+                break;
+            case Node.ELEMENT_NODE:
+                if (this.namespaceURI !== other.namespaceURI || this.prefix !== other.prefix || this.localName !== other.localName) {
+                    return false;
+                }
+                thisAttributes = $.descriptors.Element.attributes.get.call(this);
+                otherAttributes = $.descriptors.Element.attributes.get.call(other);
+                if (thisAttributes.length != otherAttributes.length) {
+                    return false;
+                }
+                break;
+            case Node.ATTRIBUTE_NODE:
+                if (this.namespaceURI !== other.namespaceURI || this.localName !== other.localName || this.value !== other.value) {
+                    return false;
+                }
+                break;
+            case Node.PROCESSING_INSTRUCTION_NODE:
+                if (this.target !== other.target || this.data !== other.data) {
+                    return false;
+                }
+                break;
+            case Node.TEXT_NODE:
+            case Node.COMMENT_NODE:
+                if (this.data !== other.data) {
+                    return false;
+                }
+                break;
         }
 
-        // TODO: tests
-
-    }, {
-        key: 'replaceChild',
-        value: function replaceChild(node, child) {
-            var _this5 = this;
-
-            return _customElements2.default.executeCEReactions(function () {
-                // https://dom.spec.whatwg.org/#dom-node-replacechild
-                // The replaceChild(node, child) method, when invoked, must return the 
-                // result of replacing child with node within context object.
-                return $.replace(child, node, _this5);
-            });
-        }
-
-        // TODO: tests
-
-    }, {
-        key: 'removeChild',
-        value: function removeChild(child) {
-            var _this6 = this;
-
-            return _customElements2.default.executeCEReactions(function () {
-                // https://dom.spec.whatwg.org/#dom-node-removechild
-                // The removeChild(child) method, when invoked, must return the result of 
-                // pre-removing child from context object.
-                return $.preRemove(child, _this6);
-            });
-        }
-    }, {
-        key: 'isConnected',
-        get: function get() {
-            return $.shadowIncludingRoot(this).nodeType === Node.DOCUMENT_NODE;
-        }
-    }, {
-        key: 'parentNode',
-        get: function get() {
-            var parentNode = void 0;
-            var nodeState = $.getShadowState(this);
-            if (nodeState) {
-                parentNode = nodeState.parentNode;
+        if (this.nodeType == Node.ELEMENT_NODE) {
+            for (var i = 0; i < thisAttributes.length; i++) {
+                var attr1 = thisAttributes[i];
+                var attr2 = otherAttributes[attr1.name];
+                if (attr1.value !== attr2.value) {
+                    return false;
+                }
             }
-
-            return parentNode || $.descriptors.Node.parentNode.get.call(this);
         }
-    }, {
-        key: 'parentElement',
-        get: function get() {
-            var parentNode = this.parentNode;
-            if (parentNode && parentNode.nodeType === Node.ELEMENT_NODE) {
-                return parentNode;
+
+        var childNodes1 = this.childNodes;
+        var childNodes2 = other.childNodes;
+        if (childNodes1.length !== other.childNodes.length) {
+            return false;
+        }
+
+        for (var _i = 0; _i < childNodes1.length; _i++) {
+            if (!childNodes1[_i].isEqualNode(childNodes2[_i])) {
+                return false;
             }
-
-            return null;
         }
-    }, {
-        key: 'childNodes',
-        get: function get() {
-            var nodeState = $.getShadowState(this);
-            if (nodeState) {
-                var childNodes = nodeState.childNodes;
-                if (childNodes) {
-                    var childNodesLength = childNodes.length;
-                    var result = new Array(childNodesLength);
-                    for (var i = 0; i < childNodesLength; i++) {
-                        result[i] = childNodes[i];
+
+        return true;
+    },
+
+
+    // TODO: tests
+    compareDocumentPosition: function compareDocumentPosition(other) {
+        // https://dom.spec.whatwg.org/#dom-node-comparedocumentposition
+
+        if (this === other) {
+            return 0;
+        }
+
+        var node1 = other;
+        var node2 = this;
+        var attr1 = null;
+        var attr2 = null;
+
+        if (node1.nodeType == Document.prototype.ATTRIBUTE_NODE) {
+            attr1 = node1;
+            node1 = attr1.ownerElement;
+        }
+
+        if (node2.nodeType == Document.prototype.ATTRIBUTE_NODE) {
+            attr2 = node2;
+            node2 = attr2.ownerElement;
+
+            if (attr1 && node1 && node2 === node1) {
+                var attrs = node2.atttributes;
+                for (var i = 0; i < attrs.length; i++) {
+                    var attr = attrs[i];
+                    if (attr.isEqualNode(attr1)) {
+                        return Document.prototype.DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC + Document.prototype.DOCUMENT_POSITION_PRECEDING;
+                    } else if (attr.isEqualNode(attr2)) {
+                        return Document.prototype.DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC + Document.prototype.DOCUMENT_POSITION_FOLLOWING;
                     }
-                    return result;
                 }
             }
-
-            return $.descriptors.Node.childNodes.get.call(this);
         }
 
-        // TODO: tests
+        if (!node1 || !node2 || $.root(node1) !== $.root(node2)) {
+            return Document.prototype.DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC + Document.prototype.DOCUMENT_POSITION_FOLLOWING + Document.prototype.DOCUMENT_POSITION_DISCONNECTED;
+        }
 
-    }, {
-        key: 'firstChild',
-        get: function get() {
-            var nodeState = $.getShadowState(this);
-            if (nodeState) {
-                var childNodes = nodeState.childNodes;
-                if (childNodes) {
-                    if (childNodes.length) {
-                        return childNodes[0];
-                    }
-                    return null;
-                }
+        if (ancestorOf(node2, node1) || node1 === node2 && attr2) {
+            return Document.prototype.DOCUMENT_POSITION_CONTAINS + Document.prototype.DOCUMENT_POSITION_PRECEDING;
+        }
+
+        if (ancestorOf(node1, node2) || node1 === node2 && attr1) {
+            return Document.prototype.DOCUMENT_POSITION_CONTAINS + Document.prototype.DOCUMENT_POSITION_FOLLOWING;
+        }
+
+        if (preceding(node1, node2)) {
+            return Document.prototype.DOCUMENT_POSITION_PRECEDING;
+        }
+
+        return Document.prototype.DOCUMENT_POSITION_FOLLOWING;
+    },
+
+
+    // TODO: tests
+    contains: function contains(node) {
+        // https://dom.spec.whatwg.org/#dom-node-contains
+
+        var parent = node.parentNode;
+
+        if (!parent) {
+            return false;
+        }
+
+        do {
+            if (parent === this) {
+                return true;
             }
+        } while (parent = parent.parentNode);
 
-            return $.descriptors.Node.firstChild.get.call(this);
-        }
+        return false;
+    },
 
-        // TODO: tests
 
-    }, {
-        key: 'lastChild',
-        get: function get() {
-            var nodeState = $.getShadowState(this);
-            if (nodeState) {
-                var childNodes = nodeState.childNodes;
-                if (childNodes) {
-                    if (childNodes.length) {
-                        return childNodes[childNodes.length - 1];
-                    }
-                    return null;
-                }
-            }
+    // TODO: tests
+    insertBefore: function insertBefore(node, child) {
+        var _this5 = this;
 
-            return $.descriptors.Node.lastChild.get.call(this);
-        }
+        return _customElements2.default.executeCEReactions(function () {
+            // https://dom.spec.whatwg.org/#dom-node-insertbefore
+            // The insertBefore(node, child) method, when invoked, must return the result 
+            // of pre-inserting node into context object before child.
+            return $.preInsert(node, _this5, child);
+        });
+    },
 
-        // TODO: tests
 
-    }, {
-        key: 'previousSibling',
-        get: function get() {
-            var nodeState = $.getShadowState(this);
-            if (nodeState) {
-                var parentNode = nodeState.parentNode;
-                if (parentNode) {
-                    var childNodes = $.getShadowState(parentNode).childNodes;
-                    var siblingIndex = childNodes.indexOf(this) - 1;
-                    return siblingIndex < 0 ? null : childNodes[siblingIndex];
-                }
-            }
+    // TODO: tests
+    appendChild: function appendChild(node) {
+        var _this6 = this;
 
-            return $.descriptors.Node.previousSibling.get.call(this);
-        }
+        return _customElements2.default.executeCEReactions(function () {
+            // https://dom.spec.whatwg.org/#dom-node-appendchild
+            // The appendChild(node) method, when invoked, must return the result of 
+            // appending node to context object.
+            return $.append(node, _this6);
+        });
+    },
 
-        // TODO: tests
 
-    }, {
-        key: 'nextSibling',
-        get: function get() {
-            var nodeState = $.getShadowState(this);
-            if (nodeState) {
-                var parentNode = nodeState.parentNode;
-                if (parentNode) {
-                    var childNodes = $.getShadowState(parentNode).childNodes;
-                    var siblingIndex = childNodes.indexOf(this) + 1;
-                    return siblingIndex === childNodes.length ? null : childNodes[siblingIndex];
-                }
-            }
+    // TODO: tests
+    replaceChild: function replaceChild(node, child) {
+        var _this7 = this;
 
-            return $.descriptors.Node.nextSibling.get.call(this);
-        }
+        return _customElements2.default.executeCEReactions(function () {
+            // https://dom.spec.whatwg.org/#dom-node-replacechild
+            // The replaceChild(node, child) method, when invoked, must return the 
+            // result of replacing child with node within context object.
+            return $.replace(child, node, _this7);
+        });
+    },
 
-        // TODO: consider creating a raw property descriptor
-        // that uses the native get instead of a pass-through function
 
-    }, {
-        key: 'nodeValue',
-        get: function get() {
-            return $.descriptors.Node.nodeValue.get.call(this);
-        }
+    // TODO: tests
+    removeChild: function removeChild(child) {
+        var _this8 = this;
 
-        // TODO: MutationObserver tests
-        ,
-        set: function set(value) {
-            var _this7 = this;
-
-            return _customElements2.default.executeCEReactions(function () {
-                switch (_this7.nodeType) {
-                    case Node.ATTRIBUTE_NODE:
-                        $.setExistingAttributeValue(_this7, value);
-                        break;
-                    case Node.TEXT_NODE:
-                    case Node.PROCESSING_INSTRUCTION_NODE:
-                    case Node.COMMENT_NODE:
-                        var length = $.descriptors.CharacterData.data.get.call(_this7).length;
-                        $.replaceData(_this7, 0, length, value);
-                        break;
-                }
-            });
-        }
-    }, {
-        key: 'textContent',
-        get: function get() {
-            switch (this.nodeType) {
-                case Node.DOCUMENT_FRAGMENT_NODE:
-                case Node.ELEMENT_NODE:
-                    return elementTextContent(this);
-                case Node.ATTRIBUTE_NODE:
-                    return $.descriptors.Attr.value.get.call(this);
-                case Node.TEXT_NODE:
-                case Node.PROCESSING_INSTRUCTION_NODE:
-                case Node.COMMENT_NODE:
-                    return $.descriptors.CharacterData.data.get.call(this);
-                default:
-                    return null;
-            }
-        }
-
-        // TODO: MutationObserver tests
-        ,
-        set: function set(value) {
-            var _this8 = this;
-
-            return _customElements2.default.executeCEReactions(function () {
-                switch (_this8.nodeType) {
-                    case Node.DOCUMENT_FRAGMENT_NODE:
-                    case Node.ELEMENT_NODE:
-                        var node = null;
-                        if (value !== '') {
-                            node = _this8.ownerDocument.createTextNode(value);
-                        }
-                        $.replaceAll(node, _this8);
-                        break;
-                    case Node.ATTRIBUTE_NODE:
-                        $.setExistingAttributeValue(_this8, value);
-                        break;
-                    case Node.TEXT_NODE:
-                    case Node.PROCESSING_INSTRUCTION_NODE:
-                    case Node.COMMENT_NODE:
-                        $.replaceData(_this8, 0, _this8.data.length, value);
-                        break;
-                }
-            });
-        }
-    }]);
-
-    return _class;
-}();
-
-exports.default = _class;
+        return _customElements2.default.executeCEReactions(function () {
+            // https://dom.spec.whatwg.org/#dom-node-removechild
+            // The removeChild(child) method, when invoked, must return the result of 
+            // pre-removing child from context object.
+            return $.preRemove(child, _this8);
+        });
+    }
+};
 
 
 function ancestorOf(node, ancestor) {
@@ -3147,9 +2753,6 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // https://dom.spec.whatwg.org/#interface-shadowroot
-// https://www.w3.org/TR/shadow-dom/#the-shadowroot-interface
-
 var _utils = require('../utils.js');
 
 var $ = _interopRequireWildcard(_utils);
@@ -3162,53 +2765,39 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+// https://dom.spec.whatwg.org/#interface-shadowroot
+// https://www.w3.org/TR/shadow-dom/#the-shadowroot-interface
 
-var _class = function () {
-    function _class() {
-        _classCallCheck(this, _class);
+exports.default = {
+
+    get nodeName() {
+        return '#shadow-root';
+    },
+
+    get mode() {
+        return $.getShadowState(this).mode;
+    },
+
+    get host() {
+        return $.getShadowState(this).host;
+    },
+
+    // TODO: tests
+    get innerHTML() {
+        return $.serializeHTMLFragment(this);
+    },
+
+    // TODO: tests
+    set innerHTML(value) {
+        var _this = this;
+
+        return _customElements2.default.executeCEReactions(function () {
+            var fragment = $.parseHTMLFragment(value, _this);
+            $.replaceAll(fragment, _this);
+        });
     }
 
-    _createClass(_class, [{
-        key: 'nodeName',
-        get: function get() {
-            return '#shadow-root';
-        }
-    }, {
-        key: 'mode',
-        get: function get() {
-            return $.getShadowState(this).mode;
-        }
-    }, {
-        key: 'host',
-        get: function get() {
-            return $.getShadowState(this).host;
-        }
-
-        // TODO: tests
-
-    }, {
-        key: 'innerHTML',
-        get: function get() {
-            return $.serializeHTMLFragment(this);
-        }
-
-        // TODO: tests
-        ,
-        set: function set(value) {
-            var _this = this;
-
-            return _customElements2.default.executeCEReactions(function () {
-                var fragment = $.parseHTMLFragment(value, _this);
-                $.replaceAll(fragment, _this);
-            });
-        }
-    }]);
-
-    return _class;
-}();
-
-exports.default = _class;
+};
 
 },{"../custom-elements.js":1,"../utils.js":28}],18:[function(require,module,exports){
 'use strict';
@@ -3217,50 +2806,34 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // https://dom.spec.whatwg.org/#interface-text
-
 var _utils = require('../utils.js');
 
 var $ = _interopRequireWildcard(_utils);
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+exports.default = {
 
-var _class = function () {
-    function _class() {
-        _classCallCheck(this, _class);
-    }
-
-    _createClass(_class, [{
-        key: 'splitText',
-
-
-        // TODO: tests
-        value: function splitText(offset) {
-            var length = this.length;
-            if (offset > length) {
-                throw $.makeError('IndexSizeError');
-            }
-            var count = length - offset;
-            var newData = this.data.slice(offset, count);
-            var newNode = this.ownerDocument.createTextNode(newData);
-            var parent = this.parentNode;
-            if (parent) {
-                $.insert(newNode, parent, this.nextSibling);
-                // TODO: (Range)
-            }
-            $.replaceData(this, offset, count, '');
-            // TODO: (Range)
-            // if (!parent) { }
-            return newNode;
+    // TODO: tests
+    splitText: function splitText(offset) {
+        var length = this.length;
+        if (offset > length) {
+            throw $.makeError('IndexSizeError');
         }
-    }]);
-
-    return _class;
-}();
-
-exports.default = _class;
+        var count = length - offset;
+        var newData = this.data.slice(offset, count);
+        var newNode = this.ownerDocument.createTextNode(newData);
+        var parent = this.parentNode;
+        if (parent) {
+            $.insert(newNode, parent, this.nextSibling);
+            // TODO: (Range)
+        }
+        $.replaceData(this, offset, count, '');
+        // TODO: (Range)
+        // if (!parent) { }
+        return newNode;
+    }
+}; // https://dom.spec.whatwg.org/#interface-text
 
 },{"../utils.js":28}],19:[function(require,module,exports){
 'use strict';
@@ -3305,177 +2878,159 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // https://dom.spec.whatwg.org/#interface-childnode
-
 exports.default = function (base) {
 
-    return function () {
-        function _class() {
-            _classCallCheck(this, _class);
+    return {
+
+        // TODO: tests
+        before: function before() {
+            var _this = this;
+
+            for (var _len = arguments.length, nodes = Array(_len), _key = 0; _key < _len; _key++) {
+                nodes[_key] = arguments[_key];
+            }
+
+            return _customElements2.default.executeCEReactions(function () {
+                // https://dom.spec.whatwg.org/#dom-childnode-before
+                // The before(nodes) method, when invoked, must run these steps:
+
+                // 1. Let parent be context object’s parent.
+                var parent = _this.parentNode;
+
+                // 2. If parent is null, terminate these steps.
+                if (!parent) {
+                    return;
+                }
+
+                // 3. Let viablePreviousSibling be context object’s first preceding 
+                // sibling not in nodes, and null otherwise.
+                var viablePreviousSibling = _this.previousSibling;
+                while (viablePreviousSibling && nodes.indexOf(viablePreviousSibling) !== -1) {
+                    viablePreviousSibling = viablePreviousSibling.previousSibling;
+                }
+
+                // 4. Let node be the result of converting nodes into a node, given 
+                // nodes and context object’s node document. Rethrow any exceptions.
+                var node = $.convertNodesIntoANode(nodes, _this.ownerDocument);
+
+                // 5. If viablePreviousSibling is null, set it to parent’s first child, 
+                // and to viablePreviousSibling’s next sibling otherwise.
+                if (viablePreviousSibling === null) {
+                    viablePreviousSibling = parent.firstChild;
+                } else {
+                    viablePreviousSibling = viablePreviousSibling.nextSibling;
+                }
+
+                // 6. Pre-insert node into parent before viablePreviousSibling. 
+                // Rethrow any exceptions.
+                $.preInsert(node, parent, viablePreviousSibling);
+            });
+        },
+
+
+        // TODO: tests
+        after: function after() {
+            var _this2 = this;
+
+            for (var _len2 = arguments.length, nodes = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+                nodes[_key2] = arguments[_key2];
+            }
+
+            return _customElements2.default.executeCEReactions(function () {
+                // https://dom.spec.whatwg.org/#dom-childnode-after
+                // The after(nodes) method, when invoked, must run these steps:
+
+                // 1. Let parent be context object’s parent.
+                var parent = _this2.parentNode;
+
+                // 2. If parent is null, terminate these steps.
+                if (!parent) {
+                    return;
+                }
+
+                // 3. Let viableNextSibling be context object’s first following 
+                // sibling not in nodes, and null otherwise.
+                var viableNextSibling = _this2.nextSibling;
+                while (viableNextSibling && nodes.indexOf(viableNextSibling) !== -1) {
+                    viableNextSibling = viableNextSibling.nextSibling;
+                }
+
+                // 4. Let node be the result of converting nodes into a node, given 
+                // nodes and context object’s node document. Rethrow any exceptions.
+                var node = $.convertNodesIntoANode(nodes, _this2.ownerDocument);
+
+                // 5. Pre-insert node into parent before viableNextSibling. Rethrow 
+                // any exceptions.
+                $.preInsert(node, parent, viableNextSibling);
+            });
+        },
+
+
+        // TODO: tests
+        replaceWith: function replaceWith() {
+            var _this3 = this;
+
+            for (var _len3 = arguments.length, nodes = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
+                nodes[_key3] = arguments[_key3];
+            }
+
+            return _customElements2.default.executeCEReactions(function () {
+                // https://dom.spec.whatwg.org/#dom-childnode-replacewith
+                // The replaceWith(nodes) method, when invoked, must run these steps:
+
+                // 1. Let parent be context object’s parent.
+                var parent = _this3.parentNode;
+
+                // 2. If parent is null, terminate these steps.
+                if (!parent) {
+                    return;
+                }
+
+                // 3. Let viableNextSibling be context object’s first following 
+                // sibling not in nodes, and null otherwise.
+                var viableNextSibling = _this3.nextSibling;
+                while (viableNextSibling && nodes.indexOf(viableNextSibling) !== -1) {
+                    viableNextSibling = viableNextSibling.nextSibling;
+                }
+
+                // 4. Let node be the result of converting nodes into a node, given 
+                // nodes and context object’s node document. Rethrow any exceptions.
+                var node = $.convertNodesIntoANode(nodes, _this3.ownerDocument);
+
+                // 5. If context object’s parent is parent, replace the context object 
+                // with node within parent. Rethrow any exceptions.
+                if (_this3.parentNode == parent) {
+                    $.replace(_this3, node, parent);
+                }
+                // 6. Otherwise, pre-insert node into parent before viableNextSibling. 
+                // Rethrow any exceptions.
+                else {
+                        $.preInsert(node, parent, viableNextSibling);
+                    }
+            });
+        },
+
+
+        // TODO: tests
+        remove: function remove() {
+            var _this4 = this;
+
+            return _customElements2.default.executeCEReactions(function () {
+                // https://dom.spec.whatwg.org/#dom-childnode-remove
+                // The remove() method, when invoked, must run these steps:
+
+                // 1. If context object’s parent is null, terminate these steps.
+                var parent = _this4.parentNode;
+
+                if (!parent) {
+                    return;
+                }
+
+                // 2. Remove the context object from context object’s parent.
+                $.remove(_this4, parent);
+            });
         }
-
-        _createClass(_class, [{
-            key: 'before',
-
-
-            // TODO: tests
-            value: function before() {
-                var _this = this;
-
-                for (var _len = arguments.length, nodes = Array(_len), _key = 0; _key < _len; _key++) {
-                    nodes[_key] = arguments[_key];
-                }
-
-                return _customElements2.default.executeCEReactions(function () {
-                    // https://dom.spec.whatwg.org/#dom-childnode-before
-                    // The before(nodes) method, when invoked, must run these steps:
-
-                    // 1. Let parent be context object’s parent.
-                    var parent = _this.parentNode;
-
-                    // 2. If parent is null, terminate these steps.
-                    if (!parent) {
-                        return;
-                    }
-
-                    // 3. Let viablePreviousSibling be context object’s first preceding 
-                    // sibling not in nodes, and null otherwise.
-                    var viablePreviousSibling = _this.previousSibling;
-                    while (viablePreviousSibling && nodes.indexOf(viablePreviousSibling) !== -1) {
-                        viablePreviousSibling = viablePreviousSibling.previousSibling;
-                    }
-
-                    // 4. Let node be the result of converting nodes into a node, given 
-                    // nodes and context object’s node document. Rethrow any exceptions.
-                    var node = $.convertNodesIntoANode(nodes, _this.ownerDocument);
-
-                    // 5. If viablePreviousSibling is null, set it to parent’s first child, 
-                    // and to viablePreviousSibling’s next sibling otherwise.
-                    if (viablePreviousSibling === null) {
-                        viablePreviousSibling = parent.firstChild;
-                    } else {
-                        viablePreviousSibling = viablePreviousSibling.nextSibling;
-                    }
-
-                    // 6. Pre-insert node into parent before viablePreviousSibling. 
-                    // Rethrow any exceptions.
-                    $.preInsert(node, parent, viablePreviousSibling);
-                });
-            }
-
-            // TODO: tests
-
-        }, {
-            key: 'after',
-            value: function after() {
-                var _this2 = this;
-
-                for (var _len2 = arguments.length, nodes = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-                    nodes[_key2] = arguments[_key2];
-                }
-
-                return _customElements2.default.executeCEReactions(function () {
-                    // https://dom.spec.whatwg.org/#dom-childnode-after
-                    // The after(nodes) method, when invoked, must run these steps:
-
-                    // 1. Let parent be context object’s parent.
-                    var parent = _this2.parentNode;
-
-                    // 2. If parent is null, terminate these steps.
-                    if (!parent) {
-                        return;
-                    }
-
-                    // 3. Let viableNextSibling be context object’s first following 
-                    // sibling not in nodes, and null otherwise.
-                    var viableNextSibling = _this2.nextSibling;
-                    while (viableNextSibling && nodes.indexOf(viableNextSibling) !== -1) {
-                        viableNextSibling = viableNextSibling.nextSibling;
-                    }
-
-                    // 4. Let node be the result of converting nodes into a node, given 
-                    // nodes and context object’s node document. Rethrow any exceptions.
-                    var node = $.convertNodesIntoANode(nodes, _this2.ownerDocument);
-
-                    // 5. Pre-insert node into parent before viableNextSibling. Rethrow 
-                    // any exceptions.
-                    $.preInsert(node, parent, viableNextSibling);
-                });
-            }
-
-            // TODO: tests
-
-        }, {
-            key: 'replaceWith',
-            value: function replaceWith() {
-                var _this3 = this;
-
-                for (var _len3 = arguments.length, nodes = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
-                    nodes[_key3] = arguments[_key3];
-                }
-
-                return _customElements2.default.executeCEReactions(function () {
-                    // https://dom.spec.whatwg.org/#dom-childnode-replacewith
-                    // The replaceWith(nodes) method, when invoked, must run these steps:
-
-                    // 1. Let parent be context object’s parent.
-                    var parent = _this3.parentNode;
-
-                    // 2. If parent is null, terminate these steps.
-                    if (!parent) {
-                        return;
-                    }
-
-                    // 3. Let viableNextSibling be context object’s first following 
-                    // sibling not in nodes, and null otherwise.
-                    var viableNextSibling = _this3.nextSibling;
-                    while (viableNextSibling && nodes.indexOf(viableNextSibling) !== -1) {
-                        viableNextSibling = viableNextSibling.nextSibling;
-                    }
-
-                    // 4. Let node be the result of converting nodes into a node, given 
-                    // nodes and context object’s node document. Rethrow any exceptions.
-                    var node = $.convertNodesIntoANode(nodes, _this3.ownerDocument);
-
-                    // 5. If context object’s parent is parent, replace the context object 
-                    // with node within parent. Rethrow any exceptions.
-                    if (_this3.parentNode == parent) {
-                        $.replace(_this3, node, parent);
-                    }
-                    // 6. Otherwise, pre-insert node into parent before viableNextSibling. 
-                    // Rethrow any exceptions.
-                    else {
-                            $.preInsert(node, parent, viableNextSibling);
-                        }
-                });
-            }
-
-            // TODO: tests
-
-        }, {
-            key: 'remove',
-            value: function remove() {
-                var _this4 = this;
-
-                return _customElements2.default.executeCEReactions(function () {
-                    // https://dom.spec.whatwg.org/#dom-childnode-remove
-                    // The remove() method, when invoked, must run these steps:
-
-                    // 1. If context object’s parent is null, terminate these steps.
-                    var parent = _this4.parentNode;
-
-                    if (!parent) {
-                        return;
-                    }
-
-                    // 2. Remove the context object from context object’s parent.
-                    $.remove(_this4, parent);
-                });
-            }
-        }]);
-
-        return _class;
-    }();
+    };
 };
 
 var _utils = require('../utils.js');
@@ -3490,8 +3045,6 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
 },{"../custom-elements.js":1,"../utils.js":28}],21:[function(require,module,exports){
 'use strict';
 
@@ -3499,48 +3052,33 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // https://dom.spec.whatwg.org/#mixin-documentorshadowroot
-// https://www.w3.org/TR/shadow-dom/#extensions-to-the-documentorshadowroot-mixin
-
 var _utils = require('../utils.js');
 
 var $ = _interopRequireWildcard(_utils);
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+exports.default = {
 
-var _class = function () {
-    function _class() {
-        _classCallCheck(this, _class);
+    // TODO: consider getSelection()
+    // TODO: consider elementFromPoint(double x, double y)
+    // TODO: consider elementsFromPoint(double x, double y)
+    // TODO: consider get styleSheets()
+
+    // TODO: tests
+    get activeElement() {
+        var document = this.ownerDocument || this;
+        var nativeActiveElement = native.activeElement.get.call(document);
+
+        if (!nativeActiveElement || document != $.shadowIncludingRoot(this)) {
+            return null;
+        }
+
+        return $.retarget(nativeActiveElement, this);
     }
 
-    _createClass(_class, [{
-        key: 'activeElement',
-
-
-        // TODO: consider getSelection()
-        // TODO: consider elementFromPoint(double x, double y)
-        // TODO: consider elementsFromPoint(double x, double y)
-        // TODO: consider get styleSheets()
-
-        // TODO: tests
-        get: function get() {
-            var document = this.ownerDocument || this;
-            var nativeActiveElement = native.activeElement.get.call(document);
-
-            if (!nativeActiveElement || document != $.shadowIncludingRoot(this)) {
-                return null;
-            }
-
-            return $.retarget(nativeActiveElement, this);
-        }
-    }]);
-
-    return _class;
-}();
-
-exports.default = _class;
+}; // https://dom.spec.whatwg.org/#mixin-documentorshadowroot
+// https://www.w3.org/TR/shadow-dom/#extensions-to-the-documentorshadowroot-mixin
 
 },{"../utils.js":28}],22:[function(require,module,exports){
 'use strict';
@@ -3549,8 +3087,6 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // https://dom.spec.whatwg.org/#interface-nondocumenttypechildnode
-
 exports.default = function (base) {
 
     var native = {
@@ -3558,75 +3094,63 @@ exports.default = function (base) {
         nextElementSibling: $.descriptor(base, 'nextElementSibling')
     };
 
-    return function () {
-        function _class() {
-            _classCallCheck(this, _class);
+    return {
+
+        // TODO: tests
+        get previousElementSibling() {
+            var nodeState = $.getShadowState(this);
+            if (nodeState && nodeState.parentNode) {
+                var childNodes = $.getShadowState(nodeState.parentNode).childNodes;
+                var index = childNodes.indexOf(this);
+                while (index > 0) {
+                    var previous = childNodes[--index];
+                    if (previous.nodeType === Node.ELEMENT_NODE) {
+                        return previous;
+                    }
+                };
+                return null;
+            } else if (native.previousElementSibling) {
+                return native.previousElementSibling.get.call(this);
+            } else {
+                var getPreviousSibling = $.descriptors.Node.previousSibling.get;
+                var previousSibling = this;
+                while (previousSibling = getPreviousSibling.call(previousSibling)) {
+                    if (previousSibling.nodeType === Node.ELEMENT_NODE) {
+                        return previousSibling;
+                    }
+                }
+                return null;
+            }
+        },
+
+        // TODO: tests
+        get nextElementSibling() {
+            var nodeState = $.getShadowState(this);
+            if (nodeState && nodeState.parentNode) {
+                var childNodes = $.getShadowState(nodeState.parentNode).childNodes;
+                var index = childNodes.indexOf(this);
+                while (index < childNodes.length - 1) {
+                    var next = childNodes[++index];
+                    if (next.nodeType === Node.ELEMENT_NODE) {
+                        return next;
+                    }
+                };
+                return null;
+            } else if (native.nextElementSibling) {
+                return native.nextElementSibling.get.call(this);
+            } else {
+                var getNextSibling = $.descriptors.Node.nextSibling.get;
+                var nextSibling = this;
+                while (nextSibling = getNextSibling.call(nextSibling)) {
+                    if (nextSibling.nodeType === Node.ELEMENT_NODE) {
+                        return nextSibling;
+                    }
+                }
+                return null;
+            }
         }
 
-        _createClass(_class, [{
-            key: 'previousElementSibling',
-
-
-            // TODO: tests
-            get: function get() {
-                var nodeState = $.getShadowState(this);
-                if (nodeState && nodeState.parentNode) {
-                    var childNodes = $.getShadowState(nodeState.parentNode).childNodes;
-                    var index = childNodes.indexOf(this);
-                    while (index > 0) {
-                        var previous = childNodes[--index];
-                        if (previous.nodeType === Node.ELEMENT_NODE) {
-                            return previous;
-                        }
-                    };
-                    return null;
-                } else if (native.previousElementSibling) {
-                    return native.previousElementSibling.get.call(this);
-                } else {
-                    var getPreviousSibling = $.descriptors.Node.previousSibling.get;
-                    var previousSibling = this;
-                    while (previousSibling = getPreviousSibling.call(previousSibling)) {
-                        if (previousSibling.nodeType === Node.ELEMENT_NODE) {
-                            return previousSibling;
-                        }
-                    }
-                    return null;
-                }
-            }
-
-            // TODO: tests
-
-        }, {
-            key: 'nextElementSibling',
-            get: function get() {
-                var nodeState = $.getShadowState(this);
-                if (nodeState && nodeState.parentNode) {
-                    var childNodes = $.getShadowState(nodeState.parentNode).childNodes;
-                    var index = childNodes.indexOf(this);
-                    while (index < childNodes.length - 1) {
-                        var next = childNodes[++index];
-                        if (next.nodeType === Node.ELEMENT_NODE) {
-                            return next;
-                        }
-                    };
-                    return null;
-                } else if (native.nextElementSibling) {
-                    return native.nextElementSibling.get.call(this);
-                } else {
-                    var getNextSibling = $.descriptors.Node.nextSibling.get;
-                    var nextSibling = this;
-                    while (nextSibling = getNextSibling.call(nextSibling)) {
-                        if (nextSibling.nodeType === Node.ELEMENT_NODE) {
-                            return nextSibling;
-                        }
-                    }
-                    return null;
-                }
-            }
-        }]);
-
-        return _class;
-    }();
+    };
 };
 
 var _utils = require('../utils.js');
@@ -3634,8 +3158,6 @@ var _utils = require('../utils.js');
 var $ = _interopRequireWildcard(_utils);
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 },{"../utils.js":28}],23:[function(require,module,exports){
 'use strict';
@@ -3644,38 +3166,27 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // https://dom.spec.whatwg.org/#interface-nonelementparentnode
-
 exports.default = function (base) {
 
-    return function () {
-        function _class() {
-            _classCallCheck(this, _class);
-        }
+    return {
+        getElementById: function getElementById(id) {
+            // https://dom.spec.whatwg.org/#dom-nonelementparentnode-getelementbyid
 
-        _createClass(_class, [{
-            key: 'getElementById',
-            value: function getElementById(id) {
-                // https://dom.spec.whatwg.org/#dom-nonelementparentnode-getelementbyid
-
-                if (id === '' || /\s/.test(id)) {
-                    return null;
-                }
-
-                var firstChild = this.firstChild;
-
-                if (!firstChild) {
-                    return null;
-                }
-
-                return $.treeOrderRecursiveSelectFirst(firstChild, function (node) {
-                    return node.id === id;
-                });
+            if (id === '' || /\s/.test(id)) {
+                return null;
             }
-        }]);
 
-        return _class;
-    }();
+            var firstChild = this.firstChild;
+
+            if (!firstChild) {
+                return null;
+            }
+
+            return $.treeOrderRecursiveSelectFirst(firstChild, function (node) {
+                return node.id === id;
+            });
+        }
+    };
 };
 
 var _utils = require('../utils.js');
@@ -3684,16 +3195,12 @@ var $ = _interopRequireWildcard(_utils);
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
 },{"../utils.js":28}],24:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // https://dom.spec.whatwg.org/#interface-parentnode
 
 exports.default = function (base) {
 
@@ -3704,214 +3211,194 @@ exports.default = function (base) {
         childElementCount: $.descriptor(base, 'childElementCount')
     };
 
-    return function () {
-        function _class() {
-            _classCallCheck(this, _class);
-        }
+    return {
 
-        _createClass(_class, [{
-            key: 'prepend',
+        get children() {
+            var childNodes = void 0;
 
-
-            // TODO: tests
-            value: function prepend() {
-                var _this = this;
-
-                for (var _len = arguments.length, nodes = Array(_len), _key = 0; _key < _len; _key++) {
-                    nodes[_key] = arguments[_key];
-                }
-
-                return _customElements2.default.executeCEReactions(function () {
-                    // https://dom.spec.whatwg.org/#dom-parentnode-prepend
-                    // The prepend(nodes) method, when invoked, must run these steps:
-
-                    // 1. Let node be the result of converting nodes into a node given 
-                    // nodes and context object’s node document. Rethrow any exceptions.
-                    var node = $.convertNodesIntoANode(nodes, _this.ownerDocument || _this);
-
-                    // 2. Pre-insert node into context object before the context object’s 
-                    // first child. Rethrow any exceptions.
-                    $.preInsert(node, _this, _this.firstChild);
-                });
+            var shadowState = $.getShadowState(this);
+            if (shadowState) {
+                childNodes = shadowState.childNodes;
             }
 
-            // TODO: tests
-
-        }, {
-            key: 'append',
-            value: function append() {
-                var _this2 = this;
-
-                for (var _len2 = arguments.length, nodes = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-                    nodes[_key2] = arguments[_key2];
+            if (!childNodes) {
+                if (native.children) {
+                    return native.children.get.call(this);
                 }
-
-                return _customElements2.default.executeCEReactions(function () {
-                    // https://dom.spec.whatwg.org/#dom-parentnode-append
-                    // The append(nodes) method, when invoked, must run these steps:
-
-                    // 1. Let node be the result of converting nodes into a node given 
-                    // nodes and context object’s node document. Rethrow any exceptions.
-                    var node = $.convertNodesIntoANode(nodes, _this2.ownerDocument || _this2);
-
-                    // 2. Append node to context object. Rethrow any exceptions.
-                    $.append(node, _this2);
-                });
+                childNodes = this.childNodes;
             }
 
-            // TODO: tests
-
-        }, {
-            key: 'querySelector',
-            value: function querySelector(selectors) {
-                var results = this.querySelectorAll(selectors);
-
-                if (results.length) {
-                    return results[0];
+            var childNodesLength = childNodes.length;
+            var elements = new Array(childNodesLength);
+            var pushed = 0;
+            for (var i = 0; i < childNodesLength; i++) {
+                var node = childNodes[i];
+                if (node.nodeType == Node.ELEMENT_NODE) {
+                    elements[pushed++] = node;
                 }
+            }
+            elements.length = pushed;
 
-                return null;
+            return elements;
+        },
+
+        get firstElementChild() {
+            var childNodes = void 0;
+
+            var shadowState = $.getShadowState(this);
+            if (shadowState) {
+                childNodes = shadowState.childNodes;
             }
 
-            // TODO: tests
-
-        }, {
-            key: 'querySelectorAll',
-            value: function querySelectorAll(selectors) {
-                // https://dom.spec.whatwg.org/#scope-match-a-selectors-string
-                // this is horrible, performance-wise.
-                // it's about 100x slower than native querySelectorAll.
-                // that might not amount to much in practice, though.
-                // after all, this is a polyfill.
-
-                var results = [];
-
-                var firstChild = this.firstChild;
-
-                if (!firstChild) {
-                    return results;
+            if (!childNodes) {
+                if (native.firstElementChild) {
+                    return native.firstElementChild.get.call(this);
                 }
+                childNodes = this.childNodes;
+            }
 
-                $.treeOrderRecursiveSelectAll(firstChild, results, function (node) {
-                    return node.nodeType === Node.ELEMENT_NODE && node.matches(selectors);
-                });
+            for (var i = 0; i < childNodes.length; i++) {
+                var node = childNodes[i];
+                if (node.nodeType == Node.ELEMENT_NODE) {
+                    return node;
+                }
+            }
 
+            return null;
+        },
+
+        get lastElementChild() {
+            var childNodes = void 0;
+
+            var shadowState = $.getShadowState(this);
+            if (shadowState) {
+                childNodes = shadowState.childNodes;
+            }
+
+            if (!childNodes) {
+                if (native.lastElementChild) {
+                    return native.lastElementChild.get.call(this);
+                }
+                childNodes = this.childNodes;
+            }
+
+            for (var i = childNodes.length - 1; i >= 0; i--) {
+                var node = childNodes[i];
+                if (node.nodeType == Node.ELEMENT_NODE) {
+                    return node;
+                }
+            }
+
+            return null;
+        },
+
+        get childElementCount() {
+            var childNodes = void 0;
+
+            var shadowState = $.getShadowState(this);
+            if (shadowState) {
+                childNodes = shadowState.childNodes;
+            }
+
+            if (!childNodes) {
+                if (native.childElementCount) {
+                    return native.childElementCount.get.call(this);
+                }
+                childNodes = this.childNodes;
+            }
+
+            var count = 0;
+
+            for (var i = 0; i < childNodes.length; i++) {
+                var node = childNodes[i];
+                if (node.nodeType == Node.ELEMENT_NODE) {
+                    count++;
+                }
+            }
+
+            return count;
+        },
+
+        // TODO: tests
+        prepend: function prepend() {
+            var _this = this;
+
+            for (var _len = arguments.length, nodes = Array(_len), _key = 0; _key < _len; _key++) {
+                nodes[_key] = arguments[_key];
+            }
+
+            return _customElements2.default.executeCEReactions(function () {
+                // https://dom.spec.whatwg.org/#dom-parentnode-prepend
+                // The prepend(nodes) method, when invoked, must run these steps:
+
+                // 1. Let node be the result of converting nodes into a node given 
+                // nodes and context object’s node document. Rethrow any exceptions.
+                var node = $.convertNodesIntoANode(nodes, _this.ownerDocument || _this);
+
+                // 2. Pre-insert node into context object before the context object’s 
+                // first child. Rethrow any exceptions.
+                $.preInsert(node, _this, _this.firstChild);
+            });
+        },
+
+
+        // TODO: tests
+        append: function append() {
+            var _this2 = this;
+
+            for (var _len2 = arguments.length, nodes = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+                nodes[_key2] = arguments[_key2];
+            }
+
+            return _customElements2.default.executeCEReactions(function () {
+                // https://dom.spec.whatwg.org/#dom-parentnode-append
+                // The append(nodes) method, when invoked, must run these steps:
+
+                // 1. Let node be the result of converting nodes into a node given 
+                // nodes and context object’s node document. Rethrow any exceptions.
+                var node = $.convertNodesIntoANode(nodes, _this2.ownerDocument || _this2);
+
+                // 2. Append node to context object. Rethrow any exceptions.
+                $.append(node, _this2);
+            });
+        },
+
+
+        // TODO: tests
+        querySelector: function querySelector(selectors) {
+            var results = this.querySelectorAll(selectors);
+
+            if (results.length) {
+                return results[0];
+            }
+
+            return null;
+        },
+
+
+        // TODO: tests
+        querySelectorAll: function querySelectorAll(selectors) {
+            // https://dom.spec.whatwg.org/#scope-match-a-selectors-string
+            // this is horrible, performance-wise.
+            // it's about 100x slower than native querySelectorAll.
+            // that might not amount to much in practice, though.
+            // after all, this is a polyfill.
+
+            var results = [];
+
+            var firstChild = this.firstChild;
+
+            if (!firstChild) {
                 return results;
             }
-        }, {
-            key: 'children',
-            get: function get() {
-                var childNodes = void 0;
 
-                var shadowState = $.getShadowState(this);
-                if (shadowState) {
-                    childNodes = shadowState.childNodes;
-                }
+            $.treeOrderRecursiveSelectAll(firstChild, results, function (node) {
+                return node.nodeType === Node.ELEMENT_NODE && node.matches(selectors);
+            });
 
-                if (!childNodes) {
-                    if (native.children) {
-                        return native.children.get.call(this);
-                    }
-                    childNodes = this.childNodes;
-                }
-
-                var childNodesLength = childNodes.length;
-                var elements = new Array(childNodesLength);
-                var pushed = 0;
-                for (var i = 0; i < childNodesLength; i++) {
-                    var node = childNodes[i];
-                    if (node.nodeType == Node.ELEMENT_NODE) {
-                        elements[pushed++] = node;
-                    }
-                }
-                elements.length = pushed;
-
-                return elements;
-            }
-        }, {
-            key: 'firstElementChild',
-            get: function get() {
-                var childNodes = void 0;
-
-                var shadowState = $.getShadowState(this);
-                if (shadowState) {
-                    childNodes = shadowState.childNodes;
-                }
-
-                if (!childNodes) {
-                    if (native.firstElementChild) {
-                        return native.firstElementChild.get.call(this);
-                    }
-                    childNodes = this.childNodes;
-                }
-
-                for (var i = 0; i < childNodes.length; i++) {
-                    var node = childNodes[i];
-                    if (node.nodeType == Node.ELEMENT_NODE) {
-                        return node;
-                    }
-                }
-
-                return null;
-            }
-        }, {
-            key: 'lastElementChild',
-            get: function get() {
-                var childNodes = void 0;
-
-                var shadowState = $.getShadowState(this);
-                if (shadowState) {
-                    childNodes = shadowState.childNodes;
-                }
-
-                if (!childNodes) {
-                    if (native.lastElementChild) {
-                        return native.lastElementChild.get.call(this);
-                    }
-                    childNodes = this.childNodes;
-                }
-
-                for (var i = childNodes.length - 1; i >= 0; i--) {
-                    var node = childNodes[i];
-                    if (node.nodeType == Node.ELEMENT_NODE) {
-                        return node;
-                    }
-                }
-
-                return null;
-            }
-        }, {
-            key: 'childElementCount',
-            get: function get() {
-                var childNodes = void 0;
-
-                var shadowState = $.getShadowState(this);
-                if (shadowState) {
-                    childNodes = shadowState.childNodes;
-                }
-
-                if (!childNodes) {
-                    if (native.childElementCount) {
-                        return native.childElementCount.get.call(this);
-                    }
-                    childNodes = this.childNodes;
-                }
-
-                var count = 0;
-
-                for (var i = 0; i < childNodes.length; i++) {
-                    var node = childNodes[i];
-                    if (node.nodeType == Node.ELEMENT_NODE) {
-                        count++;
-                    }
-                }
-
-                return count;
-            }
-        }]);
-
-        return _class;
-    }();
+            return results;
+        }
+    };
 };
 
 var _utils = require('../utils.js');
@@ -3926,8 +3413,6 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
 
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
-
 },{"../custom-elements.js":1,"../utils.js":28}],25:[function(require,module,exports){
 'use strict';
 
@@ -3935,34 +3420,25 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }(); // https://dom.spec.whatwg.org/#mixin-slotable
-
 exports.default = function (base) {
 
-    return function () {
-        function _class() {
-            _classCallCheck(this, _class);
+    return {
+
+        get assignedSlot() {
+            // spec implementation is to run 'find a slot'
+            // this uses an alternative (see https://github.com/whatwg/dom/issues/369)
+            var shadowState = $.getShadowState(this);
+            if (shadowState) {
+                var slot = shadowState.assignedSlot;
+                if (slot && $.closedShadowHidden(slot, this)) {
+                    slot = null;
+                }
+                return slot;
+            }
+            return null;
         }
 
-        _createClass(_class, [{
-            key: 'assignedSlot',
-            get: function get() {
-                // spec implementation is to run 'find a slot'
-                // this uses an alternative (see https://github.com/whatwg/dom/issues/369)
-                var shadowState = $.getShadowState(this);
-                if (shadowState) {
-                    var slot = shadowState.assignedSlot;
-                    if (slot && $.closedShadowHidden(slot, this)) {
-                        slot = null;
-                    }
-                    return slot;
-                }
-                return null;
-            }
-        }]);
-
-        return _class;
-    }();
+    };
 };
 
 var _utils = require('../utils.js');
@@ -3970,8 +3446,6 @@ var _utils = require('../utils.js');
 var $ = _interopRequireWildcard(_utils);
 
 function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
-
-function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 },{"../utils.js":28}],26:[function(require,module,exports){
 'use strict';
@@ -4650,8 +4124,6 @@ function install() {
     $.extend(CharacterData, _CharacterData2.default);
 
     // CustomEvent interface
-    $.extend(CustomEvent, _CustomEvent2.default);
-    _CustomEvent2.default.prototype = CustomEvent.prototype;
     window.CustomEvent = _CustomEvent2.default;
 
     // Document interface
@@ -4898,14 +4370,15 @@ function extend(object) {
     }
 
     for (var i = 0; i < mixins.length; i++) {
-        var mixin = mixins[i].prototype;
-        var names = Object.getOwnPropertyNames(mixin);
+        var mixin = mixins[i];
+        var prototype = mixin.prototype || mixin;
+        var names = Object.getOwnPropertyNames(prototype);
         for (var j = 0; j < names.length; j++) {
             var name = names[j];
             if (name === 'constructor') {
                 continue;
             }
-            var _descriptor = Object.getOwnPropertyDescriptor(mixin, name);
+            var _descriptor = Object.getOwnPropertyDescriptor(prototype, name);
             Object.defineProperty(object.prototype || object, name, _descriptor);
         }
     }

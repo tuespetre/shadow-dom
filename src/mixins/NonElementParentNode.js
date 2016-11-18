@@ -4,7 +4,7 @@ import * as $ from '../utils.js';
 
 export default function (base) {
 
-    return class {
+    return {
 
         getElementById(id) {
             // https://dom.spec.whatwg.org/#dom-nonelementparentnode-getelementbyid
@@ -22,7 +22,7 @@ export default function (base) {
             return $.treeOrderRecursiveSelectFirst(firstChild, function (node) {
                 return node.id === id;
             });
-        }
+        },
 
     };
 

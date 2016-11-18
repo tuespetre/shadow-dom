@@ -2,7 +2,7 @@
 
 import * as $ from '../utils.js';
 
-export default class {
+export default {
 
     // TODO: tests
     splitText(offset) {
@@ -22,6 +22,6 @@ export default class {
         // TODO: (Range)
         // if (!parent) { }
         return newNode;
-    }
+    },
 
 }

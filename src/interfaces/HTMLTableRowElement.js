@@ -2,7 +2,7 @@
 
 import * as $ from '../utils.js';
 
-export default class {
+export default {
 
     // TODO: tests
     deleteCell(index) {
@@ -14,6 +14,6 @@ export default class {
             throw $.makeError('IndexSizeError');
         }
         this.cells[index].remove();
-    }
+    },
 
 }

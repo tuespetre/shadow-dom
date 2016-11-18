@@ -3,7 +3,7 @@
 
 import * as $ from '../utils.js';
 
-export default class {
+export default {
 
     // TODO: consider getSelection()
     // TODO: consider elementFromPoint(double x, double y)
@@ -20,6 +20,6 @@ export default class {
         }
 
         return $.retarget(nativeActiveElement, this);
-    }
+    },
 
 }

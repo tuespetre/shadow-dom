@@ -9,7 +9,7 @@ export default function (base) {
         nextElementSibling: $.descriptor(base, 'nextElementSibling')
     };
 
-    return class {
+    return {
 
         // TODO: tests
         get previousElementSibling() {
@@ -38,7 +38,7 @@ export default function (base) {
                 }
                 return null;
             }
-        }
+        },
 
         // TODO: tests
         get nextElementSibling() {
@@ -67,7 +67,7 @@ export default function (base) {
                 }
                 return null;
             }
-        }
+        },
 
     };
 

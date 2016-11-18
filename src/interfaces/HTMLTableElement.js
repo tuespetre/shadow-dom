@@ -2,7 +2,7 @@
 
 import * as $ from '../utils.js';
 
-export default class {
+export default {
 
     // TODO: tests
     deleteCaption() {
@@ -10,7 +10,7 @@ export default class {
         if (caption) {
             $.remove(caption, this);
         }
-    }
+    },
 
     // TODO: tests
     deleteTHead() {
@@ -18,7 +18,7 @@ export default class {
         if (tHead) {
             $.remove(tHead, this);
         }
-    }
+    },
 
     // TODO: tests
     deleteTFoot() {
@@ -26,7 +26,7 @@ export default class {
         if (tFoot) {
             $.remove(tFoot, this);
         }
-    }
+    },
 
     // TODO: tests
     deleteRow(index) {
@@ -38,6 +38,6 @@ export default class {
             throw $.makeError('IndexSizeError');
         }
         this.rows[index].remove();
-    }
+    },
 
 }

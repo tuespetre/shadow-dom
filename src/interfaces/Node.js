@@ -4,16 +4,16 @@ import * as $ from '../utils.js';
 
 import CustomElements from '../custom-elements.js';
 
-export default class {
+export default {
 
     get isConnected() {
         return $.shadowIncludingRoot(this).nodeType === Node.DOCUMENT_NODE;
-    }
+    },
 
     getRootNode(options) {
         const composed = options && (options.composed === true);
         return composed ? $.shadowIncludingRoot(this) : $.root(this);
-    }
+    },
 
     get parentNode() {
         let parentNode;
@@ -23,7 +23,7 @@ export default class {
         }
 
         return parentNode || $.descriptors.Node.parentNode.get.call(this);
-    }
+    },
 
     get parentElement() {
         const parentNode = this.parentNode;
@@ -32,7 +32,7 @@ export default class {
         }
 
         return null;
-    }
+    },
 
     // TODO: tests
     hasChildNodes() {
@@ -45,7 +45,7 @@ export default class {
         }
 
         return $.descriptors.Node.hasChildNodes.value.call(this);
-    }
+    },
 
     // TODO: tests
     get childNodes() {
@@ -63,7 +63,7 @@ export default class {
         }
 
         return $.descriptors.Node.childNodes.get.call(this);
-    }
+    },
 
     // TODO: tests
     get firstChild() {
@@ -79,7 +79,7 @@ export default class {
         }
 
         return $.descriptors.Node.firstChild.get.call(this);
-    }
+    },
 
     // TODO: tests
     get lastChild() {
@@ -95,7 +95,7 @@ export default class {
         }
 
         return $.descriptors.Node.lastChild.get.call(this);
-    }
+    },
 
     // TODO: tests
     get previousSibling() {
@@ -110,7 +110,7 @@ export default class {
         }
 
         return $.descriptors.Node.previousSibling.get.call(this);
-    }
+    },
 
     // TODO: tests
     get nextSibling() {
@@ -125,13 +125,13 @@ export default class {
         }
 
         return $.descriptors.Node.nextSibling.get.call(this);
-    }
+    },
 
     // TODO: consider creating a raw property descriptor
     // that uses the native get instead of a pass-through function
     get nodeValue() {
         return $.descriptors.Node.nodeValue.get.call(this);
-    }
+    },
 
     // TODO: MutationObserver tests
     set nodeValue(value) {
@@ -148,7 +148,7 @@ export default class {
                     break;
             }
         });
-    }
+    },
 
     get textContent() {
         switch (this.nodeType) {
@@ -164,7 +164,7 @@ export default class {
             default:
                 return null;
         }
-    }
+    },
 
     // TODO: MutationObserver tests
     set textContent(value) {
@@ -188,7 +188,7 @@ export default class {
                     break;
             }
         });
-    }
+    },
 
     // TODO: tests
     normalize() {
@@ -225,7 +225,7 @@ export default class {
                 }
             }
         });
-    }
+    },
 
     // TODO: tests
     cloneNode(deep) {        
@@ -241,7 +241,7 @@ export default class {
             // 2. Return a clone of the context object, with the clone children flag set if deep is true.
             return $.clone(this, undefined, deep);
         });
-    }
+    },
 
     // TODO: tests
     isEqualNode(other) {
@@ -322,7 +322,7 @@ export default class {
         }
 
         return true;
-    }
+    },
 
     // TODO: tests
     compareDocumentPosition(other) {
@@ -383,7 +383,7 @@ export default class {
         }
 
         return Document.prototype.DOCUMENT_POSITION_FOLLOWING;
-    }
+    },
 
     // TODO: tests
     contains(node) {
@@ -403,7 +403,7 @@ export default class {
         while (parent = parent.parentNode);
 
         return false;
-    }
+    },
 
     // TODO: tests
     insertBefore(node, child) {
@@ -413,7 +413,7 @@ export default class {
             // of pre-inserting node into context object before child.
             return $.preInsert(node, this, child);
         });
-    }
+    },
 
     // TODO: tests
     appendChild(node) {
@@ -423,7 +423,7 @@ export default class {
             // appending node to context object.
             return $.append(node, this);
         });
-    }
+    },
 
     // TODO: tests
     replaceChild(node, child) {
@@ -433,7 +433,7 @@ export default class {
             // result of replacing child with node within context object.
             return $.replace(child, node, this);
         });
-    }
+    },
 
     // TODO: tests
     removeChild(child) {
@@ -443,7 +443,7 @@ export default class {
             // pre-removing child from context object.
             return $.preRemove(child, this);
         });
-    }
+    },
 
 }
 

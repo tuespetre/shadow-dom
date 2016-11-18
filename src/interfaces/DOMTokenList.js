@@ -4,23 +4,23 @@ import * as $ from '../utils.js';
 
 import CustomElements from '../custom-elements.js';
 
-export default class {
+export default {
 
     get length() {
         const state = $.getShadowState(this);
         return state.tokens.length;
-    }
+    },
 
     // TODO: Caveat about indexer expressions?
     item(index) {
         const state = $.getShadowState(this);
         return index >= state.tokens.length ? null : state.tokens[index];
-    }
+    },
 
     contains(token) {
         const state = $.getShadowState(this);
         return state.tokens.indexOf(token) !== -1;
-    }
+    },
 
     add(...tokens) {
         return CustomElements.executeCEReactions(() => {
@@ -36,7 +36,7 @@ export default class {
             state.tokens.sort();
             $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
         });
-    }
+    },
 
     remove(...tokens) {
         return CustomElements.executeCEReactions(() => {
@@ -51,7 +51,7 @@ export default class {
             }
             $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
         });
-    }
+    },
 
     toggle(token, force) {
         return CustomElements.executeCEReactions(() => {
@@ -80,7 +80,7 @@ export default class {
                 }
             }
         });
-    }
+    },
 
     replace(token, newToken) {
         return CustomElements.executeCEReactions(() => {
@@ -95,12 +95,12 @@ export default class {
             state.tokens.sort();
             $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
         });
-    }
+    },
 
     get value() {
         const state = $.getShadowState(this);
         return state.element.getAttribute(state.localName) || '';
-    }
+    },
 
     set value(value) {
         return CustomElements.executeCEReactions(() => {
@@ -109,7 +109,7 @@ export default class {
             // TODO: Remove usage of slice in favor of direct parse
             state.tokens = $.slice(this);
         });
-    }
+    },
 
 }
 

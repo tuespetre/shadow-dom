@@ -2,35 +2,35 @@
 
 import * as $ from '../utils.js';
 
-export default class {
-
-    constructor(type, init) {
-        let bubbles = false;
-        let cancelable = false;
-        let composed = false;
-        if (init) {
-            bubbles = init.bubbles === true;
-            cancelable = init.cancelable === true;
-            composed = init.composed === true;
-        }
-        const event = document.createEvent('event');
-        event.initEvent(type, bubbles, cancelable);
-        $.setShadowState(event, { composed });
-        return event;
+export default function $Event(type, init) {
+    let bubbles = false;
+    let cancelable = false;
+    let composed = false;
+    if (init) {
+        bubbles = init.bubbles === true;
+        cancelable = init.cancelable === true;
+        composed = init.composed === true;
     }
+    const event = document.createEvent('event');
+    event.initEvent(type, bubbles, cancelable);
+    $.setShadowState(event, { composed });
+    return event;
+}
+
+$Event.prototype = {
 
     get currentTarget() {
         return $.getShadowState(this).currentTarget;
-    }
+    },
 
     get target() {
         return $.getShadowState(this).target;
-    }
+    },
 
     stopImmediatePropagation() {
         this.stopPropagation();
         $.getShadowState(this).stopImmediatePropagationFlag = true;
-    }
+    },
 
     composedPath() {
         // https://dom.spec.whatwg.org/#dom-event-composedpath
@@ -66,12 +66,12 @@ export default class {
 
         // 4. return composedPath.
         return composedPath;
-    }
+    },
 
     get composed() {
         // TODO: Compare against the actual prototype instead of just the type strings
         return $.getShadowState(this).composed || builtInComposedEvents.indexOf(this.type) !== -1;
-    }
+    },
 
 }
 
@@ -79,11 +79,11 @@ export default class {
 // relatedTarget will be the element losing or gaining focus
 // MouseEvent:
 // relatedTarget will be the element being moved into or out of
-export class hasRelatedTarget {
+export const hasRelatedTarget = {
 
     get relatedTarget() {
         return $.getShadowState(this).relatedTarget;
-    }
+    },
 
 };
 

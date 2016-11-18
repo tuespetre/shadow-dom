@@ -445,15 +445,15 @@ function lookupCustomElementDefinition(document, nameSpace, localName, is) {
     return null;
 }
 
-class CustomElementRegistry {
+function CustomElementRegistry() {
+    setPrivateState(this, {
+        definitions: [],
+        elementDefinitionIsRunning: false,
+        whenDefinedPromiseMap: {}
+    });
+}
 
-    constructor() {
-        setPrivateState(this, {
-            definitions: [],
-            elementDefinitionIsRunning: false,
-            whenDefinedPromiseMap: {}
-        });
-    }
+CustomElementRegistry.prototype = {
 
     define(name, constructor, options) {
         const privateState = getPrivateState(this);
@@ -489,7 +489,7 @@ class CustomElementRegistry {
         let nativeInterface;
         try {
             const prototype = constructor.prototype;
-            if (typeof prototype !== 'object') {
+            if (!(prototype instanceof Object)) {
                 throw new TypeError('Invalid prototype');
             }
             lifecycleCallbacks = {
@@ -538,7 +538,7 @@ class CustomElementRegistry {
         });
         // 16. when-defined promise map
         // TODO: impl
-    }
+    },
 
     get(name) {
         const privateState = getPrivateState(this);
@@ -549,14 +549,14 @@ class CustomElementRegistry {
             }
         }
         return undefined;
-    }
+    },
 
     whenDefined(name) {
         // TODO: impl
         throw new Error('Not implemented yet');
-    }
+    },
 
-}
+};
 
 function upgradeElement(element, definition) {
     // https://html.spec.whatwg.org/multipage/scripting.html#concept-upgrade-an-element
@@ -675,7 +675,8 @@ function invokeReactions(queue) {
         const reactions = getPrivateState(element).reactionQueue;
         while (reactions.length) {
             try {
-                const [reaction] = reactions.splice(0, 1);
+                const splicedOut = reactions.splice(0, 1);
+                const reaction = splicedOut[0];
                 switch (reaction.type) {
                     case upgradeReactionType:
                         upgradeElement(element, reaction.definition);
