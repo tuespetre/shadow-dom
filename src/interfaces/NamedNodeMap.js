@@ -13,7 +13,7 @@ export default {
             return $.setAttribute(attr, shadowState.element);
         });
     },
-    
+
     // TODO: tests
     setNamedItemNS(attr) {
         return CustomElements.executeCEReactions(() => {

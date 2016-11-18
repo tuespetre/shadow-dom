@@ -1206,7 +1206,7 @@ export function insert(node, parent, child, suppressObservers) {
 
         // 3. If parent is a slot whose assigned nodes is the empty list, 
         // then run signal a slot change for parent.
-        if (parent.localName === 'slot' && 
+        if (parent.localName === 'slot' &&
             (!parentState || !parentState.assignedNodes || parentState.assignedNodes.length === 0)) {
             // 3a. Physically append the child into the slot.
             descriptors.Node.appendChild.value.call(parent, node);
@@ -1231,7 +1231,7 @@ export function insert(node, parent, child, suppressObservers) {
 
         // 5. For each shadow-including inclusive descendant inclusiveDescendant of node, 
         // in shadow-including tree order, run these subsubsteps:
-        forEachShadowIncludingInclusiveDescendant(node, function(inclusiveDescendant) {
+        forEachShadowIncludingInclusiveDescendant(node, function (inclusiveDescendant) {
             // Skip (other)
             // 1. Run the insertion steps with inclusiveDescendant
             // PERF: moved this check out of the loop.
@@ -1443,7 +1443,7 @@ export function remove(node, parent, suppressObservers) {
 
     // 11. If parent is a slot whose assigned nodes is the empty list,
     // then run signal a slot change for parent.
-    if (parent.localName === 'slot' && 
+    if (parent.localName === 'slot' &&
         (!parentState || !parentState.assignedNodes || parentState.assignedNodes.length === 0)) {
         signalASlotChange(parent);
     }
@@ -1711,7 +1711,6 @@ function queueMutationRecord(type, target, name, nameSpace, oldValue, addedNodes
         // 7. If observer has a paired string, set record’s oldValue to observer’s paired string.
         record.oldValue = pairedStrings[i];
         // 8. Append record to observer’s record queue.
-        Object.freeze(record);
         observer.queue.push(record);
     }
 

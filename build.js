@@ -18,10 +18,7 @@ const files = {
     map: './dist/shadow-dom.min.js.map'
 };
 
-const uglifyOptions = { 
-    output: {
-        keep_quoted_props: true
-    },
+const uglifyOptions = opts => Object.assign({
     compress: {
         properties: false
     },
@@ -29,7 +26,7 @@ const uglifyOptions = {
     mangleProperties: false /*{
         ignore_quoted: true    
     }*/
-};
+}, opts);
 
 const unminified = browserify('./src/main.js')
     .transform('babelify', { 
@@ -47,16 +44,20 @@ const minified = browserify('./src/main.js', { debug: true })
         presets: ['es2015'],
         sourceMaps: false 
     })
-    .transform('uglifyify', uglifyOptions)
+    .transform('uglifyify', uglifyOptions({
+        output: {
+            keep_quoted_props: true
+        }
+    }))
     .bundle()
     .pipe(exorcist(files.map))
     .pipe(fs.createWriteStream(files.minified, 'utf8'));
 
 minified.on('finish', () => {
-    const uglified = uglify.minify(files.minified, Object.assign({
+    const uglified = uglify.minify(files.minified, uglifyOptions({
         inSourceMap: files.map,
         outSourceMap: files.map
-    }, uglifyOptions));
+    }));
     fs.writeFileSync(files.minified, uglified.code);
     fs.writeFileSync(files.map, uglified.map);
     console.log('Minified build complete');

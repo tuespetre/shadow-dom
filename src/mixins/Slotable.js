@@ -17,7 +17,7 @@ export default function (base) {
                 }
                 return slot;
             }
-            return null;            
+            return null;
         },
 
     };

@@ -118,7 +118,7 @@ export default function (base) {
         },
 
         // TODO: tests
-        remove() {            
+        remove() {
             return CustomElements.executeCEReactions(() => {
                 // https://dom.spec.whatwg.org/#dom-childnode-remove
                 // The remove() method, when invoked, must run these steps:

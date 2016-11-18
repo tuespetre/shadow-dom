@@ -143,7 +143,7 @@ function install() {
     // Slotable mixin
     $.extend(Element, $Slotable(Element));
     $.extend(Text, $Slotable(Text));
-    
+
     // Cleanup for IE, Edge
     delete Node.prototype.attributes;
     delete HTMLElement.prototype.classList;

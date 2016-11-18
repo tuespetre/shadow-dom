@@ -5976,7 +5976,6 @@ function queueMutationRecord(type, target, name, nameSpace, oldValue, addedNodes
         // 7. If observer has a paired string, set record’s oldValue to observer’s paired string.
         record.oldValue = pairedStrings[_i10];
         // 8. Append record to observer’s record queue.
-        Object.freeze(record);
         _observer.queue.push(record);
     }
 

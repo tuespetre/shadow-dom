@@ -228,7 +228,7 @@ export default {
     },
 
     // TODO: tests
-    cloneNode(deep) {        
+    cloneNode(deep) {
         return CustomElements.executeCEReactions(() => {
             // https://dom.spec.whatwg.org/#dom-node-clonenode
             // The cloneNode(deep) method, when invoked, must run these steps:
@@ -510,7 +510,7 @@ function preceding(element1, element2) {
 
 function elementTextContent(element) {
     let result = '';
-    const childNodes = element.childNodes;                
+    const childNodes = element.childNodes;
     for (let i = 0; i < childNodes.length; i++) {
         const childNode = childNodes[i];
         switch (childNode.nodeType) {
