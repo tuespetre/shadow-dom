@@ -25,8 +25,6 @@ export default {
     isValidCustomElementName
 };
 
-// TODO: add a note about importing YuzuJS/setImmediate before this polyfill if better performance is desired.
-// TODO: what about IE9?
 const setImmediate = 'setImmediate' in window ? window.setImmediate : function (callback, ...args) {
     return setTimeout(callback, 0, ...args);
 };

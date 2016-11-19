@@ -2,13 +2,31 @@
 
 This repo aims to provide a polyfill for Shadow DOM v1 that is as spec-complete and correct as possible. 
 
+What you will get if you use it right now:
+
+- **Shadow DOM** polyfill
+  - MutationObserver support
+  - Currently lacking `Range` and `HTMLElement.style` support
+- **Custom Elements** polyfill
+  - Built in/around the Shadow DOM polyfill
+  - Shims HTMLElement and kin for browsers that have native support 
+    so transpiled and ES5-style classes can work 
+    (i.e. via `var self = HTMLElement.call(this)`)
+- **Browser support** across all of 'the moderns', plus IE10/11
+  - IE9 will work as well if you include [YuzuJS/setImmediate](https://github.com/YuzuJS/setImmediate)
+
 ## Usage:
 
-Include `dist/shadow-dom.js` or `dist/shadow-dom.min.js` before any other scripts.
-It wouldn't be wise to use `async`. Use `defer` with caution.
-
-If you want to **force the polyfill** to be used in browsers with native support for some reason,
+- Include `dist/shadow-dom.js` or `dist/shadow-dom.min.js` before any other scripts.
+It wouldn't be wise to use the `async` attribute for the `<script>`. Use the `defer` 
+attribute with caution.
+- If you want to **force the Shadow DOM polyfill** to be used in browsers with native support for some reason,
 set `window.forceShadowDomPolyfill = true` before the script is included.
+- If you want to **force the Custom Elements polyfill** to be used in browsers with native support for some reason,
+set `window.forceCustomElementsPolyfill = true` before the script is included.
+
+> **Note:** For a performance boost in browsers that don't natively support `setImmediate`, it is recommended 
+> to include [YuzuJS/setImmediate](https://github.com/YuzuJS/setImmediate) before you include this polyfill.
 
 ## Caveats:
 

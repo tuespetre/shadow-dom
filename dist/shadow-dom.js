@@ -31,8 +31,6 @@ exports.default = {
     isValidCustomElementName: isValidCustomElementName
 };
 
-// TODO: add a note about importing YuzuJS/setImmediate before this polyfill if better performance is desired.
-// TODO: what about IE9?
 
 var setImmediate = 'setImmediate' in window ? window.setImmediate : function (callback) {
     for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
@@ -4347,8 +4345,6 @@ var descriptors = exports.descriptors = {
     }
 };
 
-// TODO: add a note about importing YuzuJS/setImmediate before this polyfill if better performance is desired.
-// TODO: what about IE9?
 var setImmediate = exports.setImmediate = 'setImmediate' in window ? window.setImmediate : function (callback) {
     for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
         args[_key - 1] = arguments[_key];
