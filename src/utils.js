@@ -863,7 +863,7 @@ function findASlot(slotable, open) {
         return null;
     }
 
-    const name = slotable instanceof Element ? slotable.slot : null;
+    const name = slotable instanceof Element ? slotable.slot : '';
 
     return treeOrderRecursiveSelectFirst(parentState.shadowRoot.firstChild, function (node) {
         return node.localName === 'slot' && node.name === name;

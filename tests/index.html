@@ -66,7 +66,9 @@
     mocha.run();
     document.addEventListener('DOMContentLoaded', function () {
       var div = document.createElement('div')
-      div.append('This is here as a demonstration of an element with a shadow root and a slot.')
+      var span = document.createElement('span');
+      span.append('This is here as a demonstration of an element with a shadow root and a slot.');
+      div.append(span);
       div.attachShadow({ mode: 'open' });
       var inner = document.createElement('div');
       inner.style.backgroundColor = 'green';

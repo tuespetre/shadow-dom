@@ -1959,7 +1959,7 @@ exports.default = {
             return;
         }
 
-        return this.getAttribute('name');
+        return this.getAttribute('name') || '';
     },
 
     // TODO: tests
@@ -5160,7 +5160,7 @@ function findASlot(slotable, open) {
         return null;
     }
 
-    var name = slotable instanceof Element ? slotable.slot : null;
+    var name = slotable instanceof Element ? slotable.slot : '';
 
     return treeOrderRecursiveSelectFirst(parentState.shadowRoot.firstChild, function (node) {
         return node.localName === 'slot' && node.name === name;

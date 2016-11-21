@@ -10,7 +10,7 @@ export default {
             return;
         }
 
-        return this.getAttribute('name');
+        return this.getAttribute('name') || '';
     },
 
     // TODO: tests
