@@ -21,22 +21,30 @@ export default {
     // TODO: tests
     setAttribute(qualifiedName, value) {
         return CustomElements.executeCEReactions(() => {
-            let attribute = $.descriptors.Element.attributes.get.call(this).getNamedItem(qualifiedName);
+            let attribute = $.descriptors.Element.getAttributeNode.value.call(this, qualifiedName);
             if (!attribute) {
-                attribute = this.ownerDocument.createAttribute(qualifiedName);
-                $.descriptors.Attr.value.set.call(attribute, value);
+                $.descriptors.Element.setAttribute.value.call(this, qualifiedName, value);
+                attribute = $.descriptors.Element.getAttributeNode.value.call(this, qualifiedName);
                 $.appendAttribute(attribute, this);
-                return;
             }
-            $.changeAttribute(attribute, this, value);
+            else {
+                $.changeAttribute(attribute, this, value);
+            }
         });
     },
 
     // TODO: tests
-    setAttributeNS(namespace, qualifiedName, value) {
+    setAttributeNS(nameSpace, qualifiedName, value) {
         return CustomElements.executeCEReactions(() => {
-            const dummy = document.createAttributeNS(namespace, qualifiedName);
-            $.setAttributeValue(this, dummy.localName, value, dummy.prefix, dummy.namespaceURI);
+            let attribute = $.descriptors.Element.getAttributeNodeNS.value.call(this, nameSpace, qualifiedName);
+            if (!attribute) {
+                $.descriptors.Element.setAttributeNS.value.call(this, nameSpace, qualifiedName, value);
+                attribute = $.descriptors.Element.getAttributeNodeNS.value.call(this, nameSpace, qualifiedName);
+                $.appendAttribute(attribute, this);
+            }
+            else {
+                $.changeAttribute(attribute, this, value);
+            }
         });
     },
 
@@ -57,14 +65,14 @@ export default {
     // TODO: tests
     setAttributeNode(attr) {
         return CustomElements.executeCEReactions(() => {
-            return $.setAttribute(attr, this);
+            return $.setAttribute(attr, this, $.descriptors.Element.setAttributeNode);
         });
     },
 
     // TODO: tests
     setAttributeNodeNS(attr) {
         return CustomElements.executeCEReactions(() => {
-            return $.setAttribute(attr, this);
+            return $.setAttribute(attr, this, $.descriptors.Element.setAttributeNodeNS);
         });
     },
 

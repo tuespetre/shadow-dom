@@ -157,4 +157,17 @@ suite('Element', function () {
 
     });
 
+    suite('attribute-related methods', function () {
+
+        test('setAttribute', function () {
+            // IE would throw a 'member not found' or similar exception
+            // if, for instance, setAttributeNodeNS was being used internally.
+            var input = document.createElement('input');
+            assert.doesNotThrow(function () {
+                input.setAttribute('type', 'radio');
+            });
+        });
+
+    });
+
 });

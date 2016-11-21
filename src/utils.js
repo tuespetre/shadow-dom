@@ -19,11 +19,15 @@ export const descriptors = {
     },
     Element: {
         attributes: descriptor(Element, 'attributes') || descriptor(Node, 'attributes'),
+        getAttributeNode: descriptor(Element, 'getAttributeNode'),
+        getAttributeNodeNS: descriptor(Element, 'getAttributeNodeNS'),
         getElementsByTagName: descriptor(Element, 'getElementsByTagName'),
         getElementsByTagNameNS: descriptor(Element, 'getElementsByTagNameNS'),
         getElementsByClassName: descriptor(Element, 'getElementsByClassName'),
         innerHTML: descriptor(Element, 'innerHTML') || descriptor(HTMLElement, 'innerHTML'),
         setAttribute: descriptor(Element, 'setAttribute'),
+        setAttributeNS: descriptor(Element, 'setAttributeNS'),
+        setAttributeNode: descriptor(Element, 'setAttributeNode'),
         setAttributeNodeNS: descriptor(Element, 'setAttributeNodeNS'),
         removeAttributeNode: descriptor(Element, 'removeAttributeNode')
     },
@@ -658,7 +662,8 @@ export function appendAttribute(attribute, element) {
     attributeChangeSteps(element, name, oldValue, newValue, nameSpace);
 
     // 4. Append the attribute to the element’s attribute list.
-    descriptors.Element.setAttributeNodeNS.value.call(element, attribute);
+    // This should be handled previously by the caller.
+    //descriptors.Element.setAttributeNodeNS.value.call(element, attribute);
 
     // Skip (native)
     // 5. Set attribute’s element to element.
@@ -720,15 +725,15 @@ function replaceAttribute(oldAttr, newAttr, element) {
     // 6. Set newAttr’s element to element.
 }
 
-export function setAttribute(attr, element) {
+export function setAttribute(attr, element, nativeSetAttributeNodeDescriptor) {
     if (attr.ownerElement != null && attr.ownerElement !== element) {
         throw makeError('InUseAttributeError');
     }
-    const attributes = descriptors.Element.attributes.get.call(element);
-    const oldAttr = attributes.getNamedItemNS(attr.namespaceURI, attr.localName);
+    const oldAttr = descriptors.Element.getAttributeNodeNS.value.call(element, attr.namespaceURI, attr.localName);
     if (oldAttr === attr) {
         return attr;
     }
+    nativeSetAttributeNodeDescriptor.value.call(element, attr);
     if (oldAttr) {
         replaceAttribute(oldAttr, attr, element);
     }
@@ -741,11 +746,10 @@ export function setAttribute(attr, element) {
 export function setAttributeValue(element, localName, value, prefix, ns) {
     prefix = prefix || null;
     ns = ns || null;
-    const attributes = descriptors.Element.attributes.get.call(element);
-    let attribute = attributes.getNamedItemNS(ns, localName);
+    let attribute = descriptors.Element.getAttributeNode.value.call(element, localName);
     if (!attribute) {
-        attribute = element.ownerDocument.createAttributeNS(ns, localName);
-        descriptors.Attr.value.set.call(attribute, value);
+        descriptors.Element.setAttribute.value.call(element, localName, value);
+        attribute = descriptors.Element.getAttributeNode.value.call(element, localName);
         appendAttribute(attribute, element);
         return;
     }

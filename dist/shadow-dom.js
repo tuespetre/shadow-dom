@@ -1159,25 +1159,31 @@ exports.default = {
         var _this = this;
 
         return _customElements2.default.executeCEReactions(function () {
-            var attribute = $.descriptors.Element.attributes.get.call(_this).getNamedItem(qualifiedName);
+            var attribute = $.descriptors.Element.getAttributeNode.value.call(_this, qualifiedName);
             if (!attribute) {
-                attribute = _this.ownerDocument.createAttribute(qualifiedName);
-                $.descriptors.Attr.value.set.call(attribute, value);
+                $.descriptors.Element.setAttribute.value.call(_this, qualifiedName, value);
+                attribute = $.descriptors.Element.getAttributeNode.value.call(_this, qualifiedName);
                 $.appendAttribute(attribute, _this);
-                return;
+            } else {
+                $.changeAttribute(attribute, _this, value);
             }
-            $.changeAttribute(attribute, _this, value);
         });
     },
 
 
     // TODO: tests
-    setAttributeNS: function setAttributeNS(namespace, qualifiedName, value) {
+    setAttributeNS: function setAttributeNS(nameSpace, qualifiedName, value) {
         var _this2 = this;
 
         return _customElements2.default.executeCEReactions(function () {
-            var dummy = document.createAttributeNS(namespace, qualifiedName);
-            $.setAttributeValue(_this2, dummy.localName, value, dummy.prefix, dummy.namespaceURI);
+            var attribute = $.descriptors.Element.getAttributeNodeNS.value.call(_this2, nameSpace, qualifiedName);
+            if (!attribute) {
+                $.descriptors.Element.setAttributeNS.value.call(_this2, nameSpace, qualifiedName, value);
+                attribute = $.descriptors.Element.getAttributeNodeNS.value.call(_this2, nameSpace, qualifiedName);
+                $.appendAttribute(attribute, _this2);
+            } else {
+                $.changeAttribute(attribute, _this2, value);
+            }
         });
     },
 
@@ -1207,7 +1213,7 @@ exports.default = {
         var _this5 = this;
 
         return _customElements2.default.executeCEReactions(function () {
-            return $.setAttribute(attr, _this5);
+            return $.setAttribute(attr, _this5, $.descriptors.Element.setAttributeNode);
         });
     },
 
@@ -1217,7 +1223,7 @@ exports.default = {
         var _this6 = this;
 
         return _customElements2.default.executeCEReactions(function () {
-            return $.setAttribute(attr, _this6);
+            return $.setAttribute(attr, _this6, $.descriptors.Element.setAttributeNodeNS);
         });
     },
 
@@ -2159,7 +2165,7 @@ exports.default = {
 
         return _customElements2.default.executeCEReactions(function () {
             var shadowState = $.getShadowState(_this);
-            return $.setAttribute(attr, shadowState.element);
+            return $.setAttribute(attr, shadowState.element, $.descriptors.Element.setAttributeNode);
         });
     },
 
@@ -2170,7 +2176,7 @@ exports.default = {
 
         return _customElements2.default.executeCEReactions(function () {
             var shadowState = $.getShadowState(_this2);
-            return $.setAttribute(attr, shadowState.element);
+            return $.setAttribute(attr, shadowState.element, $.descriptors.Element.setAttributeNodeNS);
         });
     },
 
@@ -4313,11 +4319,15 @@ var descriptors = exports.descriptors = {
     },
     Element: {
         attributes: descriptor(Element, 'attributes') || descriptor(Node, 'attributes'),
+        getAttributeNode: descriptor(Element, 'getAttributeNode'),
+        getAttributeNodeNS: descriptor(Element, 'getAttributeNodeNS'),
         getElementsByTagName: descriptor(Element, 'getElementsByTagName'),
         getElementsByTagNameNS: descriptor(Element, 'getElementsByTagNameNS'),
         getElementsByClassName: descriptor(Element, 'getElementsByClassName'),
         innerHTML: descriptor(Element, 'innerHTML') || descriptor(HTMLElement, 'innerHTML'),
         setAttribute: descriptor(Element, 'setAttribute'),
+        setAttributeNS: descriptor(Element, 'setAttributeNS'),
+        setAttributeNode: descriptor(Element, 'setAttributeNode'),
         setAttributeNodeNS: descriptor(Element, 'setAttributeNodeNS'),
         removeAttributeNode: descriptor(Element, 'removeAttributeNode')
     },
@@ -4951,7 +4961,8 @@ function appendAttribute(attribute, element) {
     attributeChangeSteps(element, name, oldValue, newValue, nameSpace);
 
     // 4. Append the attribute to the element’s attribute list.
-    descriptors.Element.setAttributeNodeNS.value.call(element, attribute);
+    // This should be handled previously by the caller.
+    //descriptors.Element.setAttributeNodeNS.value.call(element, attribute);
 
     // Skip (native)
     // 5. Set attribute’s element to element.
@@ -5013,15 +5024,15 @@ function replaceAttribute(oldAttr, newAttr, element) {
     // 6. Set newAttr’s element to element.
 }
 
-function setAttribute(attr, element) {
+function setAttribute(attr, element, nativeSetAttributeNodeDescriptor) {
     if (attr.ownerElement != null && attr.ownerElement !== element) {
         throw makeError('InUseAttributeError');
     }
-    var attributes = descriptors.Element.attributes.get.call(element);
-    var oldAttr = attributes.getNamedItemNS(attr.namespaceURI, attr.localName);
+    var oldAttr = descriptors.Element.getAttributeNodeNS.value.call(element, attr.namespaceURI, attr.localName);
     if (oldAttr === attr) {
         return attr;
     }
+    nativeSetAttributeNodeDescriptor.value.call(element, attr);
     if (oldAttr) {
         replaceAttribute(oldAttr, attr, element);
     } else {
@@ -5033,11 +5044,10 @@ function setAttribute(attr, element) {
 function setAttributeValue(element, localName, value, prefix, ns) {
     prefix = prefix || null;
     ns = ns || null;
-    var attributes = descriptors.Element.attributes.get.call(element);
-    var attribute = attributes.getNamedItemNS(ns, localName);
+    var attribute = descriptors.Element.getAttributeNode.value.call(element, localName);
     if (!attribute) {
-        attribute = element.ownerDocument.createAttributeNS(ns, localName);
-        descriptors.Attr.value.set.call(attribute, value);
+        descriptors.Element.setAttribute.value.call(element, localName, value);
+        attribute = descriptors.Element.getAttributeNode.value.call(element, localName);
         appendAttribute(attribute, element);
         return;
     }

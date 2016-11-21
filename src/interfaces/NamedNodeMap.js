@@ -10,7 +10,7 @@ export default {
     setNamedItem(attr) {
         return CustomElements.executeCEReactions(() => {
             const shadowState = $.getShadowState(this);
-            return $.setAttribute(attr, shadowState.element);
+            return $.setAttribute(attr, shadowState.element, $.descriptors.Element.setAttributeNode);
         });
     },
 
@@ -18,7 +18,7 @@ export default {
     setNamedItemNS(attr) {
         return CustomElements.executeCEReactions(() => {
             const shadowState = $.getShadowState(this);
-            return $.setAttribute(attr, shadowState.element);
+            return $.setAttribute(attr, shadowState.element, $.descriptors.Element.setAttributeNodeNS);
         });
     },
 
