@@ -2871,10 +2871,12 @@ if (window['forceCustomElementsPolyfill'] || !_customElements2.default.nativeSup
 
 if (installShadowDom) {
     _shadowDom2.default.install();
+    window.shadowDomPolyfilled = true;
 }
 
 if (installCustomElements) {
     _customElements2.default.install();
+    window.customElementsPolyfilled = true;
 } else {
     // TODO: Offer a way to opt out if desired
     _customElements2.default.shimHtmlConstructors();
