@@ -185,4 +185,15 @@ suite('Node', function () {
 
     });
 
+    suite('appendChild(node)', function () {
+
+        test('returns the appended child node', function () {
+            var parent = document.createElement('div');
+            var child = document.createElement('span');
+            var result = parent.appendChild(child);
+            assert.equal(result, child);
+        });
+
+    });
+
 });

@@ -5553,7 +5553,7 @@ function insert(node, parent, child, suppressObservers) {
 function append(node, parent) {
     // https://dom.spec.whatwg.org/#concept-node-append
     // To append a node to a parent, pre-insert node into parent before null.
-    preInsert(node, parent, null);
+    return preInsert(node, parent, null);
 }
 
 function replace(child, node, parent) {
