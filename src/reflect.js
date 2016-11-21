@@ -67,7 +67,7 @@ const interfaces = {
     'HTMLButtonElement': {
         'autofocus': reflectBoolean(),
         'disabled': reflectBoolean(),
-        'form': reflectHTMLElement(HTMLFormElement, true),
+        //'form': reflectHTMLElement(HTMLFormElement, true),
         'formAction': reflectString(),
         'formEnctype': reflectString(),
         'formMethod': reflectString(),
@@ -98,7 +98,7 @@ const interfaces = {
     },
     'HTMLFieldSetElement': {
         'disabled': reflectBoolean(),
-        'form': reflectHTMLElement(HTMLFormElement, true),
+        //'form': reflectHTMLElement(HTMLFormElement, true),
         'name': reflectString(),
         // TODO: implement on demand
         // 'elements': reflectHTMLFormControlsCollection()
@@ -147,7 +147,7 @@ const interfaces = {
         'defaultChecked': reflectBoolean('checked'),
         'dirName': reflectString(),
         'disabled': reflectBoolean(),
-        'form': reflectHTMLElement(HTMLFormElement, true),
+        //'form': reflectHTMLElement(HTMLFormElement, true),
         'formAction': reflectString(),
         'formEnctype': reflectString(),
         'formMethod': reflectString(),
@@ -183,20 +183,20 @@ const interfaces = {
         'autofocus': reflectBoolean(),
         'challenge': reflectString(),
         'disabled': reflectBoolean(),
-        'form': reflectHTMLElement(HTMLFormElement, true),
+        //'form': reflectHTMLElement(HTMLFormElement, true),
         'keytype': reflectString(),
         'name': reflectString(),
         // TODO: implement on demand
         // 'labels': reflectLabels()
     },
     'HTMLLabelElement': {
-        'form': reflectHTMLElement(HTMLFormElement, true),
+        //'form': reflectHTMLElement(HTMLFormElement, true),
         'htmlFor': reflectString('for'),
         // TODO: implement on demand
         // 'control': reflectLabelControl()
     },
     'HTMLLegendElement': {
-        'form': reflectHTMLElement(HTMLFormElement, true)
+        //'form': reflectHTMLElement(HTMLFormElement, true)
     },
     'HTMLLIElement': {
         'value': reflectString()
@@ -265,7 +265,7 @@ const interfaces = {
         'type': reflectString(),
         'typeMustMatch': reflectBoolean(),
         'name': reflectString(),
-        'form': reflectHTMLElement(HTMLFormElement, true),
+        //'form': reflectHTMLElement(HTMLFormElement, true),
         'width': reflectInteger(null, 0),
         'height': reflectInteger(null, 0)
     },
@@ -280,14 +280,14 @@ const interfaces = {
     },
     'HTMLOptionElement': {
         'disabled': reflectBoolean(),
-        'form': reflectHTMLElement(HTMLFormElement, true),
+        //'form': reflectHTMLElement(HTMLFormElement, true),
         'label': reflectString(),
         'defaultSelected': reflectBoolean('selected'),
         'value': reflectString()
     },
     'HTMLOutputElement': {
         'htmlFor': reflectDOMTokenList('for'),
-        'form': reflectHTMLElement(HTMLFormElement, true),
+        //'form': reflectHTMLElement(HTMLFormElement, true),
         'name': reflectString(),
         'defaultValue': reflectString('value'),
         // TODO: implement on demand
@@ -321,7 +321,7 @@ const interfaces = {
         'autocomplete': reflectString(),
         'autofocus': reflectBoolean(),
         'disabled': reflectBoolean(),
-        'form': reflectHTMLElement(HTMLFormElement, true),
+        //'form': reflectHTMLElement(HTMLFormElement, true),
         'multiple': reflectBoolean(),
         'name': reflectString(),
         'required': reflectBoolean(),
@@ -355,7 +355,7 @@ const interfaces = {
         'cols': reflectString(),
         'dirName': reflectString(),
         'disabled': reflectBoolean(),
-        'form': reflectHTMLElement(HTMLFormElement, true),
+        //'form': reflectHTMLElement(HTMLFormElement, true),
         'inputMode': reflectString(),
         'maxLength': reflectInteger(0, 0),
         'minLength': reflectInteger(0, 0),
