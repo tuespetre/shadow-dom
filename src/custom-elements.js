@@ -197,6 +197,7 @@ function makeHtmlConstructor() {
             const current = registryState.definitions[i];
             if (current.constructor === thisPrototype.constructor) {
                 definition = current;
+                break;
             }
         }
         if (!definition) {
@@ -546,9 +547,9 @@ CustomElementRegistry.prototype = {
                 enqueueUpgradeReaction(element, definition);
             }
         });
-        const promise = privateState.whenDefinedPromiseMap[name];
-        if (promise) {
-            promise.resolve();
+        const entry = privateState.whenDefinedPromiseMap[name];
+        if (entry) {
+            entry.resolve();
             privateState.whenDefinedPromiseMap[name] = null;
         }
     },
@@ -572,15 +573,21 @@ CustomElementRegistry.prototype = {
             throw makeDOMException('SyntaxError', 'Invalid custom element name');
         }
         const privateState = getPrivateState(this);
-        if (name in privateState.definitions) {
-            return Promise.resolve();
+        for (let i = 0; i < privateState.definitions.length; i++) {
+            const definition = privateState.definitions[i];
+            if (name === definition.name) {
+                return Promise.resolve();
+            }
         }
-        let promise = privateState.whenDefinedPromiseMap[name];
-        if (!promise) {
-            promise = new Promise();
-            privateState.whenDefinedPromiseMap[name] = promise;
+        let entry = privateState.whenDefinedPromiseMap[name];
+        if (!entry) {
+            entry = { promise: null, resolve: null };
+            entry.promise = new Promise(function (resolve, reject) {
+                entry.resolve = resolve;
+            });
+            privateState.whenDefinedPromiseMap[name] = entry;
         }
-        return promise;
+        return entry.promise;
     },
 
 };
