@@ -4,6 +4,7 @@
 // TODO: CEReactions for interfaces in the HTML spec
 
 const nativeSupport = 'customElements' in window;
+const promisesSupported = 'Promise' in window;
 const originalHTMLElement = window.HTMLElement;
 const originalCreateElement = Document.prototype.createElement;
 const originalCreateElementNS = Document.prototype.createElementNS;
@@ -545,8 +546,11 @@ CustomElementRegistry.prototype = {
                 enqueueUpgradeReaction(element, definition);
             }
         });
-        // 16. when-defined promise map
-        // TODO: impl
+        const promise = privateState.whenDefinedPromiseMap[name];
+        if (promise) {
+            promise.resolve();
+            privateState.whenDefinedPromiseMap[name] = null;
+        }
     },
 
     get(name) {
@@ -561,8 +565,22 @@ CustomElementRegistry.prototype = {
     },
 
     whenDefined(name) {
-        // TODO: impl
-        throw new Error('Not implemented yet');
+        if (!promisesSupported) {
+            throw new Error('Please include a promise polyfill.');
+        }
+        if (!isValidCustomElementName(name)) {
+            throw makeDOMException('SyntaxError', 'Invalid custom element name');
+        }
+        const privateState = getPrivateState(this);
+        if (name in privateState.definitions) {
+            return Promise.resolve();
+        }
+        let promise = privateState.whenDefinedPromiseMap[name];
+        if (!promise) {
+            promise = new Promise();
+            privateState.whenDefinedPromiseMap[name] = promise;
+        }
+        return promise;
     },
 
 };
