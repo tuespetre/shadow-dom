@@ -8,6 +8,7 @@ const promisesSupported = 'Promise' in window;
 const originalHTMLElement = window.HTMLElement;
 const originalCreateElement = Document.prototype.createElement;
 const originalCreateElementNS = Document.prototype.createElementNS;
+const nativeMutationObserver = window.MutationObserver;
 const htmlNamespace = 'http://www.w3.org/1999/xhtml';
 const alreadyConstructedMarker = 1;
 const upgradeReactionType = 1;
@@ -61,9 +62,10 @@ function install() {
     const installation = {};
 
     installation.builtInElementInterfaces = installHtmlConstructors();
+    installation.registry = new CustomElementRegistry();
 
     Object.defineProperty(window, 'customElements', {
-        value: new CustomElementRegistry(),
+        value: installation.registry,
         writable: false,
         configurable: true,
         enumerable: true
@@ -72,11 +74,32 @@ function install() {
     Document.prototype.createElement = createElement;
     Document.prototype.createElementNS = createElementNS;
 
+    if (nativeMutationObserver) {
+        const observer = new nativeMutationObserver(function (records) {
+            for (let i = 0; i < records.length; i++) {
+                for (let j = 0; j < records[i].addedNodes.length; j++) {
+                    let added = records[i].addedNodes[j];
+                    if (added.nodeType === Node.ELEMENT_NODE) {
+                        tryToUpgradeElementSync(added);
+                    }
+                }
+            }
+        });
+        observer.observe(window.document, {
+            childList: true,
+            subtree: true
+        });
+        window.document.addEventListener('DOMContentLoaded', function () {
+            observer.disconnect();
+        });
+    }
+    
     window.document.addEventListener('DOMContentLoaded', function () {
         // Upgrading elements initially present in the document
-        // TODO: Improve this, possibly with a MutationEvent or something
-        treeOrderShadowInclusiveForEach(document, tryToUpgradeElement);
-    });
+        const elements = [];
+        treeOrderShadowInclusiveForEach(document, function (element) { elements.push(element); });
+        elements.forEach(tryToUpgradeElementSync);
+    }, { once: true });
 
     installation.customElementsReactionStack = [];
     installation.backupElementQueue = [];
@@ -549,8 +572,10 @@ CustomElementRegistry.prototype = {
         });
         const entry = privateState.whenDefinedPromiseMap[name];
         if (entry) {
-            entry.resolve();
-            privateState.whenDefinedPromiseMap[name] = null;
+            setImmediate(function () {
+                entry.resolve();
+                privateState.whenDefinedPromiseMap[name] = null;
+            });
         }
     },
 
@@ -594,9 +619,14 @@ CustomElementRegistry.prototype = {
 
 function upgradeElement(element, definition) {
     // https://html.spec.whatwg.org/multipage/scripting.html#concept-upgrade-an-element
-    const elementState = getPrivateState(element) || setPrivateState(element, { reactionQueue: [] });
-    if (elementState.customElementState === 'custom' ||
-        elementState.customElementState === 'failed') {
+    let elementState = getPrivateState(element);
+    if (!elementState) {
+        elementState = setPrivateState(element, { 
+            reactionQueue: [],
+            customElementDefinition: definition
+        });
+    }
+    else if (shouldNotUpgrade(elementState)) {
         return;
     }
     const attributes = element.attributes;
@@ -620,6 +650,7 @@ function upgradeElement(element, definition) {
         caught = error;
         delete element.prototype;
         elementState.customElementState = 'failed';
+        elementState.customElementDefinition = null;
         elementState.reactionQueue.splice(0, elementState.reactionQueue.length);
     }
     definition.constructionStack.pop();
@@ -627,13 +658,30 @@ function upgradeElement(element, definition) {
         throw caught;
     }
     elementState.customElementState = 'custom';
-    elementState.customElementDefinition = definition;
+}
+
+function tryToUpgradeElementSync(element) {
+    const elementState = getPrivateState(element);
+    let isValue = null;
+    if (elementState) {
+        if (shouldNotUpgrade(elementState)) {
+            return;
+        }
+        isValue = elementState.isValue;
+    }
+    const definition = lookupCustomElementDefinition(element.ownerDocument, element.namespaceURI, element.localName, isValue);
+    if (definition) {
+        upgradeElement(element, definition);
+    }
 }
 
 function tryToUpgradeElement(element) {
     const elementState = getPrivateState(element);
     let isValue = null;
     if (elementState) {
+        if (shouldNotUpgrade(elementState)) {
+            return;
+        }
         isValue = elementState.isValue;
     }
     const definition = lookupCustomElementDefinition(element.ownerDocument, element.namespaceURI, element.localName, isValue);
@@ -740,6 +788,12 @@ function executeCEReactions(callback) {
 }
 
 // Utility functions
+
+function shouldNotUpgrade(privateState) {
+    return privateState && (
+        privateState.customElementState === 'custom' ||
+        privateState.customElementState === 'failed');
+}
 
 function makeDOMException(name, message) {
     try {
