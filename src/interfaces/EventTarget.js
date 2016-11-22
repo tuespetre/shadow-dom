@@ -1,6 +1,11 @@
 // https://dom.spec.whatwg.org/#interface-eventtarget
 
-import * as $ from '../utils.js';
+import $dom from '../dom.js';
+import $utils from '../utils.js';
+
+const eventTargetDescriptor = $utils.descriptor(Event, 'target');
+const focusEventRelatedTargetDescriptor = $utils.descriptor(FocusEvent, 'relatedTarget');
+const mouseEventRelatedTargetDescriptor = $utils.descriptor(MouseEvent, 'relatedTarget');
 
 export default function (base) {
 
@@ -80,7 +85,7 @@ const EventListenerCollection = function (target, type, capture) {
 
     this.callback = event => {
         let shadowRoot = null;
-        let targetState = $.getShadowState(target);
+        let targetState = $utils.getShadowState(target);
         if (targetState) {
             shadowRoot = targetState.shadowRoot;
         }
@@ -92,7 +97,7 @@ const EventListenerCollection = function (target, type, capture) {
                 }
                 break;
             case Event.prototype.AT_TARGET:
-                const nativeTarget = $.descriptors.Event.target.get.call(event);
+                const nativeTarget = eventTargetDescriptor.get.call(event);
                 this.invokeListeners(event, nativeTarget, this.getListeners(nativeTarget));
                 break;
             case Event.prototype.BUBBLING_PHASE:
@@ -106,12 +111,12 @@ const EventListenerCollection = function (target, type, capture) {
 };
 
 EventListenerCollection.get = function (target, type, capture) {
-    let targetState = $.getShadowState(target);
+    let targetState = $utils.getShadowState(target);
     let nativeTarget = target;
     let nativeTargetState = targetState;
     if (targetState && targetState.host) {
         nativeTarget = targetState.host;
-        nativeTargetState = $.getShadowState(nativeTarget);
+        nativeTargetState = $utils.getShadowState(nativeTarget);
     }
     if (!nativeTargetState || !nativeTargetState.listeners) {
         return null;
@@ -129,15 +134,15 @@ EventListenerCollection.get = function (target, type, capture) {
 };
 
 EventListenerCollection.create = function (target, type, capture) {
-    let targetState = $.getShadowState(target);
+    let targetState = $utils.getShadowState(target);
     let nativeTarget = target;
     let nativeTargetState = targetState;
     if (targetState && targetState.host) {
         nativeTarget = targetState.host;
-        nativeTargetState = $.getShadowState(nativeTarget);
+        nativeTargetState = $utils.getShadowState(nativeTarget);
     }
     if (!nativeTargetState) {
-        nativeTargetState = $.setShadowState(nativeTarget, { listeners: [] });
+        nativeTargetState = $utils.setShadowState(nativeTarget, { listeners: [] });
     }
     else if (!nativeTargetState.listeners) {
         nativeTargetState.listeners = [];
@@ -155,7 +160,7 @@ EventListenerCollection.prototype = {
     },
 
     getListeners(target) {
-        let targetState = $.getShadowState(target);
+        let targetState = $utils.getShadowState(target);
         if (targetState && targetState.host) {
             return this.shadowListeners;
         }
@@ -187,7 +192,7 @@ EventListenerCollection.prototype = {
     },
 
     invokeListeners(event, currentTarget, listeners) {
-        const eventState = $.getShadowState(event) || $.setShadowState(event, {});
+        const eventState = $utils.getShadowState(event) || $utils.setShadowState(event, {});
         let path = eventState.calculatedPath;
         if (!path) {
             path = eventState.calculatedPath = calculatePath(event);
@@ -250,19 +255,19 @@ function calculatePath(event) {
     const path = [];
     let p = 0;
 
-    let target = $.descriptors.Event.target.get.call(event);
+    let target = eventTargetDescriptor.get.call(event);
 
     let relatedTargetDescriptor = null;
 
     if (event instanceof FocusEvent) {
-        relatedTargetDescriptor = $.descriptors.FocusEvent.relatedTarget;
+        relatedTargetDescriptor = focusEventRelatedTargetDescriptor;
     }
     else if (event instanceof MouseEvent) {
-        relatedTargetDescriptor = $.descriptors.MouseEvent.relatedTarget;
+        relatedTargetDescriptor = mouseEventRelatedTargetDescriptor;
     }
 
-    // Skip (native)
     // 1. Set event’s dispatch flag.
+    // SKIP: native
 
     // 2. Let targetOverride be target, if legacy target override flag is 
     // not given, and target’s associated Document otherwise. 
@@ -275,21 +280,23 @@ function calculatePath(event) {
     if (relatedTargetDescriptor) {
         originalRelatedTarget = relatedTargetDescriptor.get.call(event);
         if (originalRelatedTarget) {
-            relatedTarget = $.retarget(originalRelatedTarget, target);
+            relatedTarget = $dom.retarget(originalRelatedTarget, target);
         }
     }
 
-    // Skip (native)
     // 4. If target is relatedTarget and target is not event’s relatedTarget, then return true.
+    // SKIP: native
 
     // 5. Append (target, targetOverride, relatedTarget) to event’s path.
     path[p++] = [target, targetOverride, relatedTarget];
 
-    // Skip (native)
     // 6. Let isActivationEvent be true, if event is a MouseEvent object and 
     // event’s type attribute is "click", and false otherwise.
+    // SKIP: native
+
     // 7. Let activationTarget be target, if isActivationEvent is true and 
-    //target has activation behavior, and null otherwise.
+    // target has activation behavior, and null otherwise.
+    // SKIP: native
 
     // 8. Let parent be the result of invoking target’s get the parent with event.
     let parent = getTheParent(target, event, path);
@@ -299,11 +306,11 @@ function calculatePath(event) {
         // 1. Let relatedTarget be the result of retargeting event’s relatedTarget
         // against parent if event’s relatedTarget is non-null, and null otherwise.
         if (originalRelatedTarget) {
-            relatedTarget = $.retarget(originalRelatedTarget, parent);
+            relatedTarget = $dom.retarget(originalRelatedTarget, parent);
         }
         // 2. If target’s root is a shadow-including inclusive ancestor of parent, then... 
         // append (parent, null, relatedTarget) to event’s path.
-        if ($.shadowIncludingInclusiveAncestor($.root(target), parent)) {
+        if ($dom.shadowIncludingInclusiveAncestor($dom.root(target), parent)) {
             path[p++] = [parent, null, relatedTarget];
             parent = getTheParent(parent, event, path);
             continue;
@@ -353,10 +360,10 @@ function getTheParent(node, event, path) {
             }
             return node.defaultView;
         }
-        else if ($.isShadowRoot(node)) {
+        else if ($dom.isShadowRoot(node)) {
             if (!event.composed) {
                 const item = path[0][0];
-                if ($.root(item) === node) {
+                if ($dom.root(item) === node) {
                     return null;
                 }
             }

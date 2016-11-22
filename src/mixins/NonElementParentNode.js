@@ -1,6 +1,6 @@
 // https://dom.spec.whatwg.org/#interface-nonelementparentnode
 
-import * as $ from '../utils.js';
+import $dom from '../dom.js';
 
 export default function (base) {
 
@@ -19,7 +19,7 @@ export default function (base) {
                 return null;
             }
 
-            return $.treeOrderRecursiveSelectFirst(firstChild, function (node) {
+            return $dom.treeOrderRecursiveSelectFirst(firstChild, function (node) {
                 return node.id === id;
             });
         },

@@ -1,6 +1,7 @@
 // https://dom.spec.whatwg.org/#interface-event
 
-import * as $ from '../utils.js';
+import $dom from '../dom.js';
+import $utils from '../utils.js';
 
 export default function $Event(type, init) {
     let bubbles = false;
@@ -13,23 +14,23 @@ export default function $Event(type, init) {
     }
     const event = document.createEvent('event');
     event.initEvent(type, bubbles, cancelable);
-    $.setShadowState(event, { composed });
+    $utils.setShadowState(event, { composed });
     return event;
 }
 
 $Event.prototype = {
 
     get currentTarget() {
-        return $.getShadowState(this).currentTarget;
+        return $utils.getShadowState(this).currentTarget;
     },
 
     get target() {
-        return $.getShadowState(this).target;
+        return $utils.getShadowState(this).target;
     },
 
     stopImmediatePropagation() {
         this.stopPropagation();
-        $.getShadowState(this).stopImmediatePropagationFlag = true;
+        $utils.getShadowState(this).stopImmediatePropagationFlag = true;
     },
 
     composedPath() {
@@ -42,19 +43,19 @@ $Event.prototype = {
         const currentTarget = this.currentTarget;
 
         // 3. For each tuple in context object’s path:
-        const path = $.getShadowState(this).path;
+        const path = $utils.getShadowState(this).path;
 
         if (path) {
             let c = 0;
             for (let i = 0; i < path.length; i++) {
                 const item = path[i][0];
                 if (currentTarget instanceof Window) {
-                    if (!(item instanceof Node) || !$.closedShadowHidden(item, $.shadowIncludingRoot(item))) {
+                    if (!(item instanceof Node) || !$dom.closedShadowHidden(item, $dom.shadowIncludingRoot(item))) {
                         composedPath[c++] = item;
                     }
                 }
                 else if (currentTarget instanceof Node) {
-                    if (!$.closedShadowHidden(item, currentTarget)) {
+                    if (!$dom.closedShadowHidden(item, currentTarget)) {
                         composedPath[c++] = item;
                     }
                 }
@@ -70,7 +71,7 @@ $Event.prototype = {
 
     get composed() {
         // TODO: Compare against the actual prototype instead of just the type strings
-        return $.getShadowState(this).composed || builtInComposedEvents.indexOf(this.type) !== -1;
+        return $utils.getShadowState(this).composed || builtInComposedEvents.indexOf(this.type) !== -1;
     },
 
 }
@@ -82,7 +83,7 @@ $Event.prototype = {
 export const hasRelatedTarget = {
 
     get relatedTarget() {
-        return $.getShadowState(this).relatedTarget;
+        return $utils.getShadowState(this).relatedTarget;
     },
 
 };

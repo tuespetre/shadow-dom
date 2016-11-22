@@ -1,35 +1,36 @@
 // https://dom.spec.whatwg.org/#interface-characterdata
 
-import * as $ from '../utils.js';
+import $dom from '../dom.js';
+import $utils from '../utils.js';
 
-const getData = $.descriptors.CharacterData.data.get;
+const characterDataDataDescriptor = $utils.descriptor(CharacterData, 'data');
 
 export default {
 
     get data() {
-        return getData.call(this);
+        return characterDataDataDescriptor.get.call(this);
     },
 
     set data(value) {
-        const length = getData.call(this).length;
-        $.replaceData(this, 0, length, value);
+        const length = characterDataDataDescriptor.get.call(this).length;
+        $dom.replaceData(this, 0, length, value);
     },
 
     appendData(data) {
-        const length = getData.call(this).length;
-        $.replaceData(this, length, 0, data);
+        const length = characterDataDataDescriptor.get.call(this).length;
+        $dom.replaceData(this, length, 0, data);
     },
 
     insertData(offset, data) {
-        $.replaceData(this, offset, 0, data);
+        $dom.replaceData(this, offset, 0, data);
     },
 
     deleteData(offset, count) {
-        $.replaceData(this, offset, count, '');
+        $dom.replaceData(this, offset, count, '');
     },
 
     replaceData(offset, count, data) {
-        $.replaceData(this, offset, count, data);
+        $dom.replaceData(this, offset, count, data);
     },
 
 }

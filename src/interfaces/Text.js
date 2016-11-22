@@ -1,6 +1,7 @@
 // https://dom.spec.whatwg.org/#interface-text
 
-import * as $ from '../utils.js';
+import $dom from '../dom.js';
+import $utils from '../utils.js';
 
 export default {
 
@@ -8,17 +9,17 @@ export default {
     splitText(offset) {
         const length = this.length;
         if (offset > length) {
-            throw $.makeError('IndexSizeError');
+            throw $utils.makeDOMException('IndexSizeError');
         }
         const count = length - offset;
         const newData = this.data.slice(offset, count);
         const newNode = this.ownerDocument.createTextNode(newData);
         const parent = this.parentNode;
         if (parent) {
-            $.insert(newNode, parent, this.nextSibling);
+            $dom.insert(newNode, parent, this.nextSibling);
             // TODO: (Range)
         }
-        $.replaceData(this, offset, count, '');
+        $dom.replaceData(this, offset, count, '');
         // TODO: (Range)
         // if (!parent) { }
         return newNode;

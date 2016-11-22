@@ -1,6 +1,6 @@
 // https://www.w3.org/TR/html5/single-page.html#the-tbody-element
 
-import * as $ from '../utils.js';
+import $utils from '../utils.js';
 
 export default {
 
@@ -8,7 +8,7 @@ export default {
     deleteRow(index) {
         // https://www.w3.org/TR/html5/single-page.html#dom-tbody-deleterow
         if (index < 0 || index >= this.rows.length) {
-            throw $.makeError('IndexSizeError');
+            throw $utils.makeDOMException('IndexSizeError');
         }
         this.rows[index].remove();
     },

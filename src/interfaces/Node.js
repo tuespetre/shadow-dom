@@ -1,28 +1,40 @@
 // https://dom.spec.whatwg.org/#interface-node
 
-import * as $ from '../utils.js';
+import $dom from '../dom.js';
+import $ce from '../custom-elements.js';
+import $utils from '../utils.js';
 
-import CustomElements from '../custom-elements.js';
+const attrValueDescriptor = $utils.descriptor(Attr, 'value');
+const characterDataDataDescriptor = $utils.descriptor(CharacterData, 'data');
+const elementAttributesDescriptor = $utils.descriptor(Element, 'attributes') || $utils.descriptor(Node, 'attributes');
+const nodeChildNodesDescriptor = $utils.descriptor(Node, 'childNodes');
+const nodeHasChildNodesDescriptor = $utils.descriptor(Node, 'hasChildNodes');
+const nodeFirstChildDescriptor = $utils.descriptor(Node, 'firstChild');
+const nodeLastChildDescriptor = $utils.descriptor(Node, 'lastChild');
+const nodePreviousSiblingDescriptor = $utils.descriptor(Node, 'previousSibling');
+const nodeNextSiblingDescriptor = $utils.descriptor(Node, 'nextSibling');
+const nodeParentNodeDescriptor = $utils.descriptor(Node, 'parentNode');
+const nodeNodeValueDescriptor = $utils.descriptor(Node, 'nodeValue');
 
 export default {
 
     get isConnected() {
-        return $.shadowIncludingRoot(this).nodeType === Node.DOCUMENT_NODE;
+        return $dom.shadowIncludingRoot(this).nodeType === Node.DOCUMENT_NODE;
     },
 
     getRootNode(options) {
         const composed = options && (options.composed === true);
-        return composed ? $.shadowIncludingRoot(this) : $.root(this);
+        return composed ? $dom.shadowIncludingRoot(this) : $dom.root(this);
     },
 
     get parentNode() {
         let parentNode;
-        const nodeState = $.getShadowState(this);
+        const nodeState = $utils.getShadowState(this);
         if (nodeState) {
             parentNode = nodeState.parentNode;
         }
 
-        return parentNode || $.descriptors.Node.parentNode.get.call(this);
+        return parentNode || nodeParentNodeDescriptor.get.call(this);
     },
 
     get parentElement() {
@@ -36,7 +48,7 @@ export default {
 
     // TODO: tests
     hasChildNodes() {
-        const nodeState = $.getShadowState(this);
+        const nodeState = $utils.getShadowState(this);
         if (nodeState) {
             const childNodes = nodeState.childNodes;
             if (childNodes) {
@@ -44,12 +56,12 @@ export default {
             }
         }
 
-        return $.descriptors.Node.hasChildNodes.value.call(this);
+        return nodeHasChildNodesDescriptor.value.call(this);
     },
 
     // TODO: tests
     get childNodes() {
-        const nodeState = $.getShadowState(this);
+        const nodeState = $utils.getShadowState(this);
         if (nodeState) {
             const childNodes = nodeState.childNodes;
             if (childNodes) {
@@ -62,12 +74,12 @@ export default {
             }
         }
 
-        return $.descriptors.Node.childNodes.get.call(this);
+        return nodeChildNodesDescriptor.get.call(this);
     },
 
     // TODO: tests
     get firstChild() {
-        const nodeState = $.getShadowState(this);
+        const nodeState = $utils.getShadowState(this);
         if (nodeState) {
             const childNodes = nodeState.childNodes;
             if (childNodes) {
@@ -78,12 +90,12 @@ export default {
             }
         }
 
-        return $.descriptors.Node.firstChild.get.call(this);
+        return nodeFirstChildDescriptor.get.call(this);
     },
 
     // TODO: tests
     get lastChild() {
-        const nodeState = $.getShadowState(this);
+        const nodeState = $utils.getShadowState(this);
         if (nodeState) {
             const childNodes = nodeState.childNodes;
             if (childNodes) {
@@ -94,57 +106,57 @@ export default {
             }
         }
 
-        return $.descriptors.Node.lastChild.get.call(this);
+        return nodeLastChildDescriptor.get.call(this);
     },
 
     // TODO: tests
     get previousSibling() {
-        const nodeState = $.getShadowState(this);
+        const nodeState = $utils.getShadowState(this);
         if (nodeState) {
             const parentNode = nodeState.parentNode;
             if (parentNode) {
-                const childNodes = $.getShadowState(parentNode).childNodes;
+                const childNodes = $utils.getShadowState(parentNode).childNodes;
                 const siblingIndex = childNodes.indexOf(this) - 1;
                 return siblingIndex < 0 ? null : childNodes[siblingIndex];
             }
         }
 
-        return $.descriptors.Node.previousSibling.get.call(this);
+        return nodePreviousSiblingDescriptor.get.call(this);
     },
 
     // TODO: tests
     get nextSibling() {
-        const nodeState = $.getShadowState(this);
+        const nodeState = $utils.getShadowState(this);
         if (nodeState) {
             const parentNode = nodeState.parentNode;
             if (parentNode) {
-                const childNodes = $.getShadowState(parentNode).childNodes;
+                const childNodes = $utils.getShadowState(parentNode).childNodes;
                 const siblingIndex = childNodes.indexOf(this) + 1;
                 return siblingIndex === childNodes.length ? null : childNodes[siblingIndex];
             }
         }
 
-        return $.descriptors.Node.nextSibling.get.call(this);
+        return nodeNextSiblingDescriptor.get.call(this);
     },
 
     // TODO: consider creating a raw property descriptor
     // that uses the native get instead of a pass-through function
     get nodeValue() {
-        return $.descriptors.Node.nodeValue.get.call(this);
+        return nodeNodeValueDescriptor.get.call(this);
     },
 
     // TODO: MutationObserver tests
     set nodeValue(value) {
-        return CustomElements.executeCEReactions(() => {
+        return $ce.executeCEReactions(() => {
             switch (this.nodeType) {
                 case Node.ATTRIBUTE_NODE:
-                    $.setExistingAttributeValue(this, value);
+                    $dom.setExistingAttributeValue(this, value);
                     break;
                 case Node.TEXT_NODE:
                 case Node.PROCESSING_INSTRUCTION_NODE:
                 case Node.COMMENT_NODE:
-                    const length = $.descriptors.CharacterData.data.get.call(this).length;
-                    $.replaceData(this, 0, length, value);
+                    const length = characterDataDataDescriptor.get.call(this).length;
+                    $dom.replaceData(this, 0, length, value);
                     break;
             }
         });
@@ -156,11 +168,11 @@ export default {
             case Node.ELEMENT_NODE:
                 return elementTextContent(this);
             case Node.ATTRIBUTE_NODE:
-                return $.descriptors.Attr.value.get.call(this);
+                return attrValueDescriptor.get.call(this);
             case Node.TEXT_NODE:
             case Node.PROCESSING_INSTRUCTION_NODE:
             case Node.COMMENT_NODE:
-                return $.descriptors.CharacterData.data.get.call(this);
+                return characterDataDataDescriptor.get.call(this);
             default:
                 return null;
         }
@@ -168,7 +180,7 @@ export default {
 
     // TODO: MutationObserver tests
     set textContent(value) {
-        return CustomElements.executeCEReactions(() => {
+        return $ce.executeCEReactions(() => {
             switch (this.nodeType) {
                 case Node.DOCUMENT_FRAGMENT_NODE:
                 case Node.ELEMENT_NODE:
@@ -176,15 +188,15 @@ export default {
                     if (value !== '') {
                         node = this.ownerDocument.createTextNode(value);
                     }
-                    $.replaceAll(node, this);
+                    $dom.replaceAll(node, this);
                     break;
                 case Node.ATTRIBUTE_NODE:
-                    $.setExistingAttributeValue(this, value);
+                    $dom.setExistingAttributeValue(this, value);
                     break;
                 case Node.TEXT_NODE:
                 case Node.PROCESSING_INSTRUCTION_NODE:
                 case Node.COMMENT_NODE:
-                    $.replaceData(this, 0, this.data.length, value);
+                    $dom.replaceData(this, 0, this.data.length, value);
                     break;
             }
         });
@@ -192,18 +204,17 @@ export default {
 
     // TODO: tests
     normalize() {
-        return CustomElements.executeCEReactions(() => {
+        return $ce.executeCEReactions(() => {
             // https://dom.spec.whatwg.org/#dom-node-normalize
             // The normalize() method, when invoked, must run these steps 
             // for each descendant exclusive Text node node of context object:
             const childNodes = this.childNodes;
-            const dataDescriptor = $.descriptors.CharacterData.data;
             for (let i = 0; i < childNodes.length; i++) {
                 let childNode = childNodes[i];
                 if (childNode.nodeType === Node.TEXT_NODE) {
-                    let length = dataDescriptor.get.call(childNode).length;
+                    let length = characterDataDataDescriptor.get.call(childNode).length;
                     if (length === 0) {
-                        $.remove(childNode, this);
+                        $dom.remove(childNode, this);
                         continue;
                     }
                     let data = '';
@@ -211,13 +222,13 @@ export default {
                     let contiguousCount = 0;
                     let next = childNode;
                     while (next = next.nextSibling && next.nodeType === Node.TEXT_NODE) {
-                        data += dataDescriptor.get.call(next);
+                        data += characterDataDataDescriptor.get.call(next);
                         contiguousTextNodes[contiguousCount++] = next;
                     }
-                    $.replaceData(childNode, length, 0, data);
+                    $dom.replaceData(childNode, length, 0, data);
                     // TODO: (Range)
                     for (let j = 0; j < contiguousCount; j++) {
-                        $.remove(contiguousTextNodes[j], this);
+                        $dom.remove(contiguousTextNodes[j], this);
                     }
                 }
                 else {
@@ -229,17 +240,17 @@ export default {
 
     // TODO: tests
     cloneNode(deep) {
-        return CustomElements.executeCEReactions(() => {
+        return $ce.executeCEReactions(() => {
             // https://dom.spec.whatwg.org/#dom-node-clonenode
             // The cloneNode(deep) method, when invoked, must run these steps:
 
             // 1. If context object is a shadow root, then throw a NotSupportedError.
-            if ($.isShadowRoot(this)) {
-                throw $.makeError('NotSupportedError');
+            if ($dom.isShadowRoot(this)) {
+                throw $utils.makeDOMException('NotSupportedError');
             }
 
             // 2. Return a clone of the context object, with the clone children flag set if deep is true.
-            return $.clone(this, undefined, deep);
+            return $dom.clone(this, undefined, deep);
         });
     },
 
@@ -272,8 +283,8 @@ export default {
                     this.localName !== other.localName) {
                     return false;
                 }
-                thisAttributes = $.descriptors.Element.attributes.get.call(this);
-                otherAttributes = $.descriptors.Element.attributes.get.call(other);
+                thisAttributes = elementAttributesDescriptor.get.call(this);
+                otherAttributes = elementAttributesDescriptor.get.call(other);
                 if (thisAttributes.length != otherAttributes.length) {
                     return false;
                 }
@@ -362,7 +373,7 @@ export default {
             }
         }
 
-        if (!node1 || !node2 || $.root(node1) !== $.root(node2)) {
+        if (!node1 || !node2 || $dom.root(node1) !== $dom.root(node2)) {
             return Document.prototype.DOCUMENT_POSITION_IMPLEMENTATION_SPECIFIC
                 + Document.prototype.DOCUMENT_POSITION_FOLLOWING
                 + Document.prototype.DOCUMENT_POSITION_DISCONNECTED;
@@ -407,41 +418,41 @@ export default {
 
     // TODO: tests
     insertBefore(node, child) {
-        return CustomElements.executeCEReactions(() => {
+        return $ce.executeCEReactions(() => {
             // https://dom.spec.whatwg.org/#dom-node-insertbefore
             // The insertBefore(node, child) method, when invoked, must return the result 
             // of pre-inserting node into context object before child.
-            return $.preInsert(node, this, child);
+            return $dom.preInsert(node, this, child);
         });
     },
 
     // TODO: tests
     appendChild(node) {
-        return CustomElements.executeCEReactions(() => {
+        return $ce.executeCEReactions(() => {
             // https://dom.spec.whatwg.org/#dom-node-appendchild
             // The appendChild(node) method, when invoked, must return the result of 
             // appending node to context object.
-            return $.append(node, this);
+            return $dom.append(node, this);
         });
     },
 
     // TODO: tests
     replaceChild(node, child) {
-        return CustomElements.executeCEReactions(() => {
+        return $ce.executeCEReactions(() => {
             // https://dom.spec.whatwg.org/#dom-node-replacechild
             // The replaceChild(node, child) method, when invoked, must return the 
             // result of replacing child with node within context object.
-            return $.replace(child, node, this);
+            return $dom.replace(child, node, this);
         });
     },
 
     // TODO: tests
     removeChild(child) {
-        return CustomElements.executeCEReactions(() => {
+        return $ce.executeCEReactions(() => {
             // https://dom.spec.whatwg.org/#dom-node-removechild
             // The removeChild(child) method, when invoked, must return the result of 
             // pre-removing child from context object.
-            return $.preRemove(child, this);
+            return $dom.preRemove(child, this);
         });
     },
 
@@ -518,7 +529,7 @@ function elementTextContent(element) {
                 result += elementTextContent(childNode);
                 break;
             case Node.TEXT_NODE:
-                result += $.descriptors.CharacterData.data.get.call(childNode);
+                result += characterDataDataDescriptor.get.call(childNode);
                 break;
         }
     }

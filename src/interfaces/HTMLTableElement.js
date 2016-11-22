@@ -1,6 +1,7 @@
 // https://www.w3.org/TR/html5/single-page.html#the-table-element
 
-import * as $ from '../utils.js';
+import $dom from '../dom.js';
+import $utils from '../utils.js';
 
 export default {
 
@@ -8,7 +9,7 @@ export default {
     deleteCaption() {
         const caption = this.caption;
         if (caption) {
-            $.remove(caption, this);
+            $dom.remove(caption, this);
         }
     },
 
@@ -16,7 +17,7 @@ export default {
     deleteTHead() {
         const tHead = this.tHead;
         if (tHead) {
-            $.remove(tHead, this);
+            $dom.remove(tHead, this);
         }
     },
 
@@ -24,7 +25,7 @@ export default {
     deleteTFoot() {
         const tFoot = this.tFoot;
         if (tFoot) {
-            $.remove(tFoot, this);
+            $dom.remove(tFoot, this);
         }
     },
 
@@ -35,7 +36,7 @@ export default {
             index = this.rows.length - 1;
         }
         if (index < 0 || index >= this.rows.length) {
-            throw $.makeError('IndexSizeError');
+            throw $utils.makeDOMException('IndexSizeError');
         }
         this.rows[index].remove();
     },

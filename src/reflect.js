@@ -1,6 +1,7 @@
 // An index of IDL attributes that should reflect a corresponding content attribute.
 
-import * as $ from './utils.js';
+import $utils from './utils.js';
+import $dom from './dom.js';
 
 import { getOrCreateDOMTokenList } from './interfaces/DOMTokenList.js';
 
@@ -391,7 +392,7 @@ const interfaces = {
 function reflectString(attributeName) {
     return function (type, name) {
         attributeName = attributeName || name.toLowerCase();
-        const descriptor = $.descriptor(type, name);
+        const descriptor = $utils.descriptor(type, name);
         Object.defineProperty(type.prototype, name, {
             configurable: true,
             enumerable: true,
@@ -399,7 +400,7 @@ function reflectString(attributeName) {
                 return this.getAttribute(attributeName) || '';
             },
             set: function (value) {
-                $.setAttributeValue(this, attributeName, value);
+                $dom.setAttributeValue(this, attributeName, value);
             }
         });
     }
@@ -416,10 +417,10 @@ function reflectBoolean(attributeName) {
             },
             set: function (value) {
                 if (value === false) {
-                    $.removeAttributeByName(attributeName, this);
+                    $dom.removeAttributeByName(attributeName, this);
                 }
                 else {
-                    $.setAttributeValue(this, attributeName, value);
+                    $dom.setAttributeValue(this, attributeName, value);
                 }
             }
         });
@@ -440,9 +441,9 @@ function reflectInteger(minValue, defaultValue) {
             },
             set: function (value) {
                 if (typeof value !== 'number') {
-                    throw $.makeError('TypeError');
+                    throw $utils.makeDOMException('TypeError');
                 }
-                $.setAttributeValue(this, attributeName, value.toString());
+                $dom.setAttributeValue(this, attributeName, value.toString());
             }
         });
     };
@@ -462,9 +463,9 @@ function reflectFloat(minValue, defaultValue) {
             },
             set: function (value) {
                 if (typeof value !== 'number') {
-                    throw $.makeError('TypeError');
+                    throw $utils.makeDOMException('TypeError');
                 }
-                $.setAttributeValue(this, attributeName, value.toString());
+                $dom.setAttributeValue(this, attributeName, value.toString());
             }
         });
     };
@@ -504,7 +505,7 @@ function reflectHTMLElement(candidateType, readOnly) {
             },
             set: readOnly ? undefined : function (value) {
                 if (!(value instanceof candidateType)) {
-                    throw $.makeError('TypeError');
+                    throw $utils.makeDOMException('TypeError');
                 }
                 if (value.hasAttribute('id')) {
                     const found = this.ownerDocument.getElementById(value.id);

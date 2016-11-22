@@ -1,44 +1,48 @@
 // https://dom.spec.whatwg.org/#interface-document
 
-import * as $ from '../utils.js';
+import $dom from '../dom.js';
+import $ce from '../custom-elements.js';
+import $utils from '../utils.js';
 
-import CustomElements from '../custom-elements.js';
+const documentGetElementsByTagNameDescriptor = $utils.descriptor(Element, 'getElementsByTagName');
+const documentGetElementsByTagNameNSDescriptor = $utils.descriptor(Element, 'getElementsByTagNameNS');
+const documentGetElementsByClassNameDescriptor = $utils.descriptor(Element, 'getElementsByClassName');
 
 export default {
 
     // TODO: tests
     getElementsByTagName(qualifiedName) {
-        const results = $.descriptors.Document.getElementsByTagName.value.call(this, qualifiedName);
-        return $.filterByRoot(this, results);
+        const results = documentGetElementsByTagNameDescriptor.value.call(this, qualifiedName);
+        return $dom.filterByRoot(this, results);
     },
 
     // TODO: tests
     getElementsByTagNameNS(ns, localName) {
-        const results = $.descriptors.Document.getElementsByTagNameNS.value.call(this, ns, localName);
-        return $.filterByRoot(this, results);
+        const results = documentGetElementsByTagNameNSDescriptor.value.call(this, ns, localName);
+        return $dom.filterByRoot(this, results);
     },
 
     // TODO: tests
     getElementsByClassName(names) {
-        const results = $.descriptors.Document.getElementsByClassName.value.call(this, name);
-        return $.filterByRoot(this, results);
+        const results = documentGetElementsByClassNameDescriptor.value.call(this, name);
+        return $dom.filterByRoot(this, results);
     },
 
     // TODO: tests
     importNode(node, deep) {
-        return CustomElements.executeCEReactions(() => {
-            if (node.nodeType === Node.DOCUMENT_NODE || $.isShadowRoot(node)) {
-                throw $.makeError('NotSupportedError');
+        return $ce.executeCEReactions(() => {
+            if (node.nodeType === Node.DOCUMENT_NODE || $dom.isShadowRoot(node)) {
+                throw $utils.makeDOMException('NotSupportedError');
             }
 
-            return $.clone(node, this, deep);
+            return $dom.clone(node, this, deep);
         });
     },
 
     // TODO: tests
     adoptNode(node) {
-        return CustomElements.executeCEReactions(() => {
-            return $.adopt(node, this);
+        return $ce.executeCEReactions(() => {
+            return $dom.adopt(node, this);
         });
     },
 

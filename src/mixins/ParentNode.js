@@ -1,16 +1,16 @@
 // https://dom.spec.whatwg.org/#interface-parentnode
 
-import * as $ from '../utils.js';
-
-import CustomElements from '../custom-elements.js';
+import $dom from '../dom.js';
+import $ce from '../custom-elements.js';
+import $utils from '../utils.js';
 
 export default function (base) {
 
     const native = {
-        children: $.descriptor(base, 'children'),
-        firstElementChild: $.descriptor(base, 'firstElementChild'),
-        lastElementChild: $.descriptor(base, 'lastElementChild'),
-        childElementCount: $.descriptor(base, 'childElementCount'),
+        children: $utils.descriptor(base, 'children'),
+        firstElementChild: $utils.descriptor(base, 'firstElementChild'),
+        lastElementChild: $utils.descriptor(base, 'lastElementChild'),
+        childElementCount: $utils.descriptor(base, 'childElementCount'),
     };
 
     return {
@@ -18,7 +18,7 @@ export default function (base) {
         get children() {
             let childNodes;
 
-            const shadowState = $.getShadowState(this);
+            const shadowState = $utils.getShadowState(this);
             if (shadowState) {
                 childNodes = shadowState.childNodes
             }
@@ -47,7 +47,7 @@ export default function (base) {
         get firstElementChild() {
             let childNodes;
 
-            const shadowState = $.getShadowState(this);
+            const shadowState = $utils.getShadowState(this);
             if (shadowState) {
                 childNodes = shadowState.childNodes
             }
@@ -72,7 +72,7 @@ export default function (base) {
         get lastElementChild() {
             let childNodes;
 
-            const shadowState = $.getShadowState(this);
+            const shadowState = $utils.getShadowState(this);
             if (shadowState) {
                 childNodes = shadowState.childNodes
             }
@@ -97,7 +97,7 @@ export default function (base) {
         get childElementCount() {
             let childNodes;
 
-            const shadowState = $.getShadowState(this);
+            const shadowState = $utils.getShadowState(this);
             if (shadowState) {
                 childNodes = shadowState.childNodes
             }
@@ -123,32 +123,32 @@ export default function (base) {
 
         // TODO: tests
         prepend(...nodes) {
-            return CustomElements.executeCEReactions(() => {
+            return $ce.executeCEReactions(() => {
                 // https://dom.spec.whatwg.org/#dom-parentnode-prepend
                 // The prepend(nodes) method, when invoked, must run these steps:
 
                 // 1. Let node be the result of converting nodes into a node given 
                 // nodes and context object’s node document. Rethrow any exceptions.
-                const node = $.convertNodesIntoANode(nodes, this.ownerDocument || this);
+                const node = $dom.convertNodesIntoANode(nodes, this.ownerDocument || this);
 
                 // 2. Pre-insert node into context object before the context object’s 
                 // first child. Rethrow any exceptions.
-                $.preInsert(node, this, this.firstChild);
+                $dom.preInsert(node, this, this.firstChild);
             });
         },
 
         // TODO: tests
         append(...nodes) {
-            return CustomElements.executeCEReactions(() => {
+            return $ce.executeCEReactions(() => {
                 // https://dom.spec.whatwg.org/#dom-parentnode-append
                 // The append(nodes) method, when invoked, must run these steps:
 
                 // 1. Let node be the result of converting nodes into a node given 
                 // nodes and context object’s node document. Rethrow any exceptions.
-                const node = $.convertNodesIntoANode(nodes, this.ownerDocument || this);
+                const node = $dom.convertNodesIntoANode(nodes, this.ownerDocument || this);
 
                 // 2. Append node to context object. Rethrow any exceptions.
-                $.append(node, this);
+                $dom.append(node, this);
             });
         },
 
@@ -179,7 +179,7 @@ export default function (base) {
                 return results;
             }
 
-            $.treeOrderRecursiveSelectAll(firstChild, results, function (node) {
+            $dom.treeOrderRecursiveSelectAll(firstChild, results, function (node) {
                 return node.nodeType === Node.ELEMENT_NODE && node.matches(selectors);
             });
 

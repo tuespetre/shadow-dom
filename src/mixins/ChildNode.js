@@ -1,8 +1,7 @@
 // https://dom.spec.whatwg.org/#interface-childnode
 
-import * as $ from '../utils.js';
-
-import CustomElements from '../custom-elements.js';
+import $dom from '../dom.js';
+import $ce from '../custom-elements.js';
 
 export default function (base) {
 
@@ -10,7 +9,7 @@ export default function (base) {
 
         // TODO: tests
         before(...nodes) {
-            return CustomElements.executeCEReactions(() => {
+            return $ce.executeCEReactions(() => {
                 // https://dom.spec.whatwg.org/#dom-childnode-before
                 // The before(nodes) method, when invoked, must run these steps:
 
@@ -31,7 +30,7 @@ export default function (base) {
 
                 // 4. Let node be the result of converting nodes into a node, given 
                 // nodes and context object’s node document. Rethrow any exceptions.
-                const node = $.convertNodesIntoANode(nodes, this.ownerDocument);
+                const node = $dom.convertNodesIntoANode(nodes, this.ownerDocument);
 
                 // 5. If viablePreviousSibling is null, set it to parent’s first child, 
                 // and to viablePreviousSibling’s next sibling otherwise.
@@ -44,13 +43,13 @@ export default function (base) {
 
                 // 6. Pre-insert node into parent before viablePreviousSibling. 
                 // Rethrow any exceptions.
-                $.preInsert(node, parent, viablePreviousSibling);
+                $dom.preInsert(node, parent, viablePreviousSibling);
             });
         },
 
         // TODO: tests
         after(...nodes) {
-            return CustomElements.executeCEReactions(() => {
+            return $ce.executeCEReactions(() => {
                 // https://dom.spec.whatwg.org/#dom-childnode-after
                 // The after(nodes) method, when invoked, must run these steps:
 
@@ -71,17 +70,17 @@ export default function (base) {
 
                 // 4. Let node be the result of converting nodes into a node, given 
                 // nodes and context object’s node document. Rethrow any exceptions.
-                const node = $.convertNodesIntoANode(nodes, this.ownerDocument);
+                const node = $dom.convertNodesIntoANode(nodes, this.ownerDocument);
 
                 // 5. Pre-insert node into parent before viableNextSibling. Rethrow 
                 // any exceptions.
-                $.preInsert(node, parent, viableNextSibling);
+                $dom.preInsert(node, parent, viableNextSibling);
             });
         },
 
         // TODO: tests
         replaceWith(...nodes) {
-            return CustomElements.executeCEReactions(() => {
+            return $ce.executeCEReactions(() => {
                 // https://dom.spec.whatwg.org/#dom-childnode-replacewith
                 // The replaceWith(nodes) method, when invoked, must run these steps:
 
@@ -102,24 +101,24 @@ export default function (base) {
 
                 // 4. Let node be the result of converting nodes into a node, given 
                 // nodes and context object’s node document. Rethrow any exceptions.
-                const node = $.convertNodesIntoANode(nodes, this.ownerDocument);
+                const node = $dom.convertNodesIntoANode(nodes, this.ownerDocument);
 
                 // 5. If context object’s parent is parent, replace the context object 
                 // with node within parent. Rethrow any exceptions.
                 if (this.parentNode == parent) {
-                    $.replace(this, node, parent);
+                    $dom.replace(this, node, parent);
                 }
                 // 6. Otherwise, pre-insert node into parent before viableNextSibling. 
                 // Rethrow any exceptions.
                 else {
-                    $.preInsert(node, parent, viableNextSibling);
+                    $dom.preInsert(node, parent, viableNextSibling);
                 }
             });
         },
 
         // TODO: tests
         remove() {
-            return CustomElements.executeCEReactions(() => {
+            return $ce.executeCEReactions(() => {
                 // https://dom.spec.whatwg.org/#dom-childnode-remove
                 // The remove() method, when invoked, must run these steps:
 
@@ -131,7 +130,7 @@ export default function (base) {
                 }
 
                 // 2. Remove the context object from context object’s parent.
-                $.remove(this, parent);
+                $dom.remove(this, parent);
             });
         },
 

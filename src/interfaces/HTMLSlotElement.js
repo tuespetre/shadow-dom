@@ -1,6 +1,7 @@
 // https://html.spec.whatwg.org/multipage/scripting.html#the-slot-element
 
-import * as $ from '../utils.js';
+import $dom from '../dom.js';
+import $utils from '../utils.js';
 
 export default {
 
@@ -19,7 +20,7 @@ export default {
             return;
         }
 
-        $.setAttributeValue(this, 'name', value);
+        $dom.setAttributeValue(this, 'name', value);
     },
 
     // TODO: tests
@@ -34,7 +35,7 @@ export default {
         // 1. If the value of options's flatten member is false, then return this element's assigned nodes.
         if (!options || options.flatten !== true) {
             let assignedNodes = null;
-            const shadowState = $.getShadowState(this);
+            const shadowState = $utils.getShadowState(this);
             if (shadowState) {
                 assignedNodes = shadowState.assignedNodes;
             }
@@ -42,7 +43,7 @@ export default {
         }
 
         // 2. Return the result of finding flattened slotables with this element.
-        return $.findFlattenedSlotables(this);
+        return $dom.findFlattenedSlotables(this);
     },
 
 }

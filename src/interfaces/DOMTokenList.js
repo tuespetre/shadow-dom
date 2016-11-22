@@ -1,31 +1,31 @@
 // https://dom.spec.whatwg.org/#interface-domtokenlist
 
-import * as $ from '../utils.js';
-
-import CustomElements from '../custom-elements.js';
+import $dom from '../dom.js';
+import $ce from '../custom-elements.js';
+import $utils from '../utils.js';
 
 export default {
 
     get length() {
-        const state = $.getShadowState(this);
+        const state = $utils.getShadowState(this);
         return state.tokens.length;
     },
 
     // TODO: Caveat about indexer expressions?
     item(index) {
-        const state = $.getShadowState(this);
+        const state = $utils.getShadowState(this);
         return index >= state.tokens.length ? null : state.tokens[index];
     },
 
     contains(token) {
-        const state = $.getShadowState(this);
+        const state = $utils.getShadowState(this);
         return state.tokens.indexOf(token) !== -1;
     },
 
     add(...tokens) {
-        return CustomElements.executeCEReactions(() => {
+        return $ce.executeCEReactions(() => {
             validateTokens(tokens);
-            const state = $.getShadowState(this);
+            const state = $utils.getShadowState(this);
             for (let i = 0; i < tokens.length; i++) {
                 const token = tokens[i];
                 const index = state.tokens.indexOf(token);
@@ -34,14 +34,14 @@ export default {
                 }
             }
             state.tokens.sort();
-            $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
+            $dom.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
         });
     },
 
     remove(...tokens) {
-        return CustomElements.executeCEReactions(() => {
+        return $ce.executeCEReactions(() => {
             validateTokens(tokens);
-            const state = $.getShadowState(this);
+            const state = $utils.getShadowState(this);
             for (let i = 0; i < tokens.length; i++) {
                 const token = tokens[i];
                 const index = state.tokens.indexOf(token);
@@ -49,19 +49,19 @@ export default {
                     state.tokens.splice(index, 1);
                 }
             }
-            $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
+            $dom.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
         });
     },
 
     toggle(token, force) {
-        return CustomElements.executeCEReactions(() => {
+        return $ce.executeCEReactions(() => {
             validateToken(token);
-            const state = $.getShadowState(this);
+            const state = $utils.getShadowState(this);
             const index = state.tokens.indexOf(token);
             if (index !== -1) {
                 if (arguments.length === 1 || force === false) {
                     state.tokens.splice(index, 1);
-                    $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
+                    $dom.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
                     return false;
                 }
                 else {
@@ -75,7 +75,7 @@ export default {
                 else {
                     state.tokens.push(token);
                     state.tokens.sort();
-                    $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
+                    $dom.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
                     return true;
                 }
             }
@@ -83,31 +83,31 @@ export default {
     },
 
     replace(token, newToken) {
-        return CustomElements.executeCEReactions(() => {
+        return $ce.executeCEReactions(() => {
             validateToken(token);
             validateToken(newToken);
-            const state = $.getShadowState(this);
+            const state = $utils.getShadowState(this);
             const index = state.tokens.indexOf(token);
             if (index === -1) {
                 return;
             }
             state.tokens[index] = newToken;
             state.tokens.sort();
-            $.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
+            $dom.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
         });
     },
 
     get value() {
-        const state = $.getShadowState(this);
+        const state = $utils.getShadowState(this);
         return state.element.getAttribute(state.localName) || '';
     },
 
     set value(value) {
-        return CustomElements.executeCEReactions(() => {
-            const state = $.getShadowState(this);
-            $.setAttributeValue(state.element, state.localName, value);
+        return $ce.executeCEReactions(() => {
+            const state = $utils.getShadowState(this);
+            $dom.setAttributeValue(state.element, state.localName, value);
             // TODO: Remove usage of slice in favor of direct parse
-            state.tokens = $.slice(this);
+            state.tokens = Array.prototype.slice.call(this);
         });
     },
 
@@ -121,10 +121,10 @@ function validateTokens(tokens) {
 
 function validateToken(token) {
     if (token == '') {
-        throw $.makeError('SyntaxError');
+        throw $utils.makeDOMException('SyntaxError');
     }
     if (/\s/.test(token)) {
-        throw $.makeError('InvalidCharacterError')
+        throw $utils.makeDOMException('InvalidCharacterError')
     }
 }
 
@@ -133,12 +133,12 @@ function createDOMTokenList(element, localName) {
     const originalValue = element.getAttribute(localName);
     const tokens = originalValue ? originalValue.split(/\s/).sort() : [];
     const tokenList = Object.create(DOMTokenList.prototype);
-    $.setShadowState(tokenList, { element, localName, tokens });
+    $utils.setShadowState(tokenList, { element, localName, tokens });
     return tokenList;
 }
 
 export function getOrCreateDOMTokenList(element, localName) {
-    const elementState = $.getShadowState(element) || $.setShadowState(element, { tokenLists: {} });
+    const elementState = $utils.getShadowState(element) || $utils.setShadowState(element, { tokenLists: {} });
     if (!elementState.tokenLists) {
         elementState.tokenLists = {};
     }

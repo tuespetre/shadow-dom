@@ -1,7 +1,7 @@
 // https://dom.spec.whatwg.org/#mixin-documentorshadowroot
 // https://www.w3.org/TR/shadow-dom/#extensions-to-the-documentorshadowroot-mixin
 
-import * as $ from '../utils.js';
+import $dom from '../dom.js';
 
 export default {
 
@@ -15,11 +15,11 @@ export default {
         const document = this.ownerDocument || this;
         const nativeActiveElement = native.activeElement.get.call(document);
 
-        if (!nativeActiveElement || document != $.shadowIncludingRoot(this)) {
+        if (!nativeActiveElement || document != $dom.shadowIncludingRoot(this)) {
             return null;
         }
 
-        return $.retarget(nativeActiveElement, this);
+        return $dom.retarget(nativeActiveElement, this);
     },
 
 }

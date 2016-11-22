@@ -1,60 +1,53 @@
 // https://html.spec.whatwg.org/multipage/scripting.html#custom-elements
 
+import $utils from './utils.js';
+
 // TODO: CEReactions annotations for Range in the DOM spec
 // TODO: CEReactions for interfaces in the HTML spec
 
-const nativeSupport = 'customElements' in window;
-const promisesSupported = 'Promise' in window;
-const originalHTMLElement = window.HTMLElement;
-const originalCreateElement = Document.prototype.createElement;
-const originalCreateElementNS = Document.prototype.createElementNS;
+// TODO: Document in the README that a Promise polyfill 
+// should be brought in to support whenDefined
+
+const nativeHTMLElement = window.HTMLElement;
+const nativeCreateElement = Document.prototype.createElement;
+const nativeCreateElementNS = Document.prototype.createElementNS;
 const nativeMutationObserver = window.MutationObserver;
+const nodeAppendChildDescriptor = $utils.descriptor(Node, 'appendChild');
+
 const htmlNamespace = 'http://www.w3.org/1999/xhtml';
 const alreadyConstructedMarker = 1;
 const upgradeReactionType = 1;
 const callbackReactionType = 2;
+const CE_STATE_FAILED = 'failed';
+const CE_STATE_CUSTOM = 'custom';
+const CE_STATE_UNDEFINED = 'undefined';
+const CE_PROP_NAME = 'customElements';
+const CE_CALLBACK_CONNECTED = 'connectedCallback';
+const CE_CALLBACK_DISCONNECTED = 'disconnectedCallback';
+const CE_CALLBACK_ADOPTED = 'adoptedCallback';
+const CE_CALLBACK_ATTRIBUTE_CHANGED = 'attributeChangedCallback';
+const DOM_CONTENT_LOADED = 'DOMContentLoaded';
+const CTOR_PROP_NAME = 'constructor';
+const ATTR_IS_NAME = 'is';
+
+const nativeSupport = CE_PROP_NAME in window;
+const promisesSupported = 'Promise' in window;
 
 export default {
     nativeSupport,
     install,
     uninstall,
     isInstalled,
-    shimHtmlConstructors,
+    installTranspiledClassSupport,
     isCustom,
     tryToUpgradeElement,
-    enqueueCallbackReaction,
+    enqueueConnectedReaction,
+    enqueueDisconnectedReaction,
+    enqueueAdoptedReaction,
+    enqueueAttributeChangedReaction,
     executeCEReactions,
-    isValidCustomElementName
+    isValidCustomElementName,
 };
-
-const setImmediate = 'setImmediate' in window ? window.setImmediate : function (callback, ...args) {
-    return setTimeout(callback, 0, ...args);
-};
-
-const setPrototypeOf = (function () {
-    if (Object.setPrototypeOf) {
-        return Object.setPrototypeOf;
-    }
-
-    const test = {};
-    const proto = {};
-    test.__proto__ = proto;
-    if (Object.getPrototypeOf(test) === proto) {
-        return function (object, proto) {
-            object.__proto__ = proto;
-            return object;
-        }
-    }
-
-    return function (object, proto) {
-        const names = Object.getOwnPropertyNames(proto);
-        for (let i = 0; i < names.length; i++) {
-            const name = names[i];
-            const descriptor = Object.getOwnPropertyDescriptor(proto, name);
-            Object.defineProperty(object, name, descriptor);
-        }
-    }
-})();
 
 // Installation/uninstallation
 
@@ -64,7 +57,7 @@ function install() {
     installation.builtInElementInterfaces = installHtmlConstructors();
     installation.registry = new CustomElementRegistry();
 
-    Object.defineProperty(window, 'customElements', {
+    Object.defineProperty(window, CE_PROP_NAME, {
         value: installation.registry,
         writable: false,
         configurable: true,
@@ -89,12 +82,12 @@ function install() {
             childList: true,
             subtree: true
         });
-        window.document.addEventListener('DOMContentLoaded', function () {
+        window.document.addEventListener(DOM_CONTENT_LOADED, function () {
             observer.disconnect();
         });
     }
     
-    window.document.addEventListener('DOMContentLoaded', function () {
+    window.document.addEventListener(DOM_CONTENT_LOADED, function () {
         // Upgrading elements initially present in the document
         const elements = [];
         treeOrderShadowInclusiveForEach(document, function (element) { elements.push(element); });
@@ -117,10 +110,10 @@ function uninstall() {
 
     uninstallHtmlConstructors(windowState.builtInElementInterfaces);
 
-    delete window['customElements'];
+    delete window[CE_PROP_NAME];
 
-    Document.prototype.createElement = originalCreateElement;
-    Document.prototype.createElementNS = originalCreateElementNS;
+    Document.prototype.createElement = nativeCreateElement;
+    Document.prototype.createElementNS = nativeCreateElementNS;
 
     setPrivateState(window, undefined);
 }
@@ -139,28 +132,28 @@ function gatherBuiltInElementInterfaces() {
             continue;
         }
         const object = window[name];
-        if (object && object instanceof originalHTMLElement || object === originalHTMLElement) {
+        if (object && object instanceof nativeHTMLElement || object === nativeHTMLElement) {
             builtInElementInterfaces.push({ name, object, constructor: object.prototype.constructor });
         }
     }
     return builtInElementInterfaces;
 }
 
-function shimHtmlConstructors() {
+function installTranspiledClassSupport() {
     try {
         // Ensure that we are only shimming browsers that support ES2015 class syntax.
         new Function('return class {}');
 
-        const makeHtmlConstructor = new Function('originalHTMLElement',
+        const makeHtmlConstructor = new Function('nativeHTMLElement',
             'return function(){const newTarget=new.target||this.constructor;' +
-            'return Reflect.construct(originalHTMLElement, [], newTarget);}');
+            'return Reflect.construct(nativeHTMLElement, [], newTarget);}');
 
         const builtInElementInterfaces = gatherBuiltInElementInterfaces();
         for (let i = 0; i < builtInElementInterfaces.length; i++) {
             const { name, object } = builtInElementInterfaces[i];
             const htmlConstructor = makeHtmlConstructor(object);
             htmlConstructor.prototype = object.prototype;
-            Object.defineProperty(object.prototype, 'constructor', {
+            Object.defineProperty(object.prototype, CTOR_PROP_NAME, {
                 value: htmlConstructor,
                 writable: true,
                 configurable: true
@@ -179,7 +172,7 @@ function installHtmlConstructors() {
         const { name, object } = builtInElementInterfaces[i];
         const htmlConstructor = makeHtmlConstructor();
         htmlConstructor.prototype = object.prototype;
-        Object.defineProperty(object.prototype, 'constructor', {
+        Object.defineProperty(object.prototype, CTOR_PROP_NAME, {
             value: htmlConstructor,
             writable: true,
             configurable: true
@@ -192,7 +185,7 @@ function installHtmlConstructors() {
 function uninstallHtmlConstructors(builtInElementInterfaces) {
     for (let i = 0; i < builtInElementInterfaces.length; i++) {
         const { name, object, constructor } = builtInElementInterfaces[i];
-        Object.defineProperty(object.prototype, 'constructor', {
+        Object.defineProperty(object.prototype, CTOR_PROP_NAME, {
             value: constructor,
             writable: true,
             configurable: true
@@ -206,7 +199,7 @@ function makeHtmlConstructor() {
         const thisPrototype = Object.getPrototypeOf(this);
 
         // 1. Let registry...
-        const registry = window['customElements'];
+        const registry = window[CE_PROP_NAME];
         const registryState = getPrivateState(registry);
 
         // 2. If NewTarget...
@@ -243,10 +236,10 @@ function makeHtmlConstructor() {
         // 8. If construction stack is empty...
         const constructionStack = definition.constructionStack;
         if (constructionStack.length === 0) {
-            const element = originalCreateElement.call(window.document, definition.localName);
-            setPrototypeOf(element, prototype);
+            const element = nativeCreateElement.call(window.document, definition.localName);
+            $utils.setPrototypeOf(element, prototype);
             setPrivateState(element, {
-                customElementState: 'custom',
+                customElementState: CE_STATE_CUSTOM,
                 customElementDefinition: definition
             });
             return element;
@@ -257,10 +250,10 @@ function makeHtmlConstructor() {
         const element = constructionStack[lastIndex];
         // 10. if alreadyConstructedMarker
         if (element === alreadyConstructedMarker) {
-            throw makeDOMException('InvalidStateError', 'This element instance is already constructed');
+            throw $utils.makeDOMException('InvalidStateError', 'This element instance is already constructed');
         }
         // 11. set prototype
-        setPrototypeOf(element, prototype);
+        $utils.setPrototypeOf(element, prototype);
         // 12. replace last entry
         constructionStack[lastIndex] = alreadyConstructedMarker;
         // 13. return element
@@ -275,9 +268,9 @@ function createAnElement(document, qualifiedOrLocalName, nameSpace, prefix, is, 
     let result = null;
     let definition = lookupCustomElementDefinition(document, nameSpace, qualifiedOrLocalName, is);
     if (definition && definition.name != definition.localName) {
-        result = originalCreateElement.call(document, qualifiedOrLocalName);
+        result = nativeCreateElement.call(document, qualifiedOrLocalName);
         setPrivateState(result, {
-            customElementState: 'undefined',
+            customElementState: CE_STATE_UNDEFINED,
             customElementDefinition: null,
             isValue: is
         });
@@ -307,25 +300,25 @@ function createAnElement(document, qualifiedOrLocalName, nameSpace, prefix, is, 
                 }
             }
             catch (error) {
-                reportError(error);
-                result = originalCreateElement.call(document, qualifiedOrLocalName);
+                $utils.reportError(error);
+                result = nativeCreateElement.call(document, qualifiedOrLocalName);
                 // should be HTMLUnknownElement already
                 setPrivateState(result, {
-                    customElementState: 'failed'
+                    customElementState: CE_STATE_FAILED
                 });
             }
         }
         else {
-            result = originalCreateElement.call(document, qualifiedOrLocalName);
-            Object.setPrototypeOf(result, HTMLElement.prototype);
+            result = nativeCreateElement.call(document, qualifiedOrLocalName);
+            $utils.setPrototypeOf(result, HTMLElement.prototype);
             enqueueUpgradeReaction(result, definition);
         }
     }
     else {
         result = nameSpace
-            ? originalCreateElementNS.call(document, nameSpace, qualifiedOrLocalName)
-            : originalCreateElement.call(document, qualifiedOrLocalName);
-        // skip setting the custom element state to 'undefined' in order
+            ? nativeCreateElementNS.call(document, nameSpace, qualifiedOrLocalName)
+            : nativeCreateElement.call(document, qualifiedOrLocalName);
+        // PERF: forgo setting the custom element state to CE_STATE_UNDEFINED in order
         // to avoid unnecessary allocation.
     }
     return result;
@@ -340,7 +333,7 @@ function createElement(localName, options) {
     let is = options ? (options.is || null) : null;
     const element = createAnElement(this, localName, nameSpace, null, is, true);
     if (is != null) {
-        element.setAttribute('is', is);
+        element.setAttribute(ATTR_IS_NAME, is);
     }
     return element;
 }
@@ -349,7 +342,7 @@ function createElementNS(nameSpace, qualifiedName, options) {
     let is = options ? (options.is || null) : null;
     const element = createAnElement(this, qualifiedName, nameSpace, null, is, true);
     if (is != null) {
-        element.setAttribute('is', is);
+        element.setAttribute(ATTR_IS_NAME, is);
     }
     return element;
 }
@@ -364,20 +357,20 @@ function isCustom(node) {
     if (!nodeState) {
         return false;
     }
-    return nodeState.customElementState === 'custom';
+    return nodeState.customElementState === CE_STATE_CUSTOM;
 }
 
 function isValidCustomElementName(localName) {
     // https://html.spec.whatwg.org/multipage/scripting.html#valid-custom-element-name
     switch (localName) {
-        case "annotation-xml":
-        case "color-profile":
-        case "font-face":
-        case "font-face-src":
-        case "font-face-uri":
-        case "font-face-format":
-        case "font-face-name":
-        case "missing-glyph":
+        case 'annotation-xml':
+        case 'color-profile':
+        case 'font-face':
+        case 'font-face-src':
+        case 'font-face-uri':
+        case 'font-face-format':
+        case 'font-face-name':
+        case 'missing-glyph':
             return false;
     }
 
@@ -495,7 +488,7 @@ CustomElementRegistry.prototype = {
             throw new TypeError('The passed argument must be a constructor');
         }
         if (!isValidCustomElementName(name)) {
-            throw makeDOMException('SyntaxError');
+            throw $utils.makeDOMException('SyntaxError');
         }
         // TODO: check for already defined name
         // TODO: check for already defined constructor
@@ -504,9 +497,9 @@ CustomElementRegistry.prototype = {
         let htmlConstructor = window.HTMLElement;
         if (extensionOf != null) {
             if (isValidCustomElementName(extensionOf)) {
-                throw makeDOMException('NotSupportedError');
+                throw $utils.makeDOMException('NotSupportedError');
             }
-            const testElement = originalCreateElement.call(window.document, extensionOf);
+            const testElement = nativeCreateElement.call(window.document, extensionOf);
             if (testElement instanceof HTMLUnknownElement) {
                 // TODO: check for HTMLUnknownElement
             }
@@ -514,7 +507,7 @@ CustomElementRegistry.prototype = {
             htmlConstructor = Object.getPrototypeOf(testElement).constructor;
         }
         if (privateState.elementDefinitionIsRunning) {
-            throw makeDOMException('NotSupportedError');
+            throw $utils.makeDOMException('NotSupportedError');
         }
         privateState.elementDefinitionIsRunning = true;
         let caught = null;
@@ -526,13 +519,12 @@ CustomElementRegistry.prototype = {
             if (!(prototype instanceof Object)) {
                 throw new TypeError('Invalid prototype');
             }
-            lifecycleCallbacks = {
-                'connectedCallback': getCallback(prototype, 'connectedCallback'),
-                'disconnectedCallback': getCallback(prototype, 'disconnectedCallback'),
-                'adoptedCallback': getCallback(prototype, 'adoptedCallback'),
-                'attributeChangedCallback': getCallback(prototype, 'attributeChangedCallback')
-            };
-            if (lifecycleCallbacks['attributeChangedCallback']) {
+            lifecycleCallbacks = {};
+            lifecycleCallbacks[CE_CALLBACK_CONNECTED] = getCallback(prototype, CE_CALLBACK_CONNECTED);
+            lifecycleCallbacks[CE_CALLBACK_DISCONNECTED] = getCallback(prototype, CE_CALLBACK_DISCONNECTED);
+            lifecycleCallbacks[CE_CALLBACK_ADOPTED] = getCallback(prototype, CE_CALLBACK_ADOPTED);
+            lifecycleCallbacks[CE_CALLBACK_ATTRIBUTE_CHANGED] = getCallback(prototype, CE_CALLBACK_ATTRIBUTE_CHANGED);
+            if (lifecycleCallbacks[CE_CALLBACK_ATTRIBUTE_CHANGED]) {
                 const observedAttributesIterable = constructor.observedAttributes;
                 if (observedAttributesIterable) {
                     observedAttributes = observedAttributesIterable.slice();
@@ -572,7 +564,7 @@ CustomElementRegistry.prototype = {
         });
         const entry = privateState.whenDefinedPromiseMap[name];
         if (entry) {
-            setImmediate(function () {
+            $utils.setImmediate(function () {
                 entry.resolve();
                 privateState.whenDefinedPromiseMap[name] = null;
             });
@@ -595,7 +587,7 @@ CustomElementRegistry.prototype = {
             throw new Error('Please include a promise polyfill.');
         }
         if (!isValidCustomElementName(name)) {
-            throw makeDOMException('SyntaxError', 'Invalid custom element name');
+            throw $utils.makeDOMException('SyntaxError', 'Invalid custom element name');
         }
         const privateState = getPrivateState(this);
         for (let i = 0; i < privateState.definitions.length; i++) {
@@ -633,23 +625,23 @@ function upgradeElement(element, definition) {
     for (var i = 0; i < attributes.length; i++) {
         const attribute = attributes[i];
         const args = [attribute.localName, null, attribute.value, attribute.namespaceURI];
-        enqueueCallbackReaction(element, 'attributeChangedCallback', args)
+        enqueueCallbackReaction(element, CE_CALLBACK_ATTRIBUTE_CHANGED, args)
     }
     if (element.isConnected) {
-        enqueueCallbackReaction(element, 'connectedCallback', []);
+        enqueueCallbackReaction(element, CE_CALLBACK_CONNECTED, []);
     }
     definition.constructionStack.push(element);
     let caught = null;
     try {
         const constructResult = new definition.constructor;
         if (constructResult !== element) {
-            throw makeDOMException('InvalidStateError');
+            throw $utils.makeDOMException('InvalidStateError');
         }
     }
     catch (error) {
         caught = error;
         delete element.prototype;
-        elementState.customElementState = 'failed';
+        elementState.customElementState = CE_STATE_FAILED;
         elementState.customElementDefinition = null;
         elementState.reactionQueue.splice(0, elementState.reactionQueue.length);
     }
@@ -657,7 +649,7 @@ function upgradeElement(element, definition) {
     if (caught) {
         throw caught;
     }
-    elementState.customElementState = 'custom';
+    elementState.customElementState = CE_STATE_CUSTOM;
 }
 
 function tryToUpgradeElementSync(element) {
@@ -708,7 +700,7 @@ function enqueueElementOnAppropriateElementQueue(element) {
         // 3. Set the processing the backup element queue flag.
         installation.processingBackupElementQueue = true;
         // 4. Queue a microtask to perform the following steps:
-        setImmediate(function () {
+        $utils.setImmediate(function () {
             // 1. Invoke custom element reactions in the backup element queue.
             invokeReactions(installation.backupElementQueue);
             // 2. Unset the processing the backup element queue flag.
@@ -729,7 +721,7 @@ function enqueueCallbackReaction(element, callbackName, args) {
     if (callback == null) {
         return;
     }
-    if (callbackName === 'attributeChangedCallback') {
+    if (callbackName === CE_CALLBACK_ATTRIBUTE_CHANGED) {
         const attributeName = args[0];
         if (definition.observedAttributes.indexOf(attributeName) === -1) {
             return;
@@ -740,6 +732,22 @@ function enqueueCallbackReaction(element, callbackName, args) {
     }
     elementState.reactionQueue.push({ type: callbackReactionType, callback, args });
     enqueueElementOnAppropriateElementQueue(element);
+}
+
+function enqueueConnectedReaction(element, args) {
+    enqueueCallbackReaction(element, CE_CALLBACK_CONNECTED, args);
+}
+
+function enqueueDisconnectedReaction(element, args) {
+    enqueueCallbackReaction(element, CE_CALLBACK_DISCONNECTED, args);
+}
+
+function enqueueAdoptedReaction(element, args) {
+    enqueueCallbackReaction(element, CE_CALLBACK_ADOPTED, args);
+}
+
+function enqueueAttributeChangedReaction(element, args) {
+    enqueueCallbackReaction(element, CE_CALLBACK_ATTRIBUTE_CHANGED, args);
 }
 
 function enqueueUpgradeReaction(element, definition) {
@@ -769,7 +777,7 @@ function invokeReactions(queue) {
                 }
             }
             catch (error) {
-                reportError(error);
+                $utils.reportError(error);
             }
         }
     }
@@ -791,20 +799,8 @@ function executeCEReactions(callback) {
 
 function shouldNotUpgrade(privateState) {
     return privateState && (
-        privateState.customElementState === 'custom' ||
-        privateState.customElementState === 'failed');
-}
-
-function makeDOMException(name, message) {
-    try {
-        const sacrifice = originalCreateElement.call(window.document, 'div');
-        descriptors.Node.appendChild.call(sacrifice, sacrifice);
-    }
-    catch (error) {
-        error.message = message;
-        error.name = name;
-        return error;
-    }
+        privateState.customElementState === CE_STATE_CUSTOM ||
+        privateState.customElementState === CE_STATE_FAILED);
 }
 
 function getCallback(prototype, callbackName) {
@@ -840,11 +836,5 @@ function treeOrderShadowInclusiveForEach(node, callback) {
     const childNodes = node.childNodes;
     for (let i = 0; i < childNodes.length; i++) {
         treeOrderShadowInclusiveForEach(childNodes[i], callback);
-    }
-}
-
-function reportError(error) {
-    if ('console' in window && 'error' in window.console) {
-        window.console.error(error);
     }
 }

@@ -1,18 +1,20 @@
 // https://dom.spec.whatwg.org/#interface-attr
 
-import * as $ from '../utils.js';
+import $dom from '../dom.js';
+import $ce from '../custom-elements.js';
+import $utils from '../utils.js';
 
-import CustomElements from '../custom-elements.js';
+const attrValueDescriptor = $utils.descriptor(Attr, 'value');
 
 export default {
 
     get value() {
-        return $.descriptors.Attr.value.get.call(this);
+        return attrValueDescriptor.get.call(this);
     },
 
     set value(value) {
-        return CustomElements.executeCEReactions(() => {
-            $.setExistingAttributeValue(this, value);
+        return $ce.executeCEReactions(() => {
+            $dom.setExistingAttributeValue(this, value);
         });
     },
 

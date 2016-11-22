@@ -1,21 +1,21 @@
 // https://dom.spec.whatwg.org/#interface-nondocumenttypechildnode
 
-import * as $ from '../utils.js';
+import $utils from '../utils.js';
 
 export default function (base) {
 
-    const native = {
-        previousElementSibling: $.descriptor(base, 'previousElementSibling'),
-        nextElementSibling: $.descriptor(base, 'nextElementSibling')
-    };
+    const nodePreviousSiblingDescriptor = $utils.descriptor(Node, 'previousSibling');
+    const nodeNextSiblingDescriptor = $utils.descriptor(Node, 'nextSibling');
+    const basePreviousElementSiblingDescriptor = $utils.descriptor(base, 'previousElementSibling');
+    const baseNextElementSiblingDescriptor = $utils.descriptor(base, 'nextElementSibling');
 
     return {
 
         // TODO: tests
         get previousElementSibling() {
-            let nodeState = $.getShadowState(this);
+            let nodeState = $utils.getShadowState(this);
             if (nodeState && nodeState.parentNode) {
-                const childNodes = $.getShadowState(nodeState.parentNode).childNodes;
+                const childNodes = $utils.getShadowState(nodeState.parentNode).childNodes;
                 let index = childNodes.indexOf(this);
                 while (index > 0) {
                     const previous = childNodes[--index];
@@ -25,11 +25,11 @@ export default function (base) {
                 };
                 return null;
             }
-            else if (native.previousElementSibling) {
-                return native.previousElementSibling.get.call(this);
+            else if (basePreviousElementSiblingDescriptor) {
+                return basePreviousElementSiblingDescriptor.get.call(this);
             }
             else {
-                const getPreviousSibling = $.descriptors.Node.previousSibling.get;
+                const getPreviousSibling = nodePreviousSiblingDescriptor.get;
                 let previousSibling = this;
                 while (previousSibling = getPreviousSibling.call(previousSibling)) {
                     if (previousSibling.nodeType === Node.ELEMENT_NODE) {
@@ -42,9 +42,9 @@ export default function (base) {
 
         // TODO: tests
         get nextElementSibling() {
-            let nodeState = $.getShadowState(this);
+            let nodeState = $utils.getShadowState(this);
             if (nodeState && nodeState.parentNode) {
-                const childNodes = $.getShadowState(nodeState.parentNode).childNodes;
+                const childNodes = $utils.getShadowState(nodeState.parentNode).childNodes;
                 let index = childNodes.indexOf(this);
                 while (index < childNodes.length - 1) {
                     const next = childNodes[++index];
@@ -54,11 +54,11 @@ export default function (base) {
                 };
                 return null;
             }
-            else if (native.nextElementSibling) {
-                return native.nextElementSibling.get.call(this);
+            else if (baseNextElementSiblingDescriptor) {
+                return baseNextElementSiblingDescriptor.get.call(this);
             }
             else {
-                const getNextSibling = $.descriptors.Node.nextSibling.get;
+                const getNextSibling = nodeNextSiblingDescriptor.get;
                 let nextSibling = this;
                 while (nextSibling = getNextSibling.call(nextSibling)) {
                     if (nextSibling.nodeType === Node.ELEMENT_NODE) {

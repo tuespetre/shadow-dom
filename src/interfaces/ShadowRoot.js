@@ -1,9 +1,9 @@
 // https://dom.spec.whatwg.org/#interface-shadowroot
 // https://www.w3.org/TR/shadow-dom/#the-shadowroot-interface
 
-import * as $ from '../utils.js';
-
-import CustomElements from '../custom-elements.js';
+import $dom from '../dom.js';
+import $ce from '../custom-elements.js';
+import $utils from '../utils.js';
 
 export default {
 
@@ -12,23 +12,23 @@ export default {
     },
 
     get mode() {
-        return $.getShadowState(this).mode;
+        return $utils.getShadowState(this).mode;
     },
 
     get host() {
-        return $.getShadowState(this).host;
+        return $utils.getShadowState(this).host;
     },
 
     // TODO: tests
     get innerHTML() {
-        return $.serializeHTMLFragment(this);
+        return $dom.serializeHTMLFragment(this);
     },
 
     // TODO: tests
     set innerHTML(value) {
-        return CustomElements.executeCEReactions(() => {
-            const fragment = $.parseHTMLFragment(value, this);
-            $.replaceAll(fragment, this);
+        return $ce.executeCEReactions(() => {
+            const fragment = $dom.parseHTMLFragment(value, this);
+            $dom.replaceAll(fragment, this);
         });
     },
 

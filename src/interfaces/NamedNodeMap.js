@@ -1,46 +1,46 @@
 // https://dom.spec.whatwg.org/#interface-namednodemap
 
-import * as $ from '../utils.js';
-
-import CustomElements from '../custom-elements.js';
+import $dom from '../dom.js';
+import $ce from '../custom-elements.js';
+import $utils from '../utils.js';
 
 export default {
 
     // TODO: tests
     setNamedItem(attr) {
-        return CustomElements.executeCEReactions(() => {
-            const shadowState = $.getShadowState(this);
-            return $.setAttribute(attr, shadowState.element, $.descriptors.Element.setAttributeNode);
+        return $ce.executeCEReactions(() => {
+            const shadowState = $utils.getShadowState(this);
+            return $dom.setAttribute(attr, shadowState.element);
         });
     },
 
     // TODO: tests
     setNamedItemNS(attr) {
-        return CustomElements.executeCEReactions(() => {
-            const shadowState = $.getShadowState(this);
-            return $.setAttribute(attr, shadowState.element, $.descriptors.Element.setAttributeNodeNS);
+        return $ce.executeCEReactions(() => {
+            const shadowState = $utils.getShadowState(this);
+            return $dom.setAttribute(attr, shadowState.element);
         });
     },
 
     // TODO: tests
     removeNamedItem(qualifiedName) {
-        return CustomElements.executeCEReactions(() => {
-            const shadowState = $.getShadowState(this);
-            const attr = $.removeAttributeByName(qualifiedName, shadowState.element);
+        return $ce.executeCEReactions(() => {
+            const shadowState = $utils.getShadowState(this);
+            const attr = $dom.removeAttributeByName(qualifiedName, shadowState.element);
             if (!attr) {
-                throw $.makeError('NotFoundError');
+                throw $utils.makeDOMException('NotFoundError');
             }
             return attr;
         });
     },
 
     // TODO: tests
-    removeNamedItemNS(namespace, localName) {
-        return CustomElements.executeCEReactions(() => {
-            const shadowState = $.getShadowState(this);
-            const attr = $.removeAttributeByNamespace(namespace, localName, shadowState.element);
+    removeNamedItemNS(nameSpace, localName) {
+        return $ce.executeCEReactions(() => {
+            const shadowState = $utils.getShadowState(this);
+            const attr = $dom.removeAttributeByNamespace(nameSpace, localName, shadowState.element);
             if (!attr) {
-                throw $.makeError('NotFoundError');
+                throw $utils.makeDOMException('NotFoundError');
             }
             return attr;
         });

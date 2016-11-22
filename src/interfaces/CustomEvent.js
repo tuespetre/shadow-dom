@@ -1,6 +1,6 @@
 // https://dom.spec.whatwg.org/#interface-customevent
 
-import * as $ from '../utils.js';
+import $utils from '../utils.js';
 
 export default function $CustomEvent(type, init) {
     let bubbles = false;
@@ -15,7 +15,7 @@ export default function $CustomEvent(type, init) {
     }
     const event = document.createEvent('CustomEvent');
     event.initCustomEvent(type, bubbles, cancelable, detail);
-    $.setShadowState(event, { composed });
+    $utils.setShadowState(event, { composed });
     return event;
 }
 

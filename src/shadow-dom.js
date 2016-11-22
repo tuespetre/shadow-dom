@@ -1,4 +1,4 @@
-import * as $ from './utils.js';
+import $utils from './utils.js';
 import * as reflect from './reflect.js';
 
 import $Attr from './interfaces/Attr.js';
@@ -54,95 +54,95 @@ function install() {
     }
 
     // Attr interface
-    $.extend(Attr, $Attr);
+    $utils.extend(Attr, $Attr);
 
     // CharacterData interface
-    $.extend(CharacterData, $CharacterData);
+    $utils.extend(CharacterData, $CharacterData);
 
     // CustomEvent interface
     window.CustomEvent = $CustomEvent;
 
     // Document interface
-    $.extend(Document, $Document);
+    $utils.extend(Document, $Document);
 
     // DOMTokenList interface
     if ('DOMTokenList' in window) {
         // TODO: what about IE9?
-        $.extend(DOMTokenList, $DOMTokenList);
+        $utils.extend(DOMTokenList, $DOMTokenList);
     }
 
     // Element interface
-    $.extend(Element, $Element);
+    $utils.extend(Element, $Element);
 
     // Event interface
-    $.extend(Event, $Event);
-    $.extend(FocusEvent, hasRelatedTarget);
-    $.extend(MouseEvent, hasRelatedTarget);
+    $utils.extend(Event, $Event);
+    $utils.extend(FocusEvent, hasRelatedTarget);
+    $utils.extend(MouseEvent, hasRelatedTarget);
     $Event.prototype = Event.prototype;
     window.Event = $Event;
 
     // EventTarget
     if ('EventTarget' in Window) {
-        $.extend(EventTarget, $EventTarget(EventTarget));
+        $utils.extend(EventTarget, $EventTarget(EventTarget));
     }
     else {
         // In IE, EventTarget is not exposed and Window's
         // EventTarget methods are not the same as Node's.
-        $.extend(Window, $EventTarget(Window));
-        $.extend(Node, $EventTarget(Node));
+        $utils.extend(Window, $EventTarget(Window));
+        $utils.extend(Node, $EventTarget(Node));
     }
 
     // HTMLSlotElement interface
-    $.extend('HTMLSlotElement' in window ? HTMLSlotElement : HTMLUnknownElement, $HTMLSlotElement);
+    $utils.extend('HTMLSlotElement' in window ? HTMLSlotElement : HTMLUnknownElement, $HTMLSlotElement);
 
     // HTMLTableElement interface
-    $.extend(HTMLTableElement, $HTMLTableElement);
+    $utils.extend(HTMLTableElement, $HTMLTableElement);
 
     // HTMLTableRowElement interface
-    $.extend(HTMLTableRowElement, $HTMLTableRowElement);
+    $utils.extend(HTMLTableRowElement, $HTMLTableRowElement);
 
     // HTMLTableSectionElement interface
-    $.extend(HTMLTableSectionElement, $HTMLTableSectionElement);
+    $utils.extend(HTMLTableSectionElement, $HTMLTableSectionElement);
 
     // MutationObserver interface
     window.MutationObserver = $MutationObserver;
 
     // NamedNodeMap interface
-    $.extend(NamedNodeMap, $NamedNodeMap);
+    $utils.extend(NamedNodeMap, $NamedNodeMap);
 
     // Node interface
-    $.extend(Node, $Node);
+    $utils.extend(Node, $Node);
 
     // TODO: implement Range interface
 
     // Text interface
-    $.extend(Text, $Text);
+    $utils.extend(Text, $Text);
 
     // ChildNode mixin
-    $.extend(DocumentType, $ChildNode(DocumentType));
-    $.extend(Element, $ChildNode(Element));
-    $.extend(CharacterData, $ChildNode(CharacterData));
+    $utils.extend(DocumentType, $ChildNode(DocumentType));
+    $utils.extend(Element, $ChildNode(Element));
+    $utils.extend(CharacterData, $ChildNode(CharacterData));
 
     // DocumentOrShadowRoot mixin
-    $.extend(Document, $DocumentOrShadowRoot);
-    $.extend($ShadowRoot, $DocumentOrShadowRoot);
+    $utils.extend(Document, $DocumentOrShadowRoot);
+    $utils.extend($ShadowRoot, $DocumentOrShadowRoot);
 
     // NonDocumentTypeChildNode mixin
-    $.extend(Element, $NonDocumentTypeChildNode(Element));
-    $.extend(CharacterData, $NonDocumentTypeChildNode(CharacterData));
+    $utils.extend(Element, $NonDocumentTypeChildNode(Element));
+    $utils.extend(CharacterData, $NonDocumentTypeChildNode(CharacterData));
 
     // NonElementParentNode mixin
-    $.extend(Document, $NonElementParentNode(Document));
-    $.extend(DocumentFragment, $NonElementParentNode(DocumentFragment));
+    $utils.extend(Document, $NonElementParentNode(Document));
+    $utils.extend(DocumentFragment, $NonElementParentNode(DocumentFragment));
 
     // ParentNode mixin
-    $.extend(Document, $ParentNode(Document));
-    $.extend(DocumentFragment, $ParentNode(DocumentFragment));
-    $.extend(Element, $ParentNode(Element));
+    $utils.extend(Document, $ParentNode(Document));
+    $utils.extend(DocumentFragment, $ParentNode(DocumentFragment));
+    $utils.extend(Element, $ParentNode(Element));
 
     // Slotable mixin
-    $.extend(Element, $Slotable(Element));
-    $.extend(Text, $Slotable(Text));
+    $utils.extend(Element, $Slotable(Element));
+    $utils.extend(Text, $Slotable(Text));
 
     // Cleanup for IE, Edge
     delete Node.prototype.attributes;

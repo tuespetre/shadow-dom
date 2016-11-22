@@ -1,5 +1,5 @@
 import ShadowDOM from './shadow-dom.js';
-import CustomElements from './custom-elements.js';
+import $ce from './custom-elements.js';
 
 let installShadowDom = false;
 let installCustomElements = false;
@@ -8,7 +8,7 @@ if (window['forceShadowDomPolyfill'] || !ShadowDOM.nativeSupport) {
     installShadowDom = true;
 }
 
-if (window['forceCustomElementsPolyfill'] || !CustomElements.nativeSupport) {
+if (window['forceCustomElementsPolyfill'] || !$ce.nativeSupport) {
     installShadowDom = true;
     installCustomElements = true;
 }
@@ -19,10 +19,10 @@ if (installShadowDom) {
 }
 
 if (installCustomElements) {
-    CustomElements.install();
+    $ce.install();
     window.customElementsPolyfilled = true;
 }
 else {
     // TODO: Offer a way to opt out if desired
-    CustomElements.shimHtmlConstructors();
+    $ce.installTranspiledClassSupport();
 }
