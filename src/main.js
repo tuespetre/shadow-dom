@@ -15,12 +15,12 @@ if (window['forceCustomElementsPolyfill'] || !$ce.nativeSupport) {
 
 if (installShadowDom) {
     ShadowDOM.install();
-    window.shadowDomPolyfilled = true;
+    window['shadowDomPolyfilled'] = true;
 }
 
 if (installCustomElements) {
     $ce.install();
-    window.customElementsPolyfilled = true;
+    window['customElementsPolyfilled'] = true;
 }
 else {
     // TODO: Offer a way to opt out if desired

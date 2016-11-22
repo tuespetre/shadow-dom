@@ -12,7 +12,6 @@ const nativeHTMLElement = window.HTMLElement;
 const nativeCreateElement = Document.prototype.createElement;
 const nativeCreateElementNS = Document.prototype.createElementNS;
 const nativeMutationObserver = window.MutationObserver;
-const nodeAppendChildDescriptor = $utils.descriptor(Node, 'appendChild');
 
 const htmlNamespace = 'http://www.w3.org/1999/xhtml';
 const alreadyConstructedMarker = 1;

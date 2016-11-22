@@ -22,7 +22,6 @@ var nativeHTMLElement = window.HTMLElement; // https://html.spec.whatwg.org/mult
 var nativeCreateElement = Document.prototype.createElement;
 var nativeCreateElementNS = Document.prototype.createElementNS;
 var nativeMutationObserver = window.MutationObserver;
-var nodeAppendChildDescriptor = _utils2.default.descriptor(Node, 'appendChild');
 
 var htmlNamespace = 'http://www.w3.org/1999/xhtml';
 var alreadyConstructedMarker = 1;
@@ -4766,12 +4765,12 @@ if (window['forceCustomElementsPolyfill'] || !_customElements2.default.nativeSup
 
 if (installShadowDom) {
     _shadowDom2.default.install();
-    window.shadowDomPolyfilled = true;
+    window['shadowDomPolyfilled'] = true;
 }
 
 if (installCustomElements) {
     _customElements2.default.install();
-    window.customElementsPolyfilled = true;
+    window['customElementsPolyfilled'] = true;
 } else {
     // TODO: Offer a way to opt out if desired
     _customElements2.default.installTranspiledClassSupport();

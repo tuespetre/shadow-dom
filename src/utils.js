@@ -1,5 +1,5 @@
 // NOTE: setTimeout with args does not work in IE9. There is a note in the README about this.
-const setImmediate = 'setImmediate' in window ? window.setImmediate : function (callback, ...args) {
+const setImmediate = 'setImmediate' in window ? window.setImmediate.bind(window) : function (callback, ...args) {
     return setTimeout(callback, 0, ...args);
 };
 
