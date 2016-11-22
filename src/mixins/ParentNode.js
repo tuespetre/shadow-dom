@@ -154,23 +154,20 @@ export default function (base) {
 
         // TODO: tests
         querySelector(selectors) {
-            const results = this.querySelectorAll(selectors);
-
-            if (results.length) {
-                return results[0];
+            let firstChild = this.firstChild;
+            
+            if (!firstChild) {
+                return null;
             }
-
-            return null;
+            
+            return $dom.treeOrderRecursiveSelectFirst(firstChild, function (node) {
+                return node.nodeType === Node.ELEMENT_NODE && node.matches(selectors);
+            });
         },
 
         // TODO: tests
         querySelectorAll(selectors) {
             // https://dom.spec.whatwg.org/#scope-match-a-selectors-string
-            // this is horrible, performance-wise.
-            // it's about 100x slower than native querySelectorAll.
-            // that might not amount to much in practice, though.
-            // after all, this is a polyfill.
-
             const results = [];
 
             let firstChild = this.firstChild;
