@@ -197,7 +197,7 @@ export default {
 
     // TODO: tests
     getElementsByClassName(names) {
-        const results = elementGetElementsByClassNameDescriptor.value.call(this, name);
+        const results = elementGetElementsByClassNameDescriptor.value.call(this, names);
         return $dom.filterByRoot(this, results);
     },
 

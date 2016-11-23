@@ -4,9 +4,9 @@ import $dom from '../dom.js';
 import $ce from '../custom-elements.js';
 import $utils from '../utils.js';
 
-const documentGetElementsByTagNameDescriptor = $utils.descriptor(Element, 'getElementsByTagName');
-const documentGetElementsByTagNameNSDescriptor = $utils.descriptor(Element, 'getElementsByTagNameNS');
-const documentGetElementsByClassNameDescriptor = $utils.descriptor(Element, 'getElementsByClassName');
+const documentGetElementsByTagNameDescriptor = $utils.descriptor(Document, 'getElementsByTagName');
+const documentGetElementsByTagNameNSDescriptor = $utils.descriptor(Document, 'getElementsByTagNameNS');
+const documentGetElementsByClassNameDescriptor = $utils.descriptor(Document, 'getElementsByClassName');
 
 export default {
 
@@ -24,7 +24,7 @@ export default {
 
     // TODO: tests
     getElementsByClassName(names) {
-        const results = documentGetElementsByClassNameDescriptor.value.call(this, name);
+        const results = documentGetElementsByClassNameDescriptor.value.call(this, names);
         return $dom.filterByRoot(this, results);
     },
 

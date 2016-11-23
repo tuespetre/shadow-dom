@@ -2888,10 +2888,10 @@ var _utils2 = _interopRequireDefault(_utils);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var documentGetElementsByTagNameDescriptor = _utils2.default.descriptor(Element, 'getElementsByTagName'); // https://dom.spec.whatwg.org/#interface-document
+var documentGetElementsByTagNameDescriptor = _utils2.default.descriptor(Document, 'getElementsByTagName'); // https://dom.spec.whatwg.org/#interface-document
 
-var documentGetElementsByTagNameNSDescriptor = _utils2.default.descriptor(Element, 'getElementsByTagNameNS');
-var documentGetElementsByClassNameDescriptor = _utils2.default.descriptor(Element, 'getElementsByClassName');
+var documentGetElementsByTagNameNSDescriptor = _utils2.default.descriptor(Document, 'getElementsByTagNameNS');
+var documentGetElementsByClassNameDescriptor = _utils2.default.descriptor(Document, 'getElementsByClassName');
 
 exports.default = {
 
@@ -2911,7 +2911,7 @@ exports.default = {
 
     // TODO: tests
     getElementsByClassName: function getElementsByClassName(names) {
-        var results = documentGetElementsByClassNameDescriptor.value.call(this, name);
+        var results = documentGetElementsByClassNameDescriptor.value.call(this, names);
         return _dom2.default.filterByRoot(this, results);
     },
 
@@ -3178,7 +3178,7 @@ exports.default = {
 
     // TODO: tests
     getElementsByClassName: function getElementsByClassName(names) {
-        var results = elementGetElementsByClassNameDescriptor.value.call(this, name);
+        var results = elementGetElementsByClassNameDescriptor.value.call(this, names);
         return _dom2.default.filterByRoot(this, results);
     },
 
