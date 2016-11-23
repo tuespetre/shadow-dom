@@ -482,99 +482,94 @@ function CustomElementRegistry() {
 CustomElementRegistry.prototype = {
 
     define(name, constructor, options) {
-        const privateState = getPrivateState(this);
-        if (constructor !== constructor.prototype.constructor) {
-            throw new TypeError('The passed argument must be a constructor');
-        }
-        if (!isValidCustomElementName(name)) {
-            throw $utils.makeDOMException('SyntaxError');
-        }
-        // TODO: check for already defined name
-        // TODO: check for already defined constructor
-        let localName = name;
-        let extensionOf = options ? options.extends : null;
-        let htmlConstructor = window.HTMLElement;
-        if (extensionOf != null) {
-            if (isValidCustomElementName(extensionOf)) {
+        executeCEReactions(() => {
+            const privateState = getPrivateState(this);
+            if (constructor !== constructor.prototype.constructor) {
+                throw new TypeError('The passed argument must be a constructor');
+            }
+            if (!isValidCustomElementName(name)) {
+                throw $utils.makeDOMException('SyntaxError');
+            }
+            // TODO: check for already defined name
+            // TODO: check for already defined constructor
+            let localName = name;
+            let extensionOf = options ? options.extends : null;
+            let htmlConstructor = window.HTMLElement;
+            if (extensionOf != null) {
+                if (isValidCustomElementName(extensionOf)) {
+                    throw $utils.makeDOMException('NotSupportedError');
+                }
+                const testElement = nativeCreateElement.call(window.document, extensionOf);
+                if (testElement instanceof HTMLUnknownElement) {
+                    // TODO: check for HTMLUnknownElement
+                }
+                localName = extensionOf;
+                htmlConstructor = Object.getPrototypeOf(testElement).constructor;
+            }
+            if (privateState.elementDefinitionIsRunning) {
                 throw $utils.makeDOMException('NotSupportedError');
             }
-            const testElement = nativeCreateElement.call(window.document, extensionOf);
-            if (testElement instanceof HTMLUnknownElement) {
-                // TODO: check for HTMLUnknownElement
-            }
-            localName = extensionOf;
-            htmlConstructor = Object.getPrototypeOf(testElement).constructor;
-        }
-        if (privateState.elementDefinitionIsRunning) {
-            throw $utils.makeDOMException('NotSupportedError');
-        }
-        privateState.elementDefinitionIsRunning = true;
-        let caught = null;
-        let observedAttributes = [];
-        let lifecycleCallbacks;
-        let nativeInterface;
-        try {
-            const prototype = constructor.prototype;
-            if (!(prototype instanceof Object)) {
-                throw new TypeError('Invalid prototype');
-            }
-            lifecycleCallbacks = {};
-            lifecycleCallbacks[CE_CALLBACK_CONNECTED] = getCallback(prototype, CE_CALLBACK_CONNECTED);
-            lifecycleCallbacks[CE_CALLBACK_DISCONNECTED] = getCallback(prototype, CE_CALLBACK_DISCONNECTED);
-            lifecycleCallbacks[CE_CALLBACK_ADOPTED] = getCallback(prototype, CE_CALLBACK_ADOPTED);
-            lifecycleCallbacks[CE_CALLBACK_ATTRIBUTE_CHANGED] = getCallback(prototype, CE_CALLBACK_ATTRIBUTE_CHANGED);
-            if (lifecycleCallbacks[CE_CALLBACK_ATTRIBUTE_CHANGED]) {
-                const observedAttributesIterable = constructor.observedAttributes;
-                if (observedAttributesIterable) {
-                    observedAttributes = observedAttributesIterable.slice();
+            privateState.elementDefinitionIsRunning = true;
+            let caught = null;
+            let observedAttributes = [];
+            let lifecycleCallbacks;
+            let nativeInterface;
+            try {
+                const prototype = constructor.prototype;
+                if (!(prototype instanceof Object)) {
+                    throw new TypeError('Invalid prototype');
                 }
-            }
-        }
-        catch (error) {
-            caught = error;
-        }
-        privateState.elementDefinitionIsRunning = false;
-        if (caught) {
-            throw caught;
-        }
-        const definition = {
-            name: name,
-            localName: localName,
-            constructor: constructor,
-            observedAttributes,
-            lifecycleCallbacks,
-            constructionStack: [],
-            htmlConstructor
-        };
-        let entry = privateState.whenDefinedPromiseMap[name];
-        if (!entry && promisesSupported) {
-            entry = { promise: null, resolve: null };
-            entry.promise = new Promise(function (resolve, reject) {
-                entry.resolve = resolve;
-            });
-            privateState.whenDefinedPromiseMap[name] = entry;
-        }
-        privateState.definitions.push(definition);
-        const document = window.document;
-        treeOrderShadowInclusiveForEach(document, function (node) {
-            if (node.nodeType === Node.ELEMENT_NODE &&
-                node.namespaceURI === htmlNamespace &&
-                node.localName === localName) {
-                if (extensionOf) {
-                    const nodeState = getPrivateState(node);
-                    if (nodeState.isValue !== extensionOf) {
-                        return;
+                lifecycleCallbacks = {};
+                lifecycleCallbacks[CE_CALLBACK_CONNECTED] = getCallback(prototype, CE_CALLBACK_CONNECTED);
+                lifecycleCallbacks[CE_CALLBACK_DISCONNECTED] = getCallback(prototype, CE_CALLBACK_DISCONNECTED);
+                lifecycleCallbacks[CE_CALLBACK_ADOPTED] = getCallback(prototype, CE_CALLBACK_ADOPTED);
+                lifecycleCallbacks[CE_CALLBACK_ATTRIBUTE_CHANGED] = getCallback(prototype, CE_CALLBACK_ATTRIBUTE_CHANGED);
+                if (lifecycleCallbacks[CE_CALLBACK_ATTRIBUTE_CHANGED]) {
+                    const observedAttributesIterable = constructor.observedAttributes;
+                    if (observedAttributesIterable) {
+                        observedAttributes = observedAttributesIterable.slice();
                     }
                 }
-                enqueueUpgradeReaction(node, definition);
+            }
+            catch (error) {
+                caught = error;
+            }
+            privateState.elementDefinitionIsRunning = false;
+            if (caught) {
+                throw caught;
+            }
+            const definition = {
+                name: name,
+                localName: localName,
+                constructor: constructor,
+                observedAttributes,
+                lifecycleCallbacks,
+                constructionStack: [],
+                htmlConstructor
+            };
+            privateState.definitions.push(definition);
+            const document = window.document;
+            treeOrderShadowInclusiveForEach(document, function (node) {
+                if (node.nodeType === Node.ELEMENT_NODE &&
+                    node.namespaceURI === htmlNamespace &&
+                    node.localName === localName) {
+                    if (extensionOf) {
+                        const nodeState = getPrivateState(node);
+                        if (nodeState.isValue !== extensionOf) {
+                            return;
+                        }
+                    }
+                    enqueueUpgradeReaction(node, definition);
+                }
+            });
+            const entry = privateState.whenDefinedPromiseMap[name];
+            if (entry) {
+                $utils.setImmediate(function () {
+                    entry.resolve();
+                    privateState.whenDefinedPromiseMap[name] = null;
+                });
             }
         });
-        if (entry) {
-            $utils.setImmediate(function () {
-                entry.resolve();
-                privateState.whenDefinedPromiseMap[name] = null;
-            });
-        }
     },
 
     get(name) {
@@ -596,14 +591,14 @@ CustomElementRegistry.prototype = {
             throw $utils.makeDOMException('SyntaxError', 'Invalid custom element name');
         }
         const privateState = getPrivateState(this);
+        for (let i = 0; i < privateState.definitions.length; i++) {
+            const definition = privateState.definitions[i];
+            if (name === definition.name) {
+                return Promise.resolve();
+            }
+        }
         let entry = privateState.whenDefinedPromiseMap[name];
         if (!entry) {
-            for (let i = 0; i < privateState.definitions.length; i++) {
-                const definition = privateState.definitions[i];
-                if (name === definition.name) {
-                    return Promise.resolve();
-                }
-            }
             entry = { promise: null, resolve: null };
             entry.promise = new Promise(function (resolve, reject) {
                 entry.resolve = resolve;

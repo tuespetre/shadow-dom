@@ -195,7 +195,7 @@ suite('Custom Elements', function () {
         // no-op
     }
     
-    test('whenDefined() will wait for running upgrades caused by define() before resolving', function (done) {
+    test('define properly implements [CEReactions]', function (done) {
         var whenDefinedElement = function () {
             var self = HTMLElement.call(this);
             return self;
