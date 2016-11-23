@@ -558,7 +558,7 @@ CustomElementRegistry.prototype = {
                         return;
                     }
                 }
-                enqueueUpgradeReaction(element, definition);
+                enqueueUpgradeReaction(node, definition);
             }
         });
         var entry = privateState.whenDefinedPromiseMap[name];
@@ -755,18 +755,18 @@ function enqueueUpgradeReaction(element, definition) {
 function invokeReactions(queue) {
     // https://html.spec.whatwg.org/multipage/scripting.html#invoke-custom-element-reactions
     for (var i = 0; i < queue.length; i++) {
-        var _element2 = queue[i];
-        var reactions = getPrivateState(_element2).reactionQueue;
+        var element = queue[i];
+        var reactions = getPrivateState(element).reactionQueue;
         while (reactions.length) {
             try {
                 var splicedOut = reactions.splice(0, 1);
                 var reaction = splicedOut[0];
                 switch (reaction.type) {
                     case upgradeReactionType:
-                        upgradeElement(_element2, reaction.definition);
+                        upgradeElement(element, reaction.definition);
                         break;
                     case callbackReactionType:
-                        reaction.callback.apply(_element2, reaction.args);
+                        reaction.callback.apply(element, reaction.args);
                         break;
                 }
             } catch (error) {
@@ -4772,7 +4772,8 @@ if (installCustomElements) {
     _customElements2.default.install();
     window['customElementsPolyfilled'] = true;
 } else {
-    // TODO: Offer a way to opt out if desired
+    // TODO: Offer a way to opt out if desired. Possibly refer to:
+    // https://philipwalton.com/articles/loading-polyfills-only-when-needed/
     _customElements2.default.installTranspiledClassSupport();
 }
 

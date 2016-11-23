@@ -558,7 +558,7 @@ CustomElementRegistry.prototype = {
                         return;
                     }
                 }
-                enqueueUpgradeReaction(element, definition);
+                enqueueUpgradeReaction(node, definition);
             }
         });
         const entry = privateState.whenDefinedPromiseMap[name];

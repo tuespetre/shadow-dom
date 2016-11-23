@@ -23,6 +23,7 @@ if (installCustomElements) {
     window['customElementsPolyfilled'] = true;
 }
 else {
-    // TODO: Offer a way to opt out if desired
+    // TODO: Offer a way to opt out if desired. Possibly refer to:
+    // https://philipwalton.com/articles/loading-polyfills-only-when-needed/
     $ce.installTranspiledClassSupport();
 }

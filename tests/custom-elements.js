@@ -9,9 +9,20 @@ suite('Custom Elements', function () {
         suite(name, function () {
 
             test('can be defined on window.customElements', function () {
-                window.customElements.define(tagName, elementClass);
-                var defined = window.customElements.get(tagName);
-                assert.equal(defined, elementClass);
+                // Ensure that, upon definition, enqueuing the upgrade callback works
+                var element = document.createElement(tagName);
+                document.body.append(element);
+                var caught = null;
+                try {
+                    window.customElements.define(tagName, elementClass);
+                    var defined = window.customElements.get(tagName);
+                    assert.equal(defined, elementClass);
+                }
+                catch (error) {
+                    caught = error;
+                }
+                element.remove();
+                assert.isNull(caught);
             });
 
             test('can be constructed with document.createElement', function () {
