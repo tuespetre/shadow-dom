@@ -166,6 +166,16 @@ suite('Element', function () {
             assert.doesNotThrow(function () {
                 input.setAttribute('type', 'radio');
             });
+            assert.equal(input.getAttribute('type'), 'radio');
+        });
+
+        test('removeAttribute', function () {
+            var element = document.createElement('div');
+            element.setAttribute('hidden', '');
+            assert.doesNotThrow(function () {
+                element.removeAttribute('hidden');
+            });
+            assert.isFalse(element.hasAttribute('hidden'));
         });
 
     });

@@ -1498,7 +1498,7 @@ function removeAttribute(attribute, element) {
     attributeChangeSteps(element, name, oldValue, null, nameSpace);
 
     // 4. Remove attribute from the element’s attribute list.
-    elementRemoveAttributeNSDescriptor.value.call(nameSpace, name);
+    elementRemoveAttributeNSDescriptor.value.call(element, nameSpace, name);
 
     // 5. Set attribute’s element to null.
     // SKIP: native
