@@ -548,6 +548,14 @@ CustomElementRegistry.prototype = {
             constructionStack: [],
             htmlConstructor: htmlConstructor
         };
+        var entry = privateState.whenDefinedPromiseMap[name];
+        if (!entry && promisesSupported) {
+            entry = { promise: null, resolve: null };
+            entry.promise = new Promise(function (resolve, reject) {
+                entry.resolve = resolve;
+            });
+            privateState.whenDefinedPromiseMap[name] = entry;
+        }
         privateState.definitions.push(definition);
         var document = window.document;
         treeOrderShadowInclusiveForEach(document, function (node) {
@@ -561,7 +569,6 @@ CustomElementRegistry.prototype = {
                 enqueueUpgradeReaction(node, definition);
             }
         });
-        var entry = privateState.whenDefinedPromiseMap[name];
         if (entry) {
             _utils2.default.setImmediate(function () {
                 entry.resolve();
@@ -587,14 +594,14 @@ CustomElementRegistry.prototype = {
             throw _utils2.default.makeDOMException('SyntaxError', 'Invalid custom element name');
         }
         var privateState = getPrivateState(this);
-        for (var i = 0; i < privateState.definitions.length; i++) {
-            var definition = privateState.definitions[i];
-            if (name === definition.name) {
-                return Promise.resolve();
-            }
-        }
         var entry = privateState.whenDefinedPromiseMap[name];
         if (!entry) {
+            for (var i = 0; i < privateState.definitions.length; i++) {
+                var definition = privateState.definitions[i];
+                if (name === definition.name) {
+                    return Promise.resolve();
+                }
+            }
             entry = { promise: null, resolve: null };
             entry.promise = new Promise(function (resolve, reject) {
                 entry.resolve = resolve;

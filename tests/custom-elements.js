@@ -194,6 +194,33 @@ suite('Custom Elements', function () {
     catch (error) {
         // no-op
     }
+    
+    test('whenDefined() will wait for running upgrades caused by define() before resolving', function (done) {
+        var whenDefinedElement = function () {
+            var self = HTMLElement.call(this);
+            return self;
+        };
+        whenDefinedElement.prototype = Object.create(HTMLElement.prototype, {
+            'constructor': {
+                value: whenDefinedElement,
+                writable: true,
+                configurable: true
+            },
+            'connectedCallback': {
+                value: function () {
+                    this.connectedCallbackWasCalled = true;
+                }
+            }
+        });
+        var element = document.createElement('when-defined');
+        document.body.append(element);
+        window.customElements.define('when-defined', whenDefinedElement);
+        window.customElements.whenDefined('when-defined').then(function () {
+            assert.isTrue(element.connectedCallbackWasCalled);
+            element.remove();
+            done();
+        });
+    });
 
 });
 
