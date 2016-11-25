@@ -1638,7 +1638,7 @@ function listOfElementsWithQualifiedName(root, qualifiedName) {
     }
 
     if (qualifiedName === '*') {
-        treeOrderRecursiveSelectAll(firstChild, results, isElementNode);
+        treeOrderRecursiveSelectAll(firstChild, results, _utils2.default.isElementNode);
         return results;
     }
 
@@ -1672,7 +1672,7 @@ function listOfElementsWithNamespaceAndLocalName(root, nameSpace, localName) {
     }
 
     if (nameSpace === '*' && localName === '*') {
-        treeOrderRecursiveSelectAll(firstChild, results, isElementNode);
+        treeOrderRecursiveSelectAll(firstChild, results, _utils2.default.isElementNode);
         return results;
     }
 
