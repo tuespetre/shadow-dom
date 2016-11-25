@@ -76,36 +76,38 @@ function install() {
     Document.prototype.createElement = createElement;
     Document.prototype.createElementNS = createElementNS;
 
-    if (nativeMutationObserver) {
-        (function () {
-            var observer = new nativeMutationObserver(function (records) {
-                for (var i = 0; i < records.length; i++) {
-                    for (var j = 0; j < records[i].addedNodes.length; j++) {
-                        var added = records[i].addedNodes[j];
-                        if (added.nodeType === Node.ELEMENT_NODE) {
-                            tryToUpgradeElementSync(added);
+    if (window.document.readyState === 'loading') {
+        // This can provide faster upgrades on browsers that support it.
+        if (nativeMutationObserver) {
+            (function () {
+                var observer = new nativeMutationObserver(function (records) {
+                    for (var i = 0; i < records.length; i++) {
+                        for (var j = 0; j < records[i].addedNodes.length; j++) {
+                            var added = records[i].addedNodes[j];
+                            if (added.nodeType === Node.ELEMENT_NODE) {
+                                tryToUpgradeElementSync(added);
+                            }
                         }
                     }
-                }
-            });
-            observer.observe(window.document, {
-                childList: true,
-                subtree: true
-            });
-            window.document.addEventListener(DOM_CONTENT_LOADED, function () {
-                observer.disconnect();
-            });
-        })();
+                });
+                observer.observe(window.document, {
+                    childList: true,
+                    subtree: true
+                });
+                window.document.addEventListener(DOM_CONTENT_LOADED, function () {
+                    observer.disconnect();
+                });
+            })();
+        }
+    } else {
+        performInitialUpgrades();
     }
 
-    window.document.addEventListener(DOM_CONTENT_LOADED, function () {
-        // Upgrading elements initially present in the document
-        var elements = [];
-        treeOrderShadowInclusiveForEach(document, function (element) {
-            elements.push(element);
-        });
-        elements.forEach(tryToUpgradeElementSync);
-    }, { once: true });
+    // For browsers that don't support the above.
+    // Not all browsers run MutationObservers during parsing,
+    // or they display timing issues one way or another, so this covers them
+    // too.
+    window.document.addEventListener(DOM_CONTENT_LOADED, performInitialUpgrades, { once: true });
 
     installation.customElementsReactionStack = [];
     installation.backupElementQueue = [];
@@ -279,6 +281,15 @@ function makeHtmlConstructor() {
         // 13. return element
         return element;
     };
+}
+
+function performInitialUpgrades() {
+    // Upgrading elements initially present in the document
+    var elements = [];
+    treeOrderShadowInclusiveForEach(window.document, function (element) {
+        elements.push(element);
+    });
+    elements.forEach(tryToUpgradeElementSync);
 }
 
 // DOM element creation
