@@ -24,6 +24,9 @@ export default {
     removeAttributeByName,
     removeAttributeByNamespace,
     insertAdjacent,
+    listOfElementsWithQualifiedName,
+    listOfElementsWithNamespaceAndLocalName,
+    listOfElementsWithClassNames,
     setExistingAttributeValue,
     replaceData,
     findFlattenedSlotables,
@@ -771,6 +774,105 @@ function insertAdjacent(element, where, node) {
         default:
             throw $utils.makeDOMException(ERROR_SYNTAX);
     }
+}
+
+function listOfElementsWithQualifiedName(root, qualifiedName) {
+    const results = [];
+    const firstChild = root.firstChild;
+
+    if (firstChild === null) {
+        return results;
+    }
+
+    if (qualifiedName === '*') {
+        treeOrderRecursiveSelectAll(firstChild, results, isElementNode);
+        return results;
+    }
+
+    // TODO: Consider support for non-HTML documents?
+    const lowerCaseQualifiedName = qualifiedName.toLowerCase();
+    treeOrderRecursiveSelectAll(firstChild, results, function (node) {
+        if (node.nodeType !== Node.ELEMENT_NODE) {
+            return false;
+        }
+        else if (node.namespaceURI === NS_HTML) {
+            return node.localName === lowerCaseQualifiedName;
+        }
+        else if (node.prefix !== null) {
+            return (node.prefix + ':' + node.localName) === qualifiedName;
+        }
+        else {
+            return node.localName === qualifiedName;
+        }
+    });
+
+    return results;
+}
+
+function listOfElementsWithNamespaceAndLocalName(root, nameSpace, localName) {
+    const results = [];
+    const firstChild = root.firstChild;
+
+    if (firstChild === null) {
+        return results;
+    }
+    
+    if (nameSpace === '') {
+        nameSpace = null;
+    }
+
+    if (nameSpace === '*' && localName === '*') {
+        treeOrderRecursiveSelectAll(firstChild, results, isElementNode);
+        return results;
+    }
+
+    if (nameSpace === '*') {
+        treeOrderRecursiveSelectAll(firstChild, results, function (node) {
+            return node.nodeType === Node.ELEMENT_NODE 
+                && node.localName === localName;
+        });
+        return results;
+    }
+
+    if (localName === '*') {
+        treeOrderRecursiveSelectAll(firstChild, results, function (node) {
+            return node.nodeType === Node.ELEMENT_NODE 
+                && node.namespaceURI === nameSpace;
+        });
+        return results;
+    }
+
+    treeOrderRecursiveSelectAll(firstChild, results, function (node) {
+        return node.nodeType === Node.ELEMENT_NODE 
+            && node.namespaceURI === nameSpace
+            && node.localName === localName;
+    });
+    return results;
+}
+
+function listOfElementsWithClassNames(root, names) {
+    const results = [];
+    const firstChild = root.firstChild;
+
+    if (firstChild === null) {
+        return results;
+    }
+
+    const classes = $utils.getUniqueSortedTokens(names);
+
+    if (classes === null) {
+        return results;
+    }
+
+    treeOrderRecursiveSelectAll(firstChild, results, function (node) {
+        if (node.nodeType !== Node.ELEMENT_NODE) {
+            return false;
+        }
+        let nodeClassNames = $utils.getUniqueSortedTokens(node.className);
+        return nodeClassNames !== null && $utils.hasAll(classes, nodeClassNames);
+    });
+
+    return results;
 }
 
 // https://dom.spec.whatwg.org/#attr

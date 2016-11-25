@@ -4,28 +4,18 @@ import $dom from '../dom.js';
 import $ce from '../custom-elements.js';
 import $utils from '../utils.js';
 
-const documentGetElementsByTagNameDescriptor = $utils.descriptor(Document, 'getElementsByTagName');
-const documentGetElementsByTagNameNSDescriptor = $utils.descriptor(Document, 'getElementsByTagNameNS');
-const documentGetElementsByClassNameDescriptor = $utils.descriptor(Document, 'getElementsByClassName');
-
 export default {
 
-    // TODO: tests
     getElementsByTagName(qualifiedName) {
-        const results = documentGetElementsByTagNameDescriptor.value.call(this, qualifiedName);
-        return $dom.filterByRoot(this, results);
+        return $dom.listOfElementsWithQualifiedName(this, qualifiedName);
     },
 
-    // TODO: tests
-    getElementsByTagNameNS(ns, localName) {
-        const results = documentGetElementsByTagNameNSDescriptor.value.call(this, ns, localName);
-        return $dom.filterByRoot(this, results);
+    getElementsByTagNameNS(nameSpace, localName) {
+        return $dom.listOfElementsWithNamespaceAndLocalName(this, nameSpace, localName);
     },
 
-    // TODO: tests
     getElementsByClassName(names) {
-        const results = documentGetElementsByClassNameDescriptor.value.call(this, names);
-        return $dom.filterByRoot(this, results);
+        return $dom.listOfElementsWithClassNames(this, names);
     },
 
     // TODO: tests
@@ -46,4 +36,4 @@ export default {
         });
     },
 
-}
+};

@@ -7,9 +7,6 @@ import $utils from '../utils.js';
 import $ShadowRoot from '../interfaces/ShadowRoot.js';
 
 const elementAttributesDescriptor = $utils.descriptor(Element, 'attributes') || $utils.descriptor(Node, 'attributes');
-const elementGetElementsByTagNameDescriptor = $utils.descriptor(Element, 'getElementsByTagName');
-const elementGetElementsByTagNameNSDescriptor = $utils.descriptor(Element, 'getElementsByTagNameNS');
-const elementGetElementsByClassNameDescriptor = $utils.descriptor(Element, 'getElementsByClassName');
 const elementSetAttributeDescriptor = $utils.descriptor(Element, 'setAttribute');
 const elementSetAttributeNSDescriptor = $utils.descriptor(Element, 'setAttributeNS');
 const nodeChildNodesDescriptor = $utils.descriptor(Node, 'childNodes');
@@ -183,22 +180,16 @@ export default {
         while (element = element.parentElement);
     },
 
-    // TODO: tests
     getElementsByTagName(qualifiedName) {
-        const results = elementGetElementsByTagNameDescriptor.value.call(this, qualifiedName);
-        return $dom.filterByRoot(this, results);
+        return $dom.listOfElementsWithQualifiedName(this, qualifiedName);
     },
 
-    // TODO: tests
     getElementsByTagNameNS(ns, localName) {
-        const results = elementGetElementsByTagNameNSDescriptor.value.call(this, ns, localName);
-        return $dom.filterByRoot(this, results);
+        return $dom.listOfElementsWithNamespaceAndLocalName(this, ns, localName);
     },
 
-    // TODO: tests
     getElementsByClassName(names) {
-        const results = elementGetElementsByClassNameDescriptor.value.call(this, names);
-        return $dom.filterByRoot(this, results);
+        return $dom.listOfElementsWithClassNames(this, names);
     },
 
     // TODO: tests

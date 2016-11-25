@@ -874,6 +874,9 @@ exports.default = {
     removeAttributeByName: removeAttributeByName,
     removeAttributeByNamespace: removeAttributeByNamespace,
     insertAdjacent: insertAdjacent,
+    listOfElementsWithQualifiedName: listOfElementsWithQualifiedName,
+    listOfElementsWithNamespaceAndLocalName: listOfElementsWithNamespaceAndLocalName,
+    listOfElementsWithClassNames: listOfElementsWithClassNames,
     setExistingAttributeValue: setExistingAttributeValue,
     replaceData: replaceData,
     findFlattenedSlotables: findFlattenedSlotables,
@@ -1613,6 +1616,98 @@ function insertAdjacent(element, where, node) {
         default:
             throw _utils2.default.makeDOMException(ERROR_SYNTAX);
     }
+}
+
+function listOfElementsWithQualifiedName(root, qualifiedName) {
+    var results = [];
+    var firstChild = root.firstChild;
+
+    if (firstChild === null) {
+        return results;
+    }
+
+    if (qualifiedName === '*') {
+        treeOrderRecursiveSelectAll(firstChild, results, isElementNode);
+        return results;
+    }
+
+    // TODO: Consider support for non-HTML documents?
+    var lowerCaseQualifiedName = qualifiedName.toLowerCase();
+    treeOrderRecursiveSelectAll(firstChild, results, function (node) {
+        if (node.nodeType !== Node.ELEMENT_NODE) {
+            return false;
+        } else if (node.namespaceURI === NS_HTML) {
+            return node.localName === lowerCaseQualifiedName;
+        } else if (node.prefix !== null) {
+            return node.prefix + ':' + node.localName === qualifiedName;
+        } else {
+            return node.localName === qualifiedName;
+        }
+    });
+
+    return results;
+}
+
+function listOfElementsWithNamespaceAndLocalName(root, nameSpace, localName) {
+    var results = [];
+    var firstChild = root.firstChild;
+
+    if (firstChild === null) {
+        return results;
+    }
+
+    if (nameSpace === '') {
+        nameSpace = null;
+    }
+
+    if (nameSpace === '*' && localName === '*') {
+        treeOrderRecursiveSelectAll(firstChild, results, isElementNode);
+        return results;
+    }
+
+    if (nameSpace === '*') {
+        treeOrderRecursiveSelectAll(firstChild, results, function (node) {
+            return node.nodeType === Node.ELEMENT_NODE && node.localName === localName;
+        });
+        return results;
+    }
+
+    if (localName === '*') {
+        treeOrderRecursiveSelectAll(firstChild, results, function (node) {
+            return node.nodeType === Node.ELEMENT_NODE && node.namespaceURI === nameSpace;
+        });
+        return results;
+    }
+
+    treeOrderRecursiveSelectAll(firstChild, results, function (node) {
+        return node.nodeType === Node.ELEMENT_NODE && node.namespaceURI === nameSpace && node.localName === localName;
+    });
+    return results;
+}
+
+function listOfElementsWithClassNames(root, names) {
+    var results = [];
+    var firstChild = root.firstChild;
+
+    if (firstChild === null) {
+        return results;
+    }
+
+    var classes = _utils2.default.getUniqueSortedTokens(names);
+
+    if (classes === null) {
+        return results;
+    }
+
+    treeOrderRecursiveSelectAll(firstChild, results, function (node) {
+        if (node.nodeType !== Node.ELEMENT_NODE) {
+            return false;
+        }
+        var nodeClassNames = _utils2.default.getUniqueSortedTokens(node.className);
+        return nodeClassNames !== null && _utils2.default.hasAll(classes, nodeClassNames);
+    });
+
+    return results;
 }
 
 // https://dom.spec.whatwg.org/#attr
@@ -2892,31 +2987,15 @@ var _utils2 = _interopRequireDefault(_utils);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var documentGetElementsByTagNameDescriptor = _utils2.default.descriptor(Document, 'getElementsByTagName'); // https://dom.spec.whatwg.org/#interface-document
-
-var documentGetElementsByTagNameNSDescriptor = _utils2.default.descriptor(Document, 'getElementsByTagNameNS');
-var documentGetElementsByClassNameDescriptor = _utils2.default.descriptor(Document, 'getElementsByClassName');
-
 exports.default = {
-
-    // TODO: tests
     getElementsByTagName: function getElementsByTagName(qualifiedName) {
-        var results = documentGetElementsByTagNameDescriptor.value.call(this, qualifiedName);
-        return _dom2.default.filterByRoot(this, results);
+        return _dom2.default.listOfElementsWithQualifiedName(this, qualifiedName);
     },
-
-
-    // TODO: tests
-    getElementsByTagNameNS: function getElementsByTagNameNS(ns, localName) {
-        var results = documentGetElementsByTagNameNSDescriptor.value.call(this, ns, localName);
-        return _dom2.default.filterByRoot(this, results);
+    getElementsByTagNameNS: function getElementsByTagNameNS(nameSpace, localName) {
+        return _dom2.default.listOfElementsWithNamespaceAndLocalName(this, nameSpace, localName);
     },
-
-
-    // TODO: tests
     getElementsByClassName: function getElementsByClassName(names) {
-        var results = documentGetElementsByClassNameDescriptor.value.call(this, names);
-        return _dom2.default.filterByRoot(this, results);
+        return _dom2.default.listOfElementsWithClassNames(this, names);
     },
 
 
@@ -2942,7 +3021,7 @@ exports.default = {
             return _dom2.default.adopt(node, _this2);
         });
     }
-};
+}; // https://dom.spec.whatwg.org/#interface-document
 
 },{"../custom-elements.js":1,"../dom.js":2,"../utils.js":29}],8:[function(require,module,exports){
 'use strict';
@@ -2972,9 +3051,6 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 // https://dom.spec.whatwg.org/#interface-element
 
 var elementAttributesDescriptor = _utils2.default.descriptor(Element, 'attributes') || _utils2.default.descriptor(Node, 'attributes');
-var elementGetElementsByTagNameDescriptor = _utils2.default.descriptor(Element, 'getElementsByTagName');
-var elementGetElementsByTagNameNSDescriptor = _utils2.default.descriptor(Element, 'getElementsByTagNameNS');
-var elementGetElementsByClassNameDescriptor = _utils2.default.descriptor(Element, 'getElementsByClassName');
 var elementSetAttributeDescriptor = _utils2.default.descriptor(Element, 'setAttribute');
 var elementSetAttributeNSDescriptor = _utils2.default.descriptor(Element, 'setAttributeNS');
 var nodeChildNodesDescriptor = _utils2.default.descriptor(Node, 'childNodes');
@@ -3164,26 +3240,14 @@ exports.default = {
             }
         } while (element = element.parentElement);
     },
-
-
-    // TODO: tests
     getElementsByTagName: function getElementsByTagName(qualifiedName) {
-        var results = elementGetElementsByTagNameDescriptor.value.call(this, qualifiedName);
-        return _dom2.default.filterByRoot(this, results);
+        return _dom2.default.listOfElementsWithQualifiedName(this, qualifiedName);
     },
-
-
-    // TODO: tests
     getElementsByTagNameNS: function getElementsByTagNameNS(ns, localName) {
-        var results = elementGetElementsByTagNameNSDescriptor.value.call(this, ns, localName);
-        return _dom2.default.filterByRoot(this, results);
+        return _dom2.default.listOfElementsWithNamespaceAndLocalName(this, ns, localName);
     },
-
-
-    // TODO: tests
     getElementsByClassName: function getElementsByClassName(names) {
-        var results = elementGetElementsByClassNameDescriptor.value.call(this, names);
-        return _dom2.default.filterByRoot(this, results);
+        return _dom2.default.listOfElementsWithClassNames(this, names);
     },
 
 
@@ -6185,7 +6249,10 @@ exports.default = {
     reportError: reportError,
     extend: extend,
     getShadowState: getShadowState,
-    setShadowState: setShadowState
+    setShadowState: setShadowState,
+    isElementNode: isElementNode,
+    getUniqueSortedTokens: getUniqueSortedTokens,
+    hasAll: hasAll
 };
 
 
@@ -6259,6 +6326,55 @@ function getShadowState(object) {
 
 function setShadowState(object, state) {
     return object._shadow = state;
+}
+
+function isElementNode(node) {
+    return node.nodeType === Node.ELEMENT_NODE;
+}
+
+function hasAll(desiredItems, itemsInQuestion) {
+    // depends on sorted, unique input.
+    if (itemsInQuestion.length < desiredItems.length) {
+        return false;
+    }
+
+    var d = 0;
+    var i = 0;
+    var desiredItem = desiredItems[0];
+    var itemInQuestion = itemsInQuestion[0];
+    var iLength = itemsInQuestion.length;
+    var dLength = desiredItems.length;
+    do {
+        if (itemInQuestion === desiredItem) {
+            desiredItem = desiredItems[++d];
+        }
+        itemInQuestion = itemsInQuestion[++d];
+    } while (d <= dLength && i <= iLength);
+    return d > dLength;
+}
+
+function getUniqueSortedTokens(tokens) {
+    if (tokens === null || tokens === undefined || tokens === '') {
+        return null;
+    }
+
+    tokens = tokens.trim().split(/\s+/).sort();
+
+    if (tokens.length > 1) {
+        var last = tokens[0];
+        var unique = [last];
+        for (var i = 1; i < tokens.length; i++) {
+            var current = tokens[i];
+            if (current === last) {
+                continue;
+            }
+            unique.push(current);
+            last = current;
+        }
+        tokens = unique;
+    }
+
+    return tokens;
 }
 
 },{}]},{},[20]);

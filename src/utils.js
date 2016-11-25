@@ -39,7 +39,10 @@ export default {
     reportError,
     extend,
     getShadowState,
-    setShadowState
+    setShadowState,
+    isElementNode,
+    getUniqueSortedTokens,
+    hasAll
 };
 
 function descriptor(type, name) {
@@ -109,4 +112,54 @@ function getShadowState(object) {
 
 function setShadowState(object, state) {
     return object._shadow = state;
+}
+
+function isElementNode(node) {
+    return node.nodeType === Node.ELEMENT_NODE;
+}
+
+function hasAll(desiredItems, itemsInQuestion) {
+    // depends on sorted, unique input.
+    if (itemsInQuestion.length < desiredItems.length) {
+        return false;
+    }
+
+    let d = 0;
+    let i = 0;
+    let desiredItem = desiredItems[0];
+    let itemInQuestion = itemsInQuestion[0];
+    let iLength = itemsInQuestion.length;
+    let dLength = desiredItems.length;
+    do {
+        if (itemInQuestion === desiredItem) {
+            desiredItem = desiredItems[++d];
+        }
+        itemInQuestion = itemsInQuestion[++d];
+    }
+    while (d <= dLength && i <= iLength);
+    return d > dLength;
+}
+
+function getUniqueSortedTokens(tokens) {        
+    if (tokens === null || tokens === undefined || tokens === '') {
+        return null;
+    }
+
+    tokens = tokens.trim().split(/\s+/).sort();
+
+    if (tokens.length > 1) {
+        let last = tokens[0];
+        const unique = [last];
+        for (let i = 1; i < tokens.length; i++) {
+            const current = tokens[i];
+            if (current === last) {
+                continue;
+            }
+            unique.push(current);
+            last = current;
+        }
+        tokens = unique;
+    }
+
+    return tokens;
 }
