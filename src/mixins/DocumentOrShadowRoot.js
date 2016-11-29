@@ -2,6 +2,9 @@
 // https://www.w3.org/TR/shadow-dom/#extensions-to-the-documentorshadowroot-mixin
 
 import $dom from '../dom.js';
+import $utils from '../utils.js';
+
+const nativeDocumentActiveElement = $utils.descriptor(Document, 'activeElement');
 
 export default {
 
@@ -13,7 +16,7 @@ export default {
     // TODO: tests
     get activeElement() {
         const document = this.ownerDocument || this;
-        const nativeActiveElement = native.activeElement.get.call(document);
+        const nativeActiveElement = nativeDocumentActiveElement.get.call(document);
 
         if (!nativeActiveElement || document != $dom.shadowIncludingRoot(this)) {
             return null;

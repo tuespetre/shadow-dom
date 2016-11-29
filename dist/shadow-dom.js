@@ -5039,7 +5039,16 @@ var _dom = require('../dom.js');
 
 var _dom2 = _interopRequireDefault(_dom);
 
+var _utils = require('../utils.js');
+
+var _utils2 = _interopRequireDefault(_utils);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+// https://dom.spec.whatwg.org/#mixin-documentorshadowroot
+// https://www.w3.org/TR/shadow-dom/#extensions-to-the-documentorshadowroot-mixin
+
+var nativeDocumentActiveElement = _utils2.default.descriptor(Document, 'activeElement');
 
 exports.default = {
 
@@ -5051,7 +5060,7 @@ exports.default = {
     // TODO: tests
     get activeElement() {
         var document = this.ownerDocument || this;
-        var nativeActiveElement = native.activeElement.get.call(document);
+        var nativeActiveElement = nativeDocumentActiveElement.get.call(document);
 
         if (!nativeActiveElement || document != _dom2.default.shadowIncludingRoot(this)) {
             return null;
@@ -5060,10 +5069,9 @@ exports.default = {
         return _dom2.default.retarget(nativeActiveElement, this);
     }
 
-}; // https://dom.spec.whatwg.org/#mixin-documentorshadowroot
-// https://www.w3.org/TR/shadow-dom/#extensions-to-the-documentorshadowroot-mixin
+};
 
-},{"../dom.js":2}],23:[function(require,module,exports){
+},{"../dom.js":2,"../utils.js":29}],23:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
