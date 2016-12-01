@@ -169,6 +169,15 @@ suite('Element', function () {
             assert.equal(input.getAttribute('type'), 'radio');
         });
 
+        test('setAttributeNS', function () {
+            var svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+            var xmlns = 'http://www.w3.org/2000/xmlns/';
+            var qualified = 'xmlns:xlink';
+            var xlink = 'http://www.w3.org/1999/xlink';
+            svg.setAttributeNS(xmlns, qualified, xlink);
+            assert.equal(svg.getAttributeNS(xmlns, qualified), xlink);
+        });
+
         test('removeAttribute', function () {
             var element = document.createElement('div');
             element.setAttribute('hidden', '');

@@ -3103,10 +3103,12 @@ exports.default = {
 
         return _customElements2.default.executeCEReactions(function () {
             var attributes = elementAttributesDescriptor.get.call(_this2);
-            var attribute = attributes.getNamedItemNS(nameSpace, qualifiedName);
+            var parts = qualifiedName.split(':', 2);
+            var localName = parts[parts.length - 1];
+            var attribute = attributes.getNamedItemNS(nameSpace, localName);
             if (!attribute) {
                 elementSetAttributeNSDescriptor.value.call(_this2, nameSpace, qualifiedName, value);
-                attribute = attributes.getNamedItemNS(nameSpace, qualifiedName);
+                attribute = attributes.getNamedItemNS(nameSpace, localName);
                 _dom2.default.appendAttribute(attribute, _this2);
             } else {
                 _dom2.default.changeAttribute(attribute, _this2, value);

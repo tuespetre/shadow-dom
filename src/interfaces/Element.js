@@ -44,10 +44,12 @@ export default {
     setAttributeNS(nameSpace, qualifiedName, value) {
         return $ce.executeCEReactions(() => {
             const attributes = elementAttributesDescriptor.get.call(this);
-            let attribute = attributes.getNamedItemNS(nameSpace, qualifiedName);
+            const parts = qualifiedName.split(':', 2);
+            const localName = parts[parts.length - 1];
+            let attribute = attributes.getNamedItemNS(nameSpace, localName);
             if (!attribute) {
                 elementSetAttributeNSDescriptor.value.call(this, nameSpace, qualifiedName, value);
-                attribute = attributes.getNamedItemNS(nameSpace, qualifiedName);
+                attribute = attributes.getNamedItemNS(nameSpace, localName);
                 $dom.appendAttribute(attribute, this);
             }
             else {
