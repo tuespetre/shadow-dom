@@ -1,12 +1,12 @@
 'use strict';
 
-suite('Event', function() {
+suite('Event', function () {
 
     var assert = chai.assert;
 
-    suite('constructor()', function() {
+    suite('constructor()', function () {
 
-        test('respects init.bubbles', function() {
+        test('respects init.bubbles', function () {
             var event = new Event('test', {
                 bubbles: true
             });
@@ -14,7 +14,7 @@ suite('Event', function() {
             assert.isTrue(event.bubbles);
         });
 
-        test('respects init.cancelable', function() {
+        test('respects init.cancelable', function () {
             var event = new Event('test', {
                 cancelable: true
             });
@@ -22,7 +22,7 @@ suite('Event', function() {
             assert.isTrue(event.cancelable);
         });
 
-        test('respects init.composed', function() {
+        test('respects init.composed', function () {
             var event = new Event('test', {
                 composed: true
             });
@@ -32,9 +32,9 @@ suite('Event', function() {
 
     });
 
-    suite('get currentTarget()', function() {
+    suite('get currentTarget()', function () {
 
-        test('returns correctly retargeted values', function() {
+        test('returns correctly retargeted values', function () {
             var event = new Event('test', { composed: true, bubbles: true });
             var target = document.createElement('span');
             var div1 = document.createElement('div');
@@ -47,7 +47,7 @@ suite('Event', function() {
             shadow2.append(div3);
             shadow3.append(target);
             var targets = [];
-            var handler = function(event) {
+            var handler = function (event) {
                 targets.push([event.currentTarget, this])
             };
             div1.addEventListener('test', handler);
@@ -68,9 +68,21 @@ suite('Event', function() {
 
     });
 
-    suite('get target()', function() {
+    suite('get target()', function () {
 
-        test('returns correctly retargeted values', function() {
+        test('works in global event handlers', function () {
+            var event = document.createEvent('MouseEvent');
+            event.initMouseEvent('click', true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+            var target = document.createElement('span');
+            var seenTarget = null;
+            target.onclick = function (event) {
+                seenTarget = event.target;
+            };
+            target.dispatchEvent(event);
+            assert.equal(seenTarget, target);
+        });
+
+        test('returns correctly retargeted values', function () {
             var event = new Event('test', { composed: true, bubbles: true });
             var target = document.createElement('span');
             var div1 = document.createElement('div');
@@ -83,7 +95,7 @@ suite('Event', function() {
             shadow2.append(div3);
             shadow3.append(target);
             var targets = [];
-            var handler = function(event) {
+            var handler = function (event) {
                 targets.push(event.target);
             };
             div1.addEventListener('test', handler);
@@ -103,9 +115,9 @@ suite('Event', function() {
 
     });
 
-    suite('get relatedTarget()', function() {
+    suite('get relatedTarget()', function () {
 
-        test('returns correctly retargeted values', function() {
+        test('returns correctly retargeted values', function () {
             var event = document.createEvent('MouseEvent');
             var target = document.createElement('span');
             var related = document.createElement('span');
@@ -119,7 +131,7 @@ suite('Event', function() {
             shadow2.append(div3);
             shadow3.append(target, related);
             var targets = [];
-            var handler = function(event) {
+            var handler = function (event) {
                 targets.push(event.relatedTarget);
             };
             div1.addEventListener('click', handler);
@@ -140,9 +152,9 @@ suite('Event', function() {
 
     });
 
-    suite('composedPath()', function() {
+    suite('composedPath()', function () {
 
-        test('returns correctly retargeted values', function() {
+        test('returns correctly retargeted values', function () {
             // Note: events created via constructor can be dispatched
             // all the way up to the document's documentElement,
             // but if the document is not the global window.document,
@@ -161,7 +173,7 @@ suite('Event', function() {
             shadow3.append(target);
             var actual = [];
             var expected = [];
-            var handler = function(event) {
+            var handler = function (event) {
                 actual.push(event.composedPath());
             };
             target.addEventListener('test', handler);

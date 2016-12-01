@@ -3369,6 +3369,11 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 // https://dom.spec.whatwg.org/#interface-event
 
+var eventCurrentTargetDescriptor = _utils2.default.descriptor(Event, 'currentTarget');
+var eventTargetDescriptor = _utils2.default.descriptor(Event, 'target');
+var focusEventRelatedTargetDescriptor = _utils2.default.descriptor(FocusEvent, 'relatedTarget');
+var mouseEventRelatedTargetDescriptor = _utils2.default.descriptor(MouseEvent, 'relatedTarget');
+
 function $Event(type, init) {
     var bubbles = false;
     var cancelable = false;
@@ -3387,11 +3392,19 @@ function $Event(type, init) {
 $Event.prototype = {
 
     get currentTarget() {
-        return _utils2.default.getShadowState(this).currentTarget;
+        var shadowState = _utils2.default.getShadowState(this);
+        if (shadowState) {
+            return shadowState.currentTarget;
+        }
+        return eventCurrentTargetDescriptor.get.call(this);
     },
 
     get target() {
-        return _utils2.default.getShadowState(this).target;
+        var shadowState = _utils2.default.getShadowState(this);
+        if (shadowState) {
+            return shadowState.target;
+        }
+        return eventTargetDescriptor.get.call(this);
     },
 
     stopImmediatePropagation: function stopImmediatePropagation() {
@@ -3447,7 +3460,16 @@ $Event.prototype = {
 var hasRelatedTarget = exports.hasRelatedTarget = {
 
     get relatedTarget() {
-        return _utils2.default.getShadowState(this).relatedTarget;
+        var shadowState = _utils2.default.getShadowState(this);
+        if (shadowState) {
+            return shadowState.relatedTarget;
+        }
+        if (this instanceof FocusEvent) {
+            return focusEventRelatedTargetDescriptor.get.call(this);
+        }
+        if (this instanceof MouseEvent) {
+            return mouseEventRelatedTargetDescriptor.get.call(this);
+        }
     }
 
 };

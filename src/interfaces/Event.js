@@ -3,6 +3,11 @@
 import $dom from '../dom.js';
 import $utils from '../utils.js';
 
+const eventCurrentTargetDescriptor = $utils.descriptor(Event, 'currentTarget');
+const eventTargetDescriptor = $utils.descriptor(Event, 'target');
+const focusEventRelatedTargetDescriptor = $utils.descriptor(FocusEvent, 'relatedTarget');
+const mouseEventRelatedTargetDescriptor = $utils.descriptor(MouseEvent, 'relatedTarget');
+
 export default function $Event(type, init) {
     let bubbles = false;
     let cancelable = false;
@@ -21,11 +26,19 @@ export default function $Event(type, init) {
 $Event.prototype = {
 
     get currentTarget() {
-        return $utils.getShadowState(this).currentTarget;
+        const shadowState = $utils.getShadowState(this);
+        if (shadowState) {
+            return shadowState.currentTarget;
+        }
+        return eventCurrentTargetDescriptor.get.call(this);
     },
 
     get target() {
-        return $utils.getShadowState(this).target;
+        const shadowState = $utils.getShadowState(this);
+        if (shadowState) {
+            return shadowState.target;
+        }
+        return eventTargetDescriptor.get.call(this);
     },
 
     stopImmediatePropagation() {
@@ -83,7 +96,16 @@ $Event.prototype = {
 export const hasRelatedTarget = {
 
     get relatedTarget() {
-        return $utils.getShadowState(this).relatedTarget;
+        const shadowState = $utils.getShadowState(this);
+        if (shadowState) {
+            return shadowState.relatedTarget;
+        }
+        if (this instanceof FocusEvent) {
+            return focusEventRelatedTargetDescriptor.get.call(this);
+        }
+        if (this instanceof MouseEvent) {
+            return mouseEventRelatedTargetDescriptor.get.call(this);
+        }
     },
 
 };

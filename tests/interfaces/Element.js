@@ -175,7 +175,7 @@ suite('Element', function () {
             var qualified = 'xmlns:xlink';
             var xlink = 'http://www.w3.org/1999/xlink';
             svg.setAttributeNS(xmlns, qualified, xlink);
-            assert.equal(svg.getAttributeNS(xmlns, qualified), xlink);
+            assert.equal(svg.getAttributeNS(xmlns, 'xlink'), xlink);
         });
 
         test('removeAttribute', function () {
