@@ -132,4 +132,7 @@ const builtInComposedEvents = [
     'DOMFocusIn', 'DOMFocusOut',
     // Legacy KeyboardEvent
     'keypress',
+
+    // Touch Events
+    'touchstart', 'touchend', 'touchmove', 'touchcancel'
 ];

@@ -3492,7 +3492,10 @@ var builtInComposedEvents = [
 // Legacy FocusEvent
 'DOMFocusIn', 'DOMFocusOut',
 // Legacy KeyboardEvent
-'keypress'];
+'keypress',
+
+// Touch Events
+'touchstart', 'touchend', 'touchmove', 'touchcancel'];
 
 },{"../dom.js":2,"../utils.js":29}],10:[function(require,module,exports){
 'use strict';
