@@ -67,36 +67,11 @@ function install() {
     Document.prototype.createElementNS = createElementNS;
 
     if (window.document.readyState === 'loading') {
-        // This can provide faster upgrades on browsers that support it.
-        if (nativeMutationObserver) {
-            const observer = new nativeMutationObserver(function (records) {
-                for (let i = 0; i < records.length; i++) {
-                    for (let j = 0; j < records[i].addedNodes.length; j++) {
-                        let added = records[i].addedNodes[j];
-                        if (added.nodeType === Node.ELEMENT_NODE) {
-                            tryToUpgradeElementSync(added);
-                        }
-                    }
-                }
-            });
-            observer.observe(window.document, {
-                childList: true,
-                subtree: true
-            });
-            window.document.addEventListener(DOM_CONTENT_LOADED, function () {
-                observer.disconnect();
-            });
-        }
+        window.document.addEventListener(DOM_CONTENT_LOADED, performInitialUpgrades, { once: true });
     }
     else {
         performInitialUpgrades();
     }
-    
-    // For browsers that don't support the above.
-    // Not all browsers run MutationObservers during parsing,
-    // or they display timing issues one way or another, so this covers them
-    // too.
-    window.document.addEventListener(DOM_CONTENT_LOADED, performInitialUpgrades, { once: true });
 
     installation.customElementsReactionStack = [];
     installation.backupElementQueue = [];
@@ -561,19 +536,27 @@ CustomElementRegistry.prototype = {
             };
             privateState.definitions.push(definition);
             const document = window.document;
-            treeOrderShadowInclusiveForEach(document, function (node) {
-                if (node.nodeType === Node.ELEMENT_NODE &&
-                    node.namespaceURI === htmlNamespace &&
-                    node.localName === localName) {
-                    if (extensionOf) {
-                        const nodeState = getPrivateState(node);
-                        if (nodeState.isValue !== extensionOf) {
-                            return;
+            // This needs to be here because in some cases,
+            // an async script can interrupt the parser
+            // and any custom elements that call attachShadow
+            // in their constructor will have adverse effects
+            // due to the parser not yet having processed all
+            // of the child nodes.
+            if (document.readyState !== 'loading') {
+                treeOrderShadowInclusiveForEach(document, function (node) {
+                    if (node.nodeType === Node.ELEMENT_NODE &&
+                        node.namespaceURI === htmlNamespace &&
+                        node.localName === localName) {
+                        if (extensionOf) {
+                            const nodeState = getPrivateState(node);
+                            if (nodeState.isValue !== extensionOf) {
+                                return;
+                            }
                         }
+                        enqueueUpgradeReaction(node, definition);
                     }
-                    enqueueUpgradeReaction(node, definition);
-                }
-            });
+                });
+            }
             const entry = privateState.whenDefinedPromiseMap[name];
             if (entry) {
                 $utils.setImmediate(function () {

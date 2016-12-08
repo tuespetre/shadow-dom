@@ -9,6 +9,7 @@ suite('DocumentOrShadowRoot', function () {
         document.body.append(button);
         button.focus();
         assert.equal(document.activeElement, button);
+        document.body.removeChild(button);
     });
 
 });

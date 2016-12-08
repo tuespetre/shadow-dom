@@ -77,37 +77,10 @@ function install() {
     Document.prototype.createElementNS = createElementNS;
 
     if (window.document.readyState === 'loading') {
-        // This can provide faster upgrades on browsers that support it.
-        if (nativeMutationObserver) {
-            (function () {
-                var observer = new nativeMutationObserver(function (records) {
-                    for (var i = 0; i < records.length; i++) {
-                        for (var j = 0; j < records[i].addedNodes.length; j++) {
-                            var added = records[i].addedNodes[j];
-                            if (added.nodeType === Node.ELEMENT_NODE) {
-                                tryToUpgradeElementSync(added);
-                            }
-                        }
-                    }
-                });
-                observer.observe(window.document, {
-                    childList: true,
-                    subtree: true
-                });
-                window.document.addEventListener(DOM_CONTENT_LOADED, function () {
-                    observer.disconnect();
-                });
-            })();
-        }
+        window.document.addEventListener(DOM_CONTENT_LOADED, performInitialUpgrades, { once: true });
     } else {
         performInitialUpgrades();
     }
-
-    // For browsers that don't support the above.
-    // Not all browsers run MutationObservers during parsing,
-    // or they display timing issues one way or another, so this covers them
-    // too.
-    window.document.addEventListener(DOM_CONTENT_LOADED, performInitialUpgrades, { once: true });
 
     installation.customElementsReactionStack = [];
     installation.backupElementQueue = [];
@@ -564,17 +537,25 @@ CustomElementRegistry.prototype = {
             };
             privateState.definitions.push(definition);
             var document = window.document;
-            treeOrderShadowInclusiveForEach(document, function (node) {
-                if (node.nodeType === Node.ELEMENT_NODE && node.namespaceURI === htmlNamespace && node.localName === localName) {
-                    if (extensionOf) {
-                        var nodeState = getPrivateState(node);
-                        if (nodeState.isValue !== extensionOf) {
-                            return;
+            // This needs to be here because in some cases,
+            // an async script can interrupt the parser
+            // and any custom elements that call attachShadow
+            // in their constructor will have adverse effects
+            // due to the parser not yet having processed all
+            // of the child nodes.
+            if (document.readyState !== 'loading') {
+                treeOrderShadowInclusiveForEach(document, function (node) {
+                    if (node.nodeType === Node.ELEMENT_NODE && node.namespaceURI === htmlNamespace && node.localName === localName) {
+                        if (extensionOf) {
+                            var nodeState = getPrivateState(node);
+                            if (nodeState.isValue !== extensionOf) {
+                                return;
+                            }
                         }
+                        enqueueUpgradeReaction(node, definition);
                     }
-                    enqueueUpgradeReaction(node, definition);
-                }
-            });
+                });
+            }
             var entry = privateState.whenDefinedPromiseMap[name];
             if (entry) {
                 _utils2.default.setImmediate(function () {
@@ -1921,33 +1902,69 @@ function assignSlotables(slot, suppressSignaling) {
         }
     }
 
-    // function call avoiding closure for performance.
     if (!identical) {
-        _utils2.default.setImmediate(renderSlotablesAsync, slot);
+        renderSlot(slot);
     }
 }
 
-function renderSlotablesAsync(slot) {
+function renderSlot(slot) {
     var slotState = _utils2.default.getShadowState(slot);
     var slotables = slotState.assignedNodes;
+    var slotableCount = slotables.length;
 
-    // 4b. Clean out the slot
-    var firstChild = void 0;
-    while (firstChild = nodeFirstChildDescriptor.get.call(slot)) {
-        nodeRemoveChildDescriptor.value.call(slot, firstChild);
-    }
-
-    // 4c. Append the slotables, if any
-    for (var i = 0; i < slotables.length; i++) {
-        var slotable = slotables[i];
-        nodeAppendChildDescriptor.value.call(slot, slotable);
-    }
-
-    // 4d. Append the fallback content, if no slots
-    if (!slotables.length) {
+    if (slotableCount) {
+        // Take a copy of the list of rendered child nodes of the slot.
+        var physicalChildNodeList = nodeChildNodesDescriptor.get.call(slot);
+        var physicalCount = physicalChildNodeList.length;
+        var physicalChildNodes = new Array(physicalCount);
+        for (var i = 0; i < physicalCount; i++) {
+            physicalChildNodes[i] = physicalChildNodeList[i];
+        }
+        // If there are any physical child nodes that do not have this slot
+        // for their assigned slot then remove them. This covers:
+        // - Node is removed
+        // - Node is fallback content of slot
+        // - Slot's name is changed
+        // - Node's slot is changed
+        for (var _i5 = physicalCount; _i5 !== 0; _i5--) {
+            var physicalChild = physicalChildNodes[_i5 - 1];
+            var state = _utils2.default.getShadowState(physicalChild);
+            if (!state || state.assignedSlot !== slot) {
+                nodeRemoveChildDescriptor.value.call(slot, physicalChild);
+                physicalChildNodes.splice(_i5, 1);
+                physicalCount--;
+            }
+        }
+        // If we have more slotables than physical nodes, insert the
+        // slotables in the correct places. This covers:
+        // - Nodes are added to shadow host
+        if (slotableCount > physicalCount) {
+            var _i6 = 0;
+            var j = 0;
+            while (_i6 < slotableCount) {
+                var slotable = slotables[_i6];
+                var physical = physicalChildNodes[j];
+                if (slotable === physical) {
+                    _i6++;
+                    j++;
+                    continue;
+                } else {
+                    nodeInsertBeforeDescriptor.value.call(slot, slotable, physical);
+                    _i6++;
+                    continue;
+                }
+            }
+        }
+    } else {
+        // Clean out the slot
+        var firstChild = void 0;
+        while (firstChild = nodeFirstChildDescriptor.get.call(slot)) {
+            nodeRemoveChildDescriptor.value.call(slot, firstChild);
+        }
+        // Append the fallback content
         var childNodes = slotState.childNodes;
-        for (var _i5 = 0; _i5 < childNodes.length; _i5++) {
-            nodeAppendChildDescriptor.value.call(slot, childNodes[_i5]);
+        for (var _i7 = 0; _i7 < childNodes.length; _i7++) {
+            nodeAppendChildDescriptor.value.call(slot, childNodes[_i7]);
         }
     }
 }
@@ -2083,8 +2100,8 @@ function insert(node, parent, child, suppressObservers) {
         for (var i = 0; i < count; i++) {
             nodes[i] = nodeChildNodes[i];
         }
-        for (var _i6 = 0; _i6 < count; _i6++) {
-            remove(nodes[_i6], node, true);
+        for (var _i8 = 0; _i8 < count; _i8++) {
+            remove(nodes[_i8], node, true);
         }
         // 5. If node is a DocumentFragment node, queue a mutation record of "childList" for node with removedNodes nodes.
         queueMutationRecord(MO_TYPE_CHILD_LIST, node, null, null, null, null, nodes);
@@ -2097,8 +2114,8 @@ function insert(node, parent, child, suppressObservers) {
     var parentIsShadow = isShadowRoot(parent);
     var parentStateChildNodes = parentState ? parentState.childNodes : null;
     var parentIsConnected = parent.isConnected;
-    for (var _i7 = 0; _i7 < count; _i7++) {
-        var _node = nodes[_i7];
+    for (var _i9 = 0; _i9 < count; _i9++) {
+        var _node = nodes[_i9];
         // 1. Insert node into parent before child or at the end of parent if child is null.
         if (parentStateChildNodes) {
             if (child) {
@@ -2282,16 +2299,16 @@ function replaceAll(node, parent) {
         var nodeChildNodes = node.childNodes;
         var nodeChildNodesLength = nodeChildNodes.length;
         addedNodes = new Array(nodeChildNodesLength);
-        for (var _i8 = 0; _i8 < nodeChildNodesLength; _i8++) {
-            addedNodes[_i8] = nodeChildNodes[_i8];
+        for (var _i10 = 0; _i10 < nodeChildNodesLength; _i10++) {
+            addedNodes[_i10] = nodeChildNodes[_i10];
         }
     } else {
         addedNodes = [node];
     }
 
     // 4. Remove all parent’s children, in tree order, with the suppress observers flag set.
-    for (var _i9 = 0; _i9 < removedNodesCount; _i9++) {
-        remove(removedNodes[_i9], parent, true);
+    for (var _i11 = 0; _i11 < removedNodesCount; _i11++) {
+        remove(removedNodes[_i11], parent, true);
     }
 
     // 5. If node is not null, insert node into parent before null with the suppress observers flag set.
@@ -2588,8 +2605,8 @@ function queueMutationRecord(type, target, name, nameSpace, oldValue, addedNodes
     }
 
     // 4. Then, for each observer in interested observers, run these substeps:
-    for (var _i10 = 0; _i10 < interestedObservers.length; _i10++) {
-        var _observer = interestedObservers[_i10];
+    for (var _i12 = 0; _i12 < interestedObservers.length; _i12++) {
+        var _observer = interestedObservers[_i12];
         // 1. Let record be a new MutationRecord object with its type set to type and target set to target.
         var record = {
             type: type,
@@ -2624,7 +2641,7 @@ function queueMutationRecord(type, target, name, nameSpace, oldValue, addedNodes
             record.nextSibling = nextSibling;
         }
         // 7. If observer has a paired string, set record’s oldValue to observer’s paired string.
-        record.oldValue = pairedStrings[_i10];
+        record.oldValue = pairedStrings[_i12];
         // 8. Append record to observer’s record queue.
         _observer.queue.push(record);
     }
@@ -2649,8 +2666,8 @@ function notifyMutationObservers() {
         notifyList[i] = mutationObservers[i];
     }
     var signalList = signalSlotList.splice(0, signalSlotList.length);
-    for (var _i11 = 0; _i11 < notifyList.length; _i11++) {
-        var observer = notifyList[_i11];
+    for (var _i13 = 0; _i13 < notifyList.length; _i13++) {
+        var observer = notifyList[_i13];
         var queue = observer.queue.splice(0, observer.queue.length);
         for (var j = mutationObservers.length - 1; j >= 0; j--) {
             var transientObserver = mutationObservers[j];
@@ -2667,8 +2684,8 @@ function notifyMutationObservers() {
             }
         }
     }
-    for (var _i12 = 0; _i12 < signalList.length; _i12++) {
-        var slot = signalList[_i12];
+    for (var _i14 = 0; _i14 < signalList.length; _i14++) {
+        var slot = signalList[_i14];
         var event = slot.ownerDocument.createEvent(EVENT);
         event.initEvent(EVT_SLOT_CHANGE, true, false);
         try {

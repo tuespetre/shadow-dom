@@ -196,6 +196,7 @@ suite('Custom Elements', function () {
     }
     
     test('define properly implements [CEReactions]', function (done) {
+        assert.notEqual(document.readyState, 'loading');
         var whenDefinedElement = function () {
             var self = HTMLElement.call(this);
             return self;

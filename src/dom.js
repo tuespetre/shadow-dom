@@ -1079,30 +1079,68 @@ function assignSlotables(slot, suppressSignaling) {
         }
     }
 
-    // function call avoiding closure for performance.
     if (!identical) {
-        $utils.setImmediate(renderSlotablesAsync, slot);
+        renderSlot(slot);
     }
 }
 
-function renderSlotablesAsync(slot) {
+function renderSlot(slot) {
     const slotState = $utils.getShadowState(slot);
     const slotables = slotState.assignedNodes;
+    const slotableCount = slotables.length;
 
-    // 4b. Clean out the slot
-    let firstChild;
-    while (firstChild = nodeFirstChildDescriptor.get.call(slot)) {
-        nodeRemoveChildDescriptor.value.call(slot, firstChild);
+    if (slotableCount) {
+        // Take a copy of the list of rendered child nodes of the slot.
+        const physicalChildNodeList = nodeChildNodesDescriptor.get.call(slot);
+        let physicalCount = physicalChildNodeList.length;
+        const physicalChildNodes = new Array(physicalCount);
+        for (let i = 0; i < physicalCount; i++) {
+            physicalChildNodes[i] = physicalChildNodeList[i];
+        }
+        // If there are any physical child nodes that do not have this slot
+        // for their assigned slot then remove them. This covers:
+        // - Node is removed
+        // - Node is fallback content of slot
+        // - Slot's name is changed
+        // - Node's slot is changed
+        for (let i = physicalCount; i !== 0; i--) {
+            const physicalChild = physicalChildNodes[i - 1];
+            const state = $utils.getShadowState(physicalChild);
+            if (!state || state.assignedSlot !== slot) {
+                nodeRemoveChildDescriptor.value.call(slot, physicalChild);
+                physicalChildNodes.splice(i, 1);
+                physicalCount--;
+            }
+        }
+        // If we have more slotables than physical nodes, insert the
+        // slotables in the correct places. This covers:
+        // - Nodes are added to shadow host
+        if (slotableCount > physicalCount) {
+            let i = 0;
+            let j = 0;
+            while (i < slotableCount) {
+                const slotable = slotables[i];
+                const physical = physicalChildNodes[j];
+                if (slotable === physical) {
+                    i++;
+                    j++;
+                    continue;
+                }
+                else {
+                    nodeInsertBeforeDescriptor.value.call(slot, slotable, physical);
+                    i++;
+                    continue;
+                }
+            }
+        }
     }
-
-    // 4c. Append the slotables, if any
-    for (let i = 0; i < slotables.length; i++) {
-        const slotable = slotables[i];
-        nodeAppendChildDescriptor.value.call(slot, slotable);
-    }
-
-    // 4d. Append the fallback content, if no slots
-    if (!slotables.length) {
+    else {
+        // Clean out the slot
+        let firstChild;
+        while (firstChild = nodeFirstChildDescriptor.get.call(slot)) {
+            nodeRemoveChildDescriptor.value.call(slot, firstChild);
+        }
+        // Append the fallback content
         const childNodes = slotState.childNodes;
         for (let i = 0; i < childNodes.length; i++) {
             nodeAppendChildDescriptor.value.call(slot, childNodes[i]);
