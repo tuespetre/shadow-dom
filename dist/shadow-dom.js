@@ -922,18 +922,26 @@ var SHADOW_MODE_CLOSED = 'closed';
 var SHADOW_NODE_NAME = '#shadow-root';
 var TAG_SLOT = 'slot';
 
+function forEachInclusiveDescendant(node, callback) {
+    callback(node);
+    var childNodes = node.childNodes;
+    for (var i = 0; i < childNodes.length; i++) {
+        forEachInclusiveDescendant(childNodes[i], callback);
+    }
+}
+
 function forEachShadowIncludingDescendant(node, action) {
     var shadowState = null;
     var shadowRoot = null;
     if ((shadowState = _utils2.default.getShadowState(node)) && (shadowRoot = shadowState.shadowRoot)) {
         action(shadowRoot);
-        forEachShadowIncludingInclusiveDescendant(shadowRoot, action);
+        forEachShadowIncludingDescendant(shadowRoot, action);
     }
     var childNodes = node.childNodes;
     for (var i = 0; i < childNodes.length; i++) {
         var childNode = childNodes[i];
         action(childNode);
-        forEachShadowIncludingInclusiveDescendant(childNode, action);
+        forEachShadowIncludingDescendant(childNode, action);
     }
 }
 
@@ -1232,29 +1240,29 @@ function clone(node, document, cloneChildren) {
     // 1. If document is not given, let document be node’s node document.
     document = document || node.ownerDocument;
 
-    // Use a shortcut here
-    // 2. If node is an element, then:
+    // For performance reasons we are going to do things a little differently.
+
+    // 2. If node is an element, then....
     // 3. Otherwise, let copy be a node that implements the same interfaces 
     // as node, and fulfills these additional requirements, switching on node:
     // 4. Set copy’s node document and document to copy, if copy is a document, 
     // and set copy’s node document to document otherwise.
+    var copy = nodeCloneNodeDescriptor.value.call(node, cloneChildren);
+    if (_customElements2.default.isInstalled()) {
+        forEachInclusiveDescendant(copy, _customElements2.default.tryToUpgradeElement);
+    }
+
     // 5. Run any cloning steps defined for node in other applicable 
     // specifications and pass copy, node, document and the clone children 
     // flag if set, as parameters.
-    var copy = nodeCloneNodeDescriptor.value.call(node, false);
-    if (_customElements2.default.isInstalled()) {
-        _customElements2.default.tryToUpgradeElement(copy);
-    }
+    // SKIP: other
 
     // 6. If the clone children flag is set, clone all the children of node 
     // and append them to copy, with document as specified and the clone 
     // children flag being set.
-    if (cloneChildren === true) {
-        var childNodes = node.childNodes;
-        for (var i = 0; i < childNodes.length; i++) {
-            append(childNodes[i].cloneNode(true), copy);
-        }
-    }
+    // PERF: this is done above after the native deep clone. This should be okay because:
+    // no node in the clone tree can possibly have any mutation observers or shadow roots
+    // yet, so we don't need to run our own 'append' routine to catch all of that stuff.
 
     return copy;
 }
@@ -2414,6 +2422,8 @@ function remove(node, parent, suppressObservers) {
         forEachShadowIncludingDescendant(node, function (descendant) {
             // 1. Run the removing steps with descendant.
             // SKIP: other
+            // NOTE: this step is the only reason we don't just use 
+            // forEachShadowIncludingInclusiveDescendant here
 
             // 2. If descendant is custom, then enqueue a custom element 
             // callback reaction with descendant, callback name "disconnectedCallback", 
