@@ -154,5 +154,6 @@ function install() {
     delete HTMLElement.prototype.insertAdjacentText;
     delete HTMLElement.prototype.insertAdjacentElement;
     delete HTMLElement.prototype.insertAdjacentHTML;
+    delete HTMLElement.prototype.contains;
 
 }
