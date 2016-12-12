@@ -4,7 +4,6 @@ import $ce from './custom-elements.js';
 export default {
     treeOrderRecursiveSelectAll,
     treeOrderRecursiveSelectFirst,
-    filterByRoot,
     isShadowRoot,
     parseHTMLFragment,
     serializeHTMLFragment,
@@ -145,20 +144,6 @@ function treeOrderRecursiveSelectFirst(node, match) {
         return treeOrderRecursiveSelectFirst(nextSibling, match);
     }
     return null;
-}
-
-function filterByRoot(node, descendants) {
-    const contextRoot = root(node);
-    const filtered = new Array(descendants.length);
-    let filteredCount = 0;
-    for (let i = 0; i < descendants.length; i++) {
-        const item = descendants[i];
-        if (root(item) === contextRoot) {
-            filtered[filteredCount++] = item;
-        }
-    }
-    filtered.length = filteredCount;
-    return filtered;
 }
 
 function isShadowRoot(node) {

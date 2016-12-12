@@ -846,7 +846,6 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 exports.default = {
     treeOrderRecursiveSelectAll: treeOrderRecursiveSelectAll,
     treeOrderRecursiveSelectFirst: treeOrderRecursiveSelectFirst,
-    filterByRoot: filterByRoot,
     isShadowRoot: isShadowRoot,
     parseHTMLFragment: parseHTMLFragment,
     serializeHTMLFragment: serializeHTMLFragment,
@@ -988,20 +987,6 @@ function treeOrderRecursiveSelectFirst(node, match) {
         return treeOrderRecursiveSelectFirst(nextSibling, match);
     }
     return null;
-}
-
-function filterByRoot(node, descendants) {
-    var contextRoot = root(node);
-    var filtered = new Array(descendants.length);
-    var filteredCount = 0;
-    for (var i = 0; i < descendants.length; i++) {
-        var item = descendants[i];
-        if (root(item) === contextRoot) {
-            filtered[filteredCount++] = item;
-        }
-    }
-    filtered.length = filteredCount;
-    return filtered;
 }
 
 function isShadowRoot(node) {
@@ -5887,6 +5872,13 @@ function reflectString(attributeName) {
     return function (type, name) {
         attributeName = attributeName || name.toLowerCase();
         var descriptor = _utils2.default.descriptor(type, name);
+        if (!descriptor) {
+            return;
+        }
+        if (!descriptor.configurable) {
+            console.warn('Unable to reconfigure property: ' + name);
+            return;
+        }
         Object.defineProperty(type.prototype, name, {
             configurable: true,
             enumerable: true,
@@ -5903,6 +5895,14 @@ function reflectString(attributeName) {
 function reflectBoolean(attributeName) {
     return function (type, name) {
         attributeName = attributeName || name.toLowerCase();
+        var descriptor = _utils2.default.descriptor(type, name);
+        if (!descriptor) {
+            return;
+        }
+        if (!descriptor.configurable) {
+            console.warn('Unable to reconfigure property: ' + name);
+            return;
+        }
         Object.defineProperty(type.prototype, name, {
             configurable: true,
             enumerable: true,
@@ -5923,6 +5923,14 @@ function reflectBoolean(attributeName) {
 // TODO: minValue, errors
 function reflectInteger(minValue, defaultValue) {
     return function (type, name) {
+        var descriptor = _utils2.default.descriptor(type, name);
+        if (!descriptor) {
+            return;
+        }
+        if (!descriptor.configurable) {
+            console.warn('Unable to reconfigure property: ' + name);
+            return;
+        }
         var attributeName = name.toLowerCase();
         defaultValue = defaultValue || 0;
         Object.defineProperty(type.prototype, name, {
@@ -5945,6 +5953,14 @@ function reflectInteger(minValue, defaultValue) {
 // TODO: minValue, errors
 function reflectFloat(minValue, defaultValue) {
     return function (type, name) {
+        var descriptor = _utils2.default.descriptor(type, name);
+        if (!descriptor) {
+            return;
+        }
+        if (!descriptor.configurable) {
+            console.warn('Unable to reconfigure property: ' + name);
+            return;
+        }
         var attributeName = name.toLowerCase();
         defaultValue = defaultValue || 0;
         Object.defineProperty(type.prototype, name, {
@@ -5966,6 +5982,14 @@ function reflectFloat(minValue, defaultValue) {
 
 function reflectDOMTokenList(localName) {
     return function (type, name) {
+        var descriptor = _utils2.default.descriptor(type, name);
+        if (!descriptor) {
+            return;
+        }
+        if (!descriptor.configurable) {
+            console.warn('Unable to reconfigure property: ' + name);
+            return;
+        }
         Object.defineProperty(type.prototype, name, {
             configurable: true,
             enumerable: true,
@@ -5981,6 +6005,14 @@ function reflectDOMTokenList(localName) {
 
 function reflectHTMLElement(candidateType, readOnly) {
     return function (type, name) {
+        var descriptor = _utils2.default.descriptor(type, name);
+        if (!descriptor) {
+            return;
+        }
+        if (!descriptor.configurable) {
+            console.warn('Unable to reconfigure property: ' + name);
+            return;
+        }
         var attributeName = name.toLowerCase();
         Object.defineProperty(type.prototype, name, {
             configurable: true,
@@ -6015,6 +6047,14 @@ function reflectHTMLElement(candidateType, readOnly) {
 
 function reflectTextContent() {
     return function (type, name) {
+        var descriptor = _utils2.default.descriptor(type, name);
+        if (!descriptor) {
+            return;
+        }
+        if (!descriptor.configurable) {
+            console.warn('Unable to reconfigure property: ' + name);
+            return;
+        }
         Object.defineProperty(type.prototype, name, {
             configurable: true,
             enumerable: true,
