@@ -408,9 +408,9 @@ function clone(node, document, cloneChildren) {
     // as node, and fulfills these additional requirements, switching on node:
     // 4. Set copy’s node document and document to copy, if copy is a document, 
     // and set copy’s node document to document otherwise.
-    const copy = nodeCloneNodeDescriptor.value.call(node, cloneChildren);
-    if ($ce.isInstalled()) {
-        forEachInclusiveDescendant(copy, $ce.tryToUpgradeElement);
+    const copy = nodeCloneNodeDescriptor.value.call(node, false);
+    if ($ce.isInstalled) {
+        $ce.tryToUpgradeElement(copy);
     }
 
     // 5. Run any cloning steps defined for node in other applicable 
@@ -421,9 +421,17 @@ function clone(node, document, cloneChildren) {
     // 6. If the clone children flag is set, clone all the children of node 
     // and append them to copy, with document as specified and the clone 
     // children flag being set.
-    // PERF: this is done above after the native deep clone. This should be okay because:
-    // no node in the clone tree can possibly have any mutation observers or shadow roots
-    // yet, so we don't need to run our own 'append' routine to catch all of that stuff.
+    // PERF: Use the native appendChild instead of the simulation DOM append algorithm.
+    // This should be okay because no node in the clone tree can possibly have any mutation 
+    // observers or shadow roots yet.
+    if (cloneChildren) {
+        const childNodes = node.childNodes;
+        const childNodesCount = childNodes.length;
+        for (let i = 0; i < childNodesCount; i++) {
+            const childCopy = clone(childNodes[i], document, true);
+            nodeAppendChildDescriptor.value.call(copy, childCopy);
+        }
+    }
 
     return copy;
 }

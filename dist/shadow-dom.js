@@ -1247,9 +1247,9 @@ function clone(node, document, cloneChildren) {
     // as node, and fulfills these additional requirements, switching on node:
     // 4. Set copy’s node document and document to copy, if copy is a document, 
     // and set copy’s node document to document otherwise.
-    var copy = nodeCloneNodeDescriptor.value.call(node, cloneChildren);
-    if (_customElements2.default.isInstalled()) {
-        forEachInclusiveDescendant(copy, _customElements2.default.tryToUpgradeElement);
+    var copy = nodeCloneNodeDescriptor.value.call(node, false);
+    if (_customElements2.default.isInstalled) {
+        _customElements2.default.tryToUpgradeElement(copy);
     }
 
     // 5. Run any cloning steps defined for node in other applicable 
@@ -1260,9 +1260,17 @@ function clone(node, document, cloneChildren) {
     // 6. If the clone children flag is set, clone all the children of node 
     // and append them to copy, with document as specified and the clone 
     // children flag being set.
-    // PERF: this is done above after the native deep clone. This should be okay because:
-    // no node in the clone tree can possibly have any mutation observers or shadow roots
-    // yet, so we don't need to run our own 'append' routine to catch all of that stuff.
+    // PERF: Use the native appendChild instead of the simulation DOM append algorithm.
+    // This should be okay because no node in the clone tree can possibly have any mutation 
+    // observers or shadow roots yet.
+    if (cloneChildren) {
+        var childNodes = node.childNodes;
+        var childNodesCount = childNodes.length;
+        for (var i = 0; i < childNodesCount; i++) {
+            var childCopy = clone(childNodes[i], document, true);
+            nodeAppendChildDescriptor.value.call(copy, childCopy);
+        }
+    }
 
     return copy;
 }
@@ -6269,6 +6277,7 @@ function install() {
     delete HTMLElement.prototype.insertAdjacentText;
     delete HTMLElement.prototype.insertAdjacentElement;
     delete HTMLElement.prototype.insertAdjacentHTML;
+    delete HTMLElement.prototype.contains;
 }
 
 },{"./interfaces/Attr.js":3,"./interfaces/CharacterData.js":4,"./interfaces/CustomEvent.js":5,"./interfaces/DOMTokenList.js":6,"./interfaces/Document.js":7,"./interfaces/Element.js":8,"./interfaces/Event.js":9,"./interfaces/EventTarget.js":10,"./interfaces/HTMLSlotElement.js":11,"./interfaces/HTMLTableElement.js":12,"./interfaces/HTMLTableRowElement.js":13,"./interfaces/HTMLTableSectionElement.js":14,"./interfaces/MutationObserver.js":15,"./interfaces/NamedNodeMap.js":16,"./interfaces/Node.js":17,"./interfaces/ShadowRoot.js":18,"./interfaces/Text.js":19,"./mixins/ChildNode.js":21,"./mixins/DocumentOrShadowRoot.js":22,"./mixins/NonDocumentTypeChildNode.js":23,"./mixins/NonElementParentNode.js":24,"./mixins/ParentNode.js":25,"./mixins/Slotable.js":26,"./reflect.js":27,"./utils.js":29}],29:[function(require,module,exports){

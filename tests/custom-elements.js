@@ -222,6 +222,39 @@ suite('Custom Elements', function () {
             done();
         });
     });
+    
+    test('Custom element reactions during cloneNode(true)', function (done) {
+        var cloneNodeElement = function () {
+            var self = HTMLElement.call(this);
+            this.attachShadow({ mode: 'open' }).innerHTML = '<span>shadow dom</span>';
+            return self;
+        };
+        cloneNodeElement.prototype = Object.create(HTMLElement.prototype, {
+            'constructor': {
+                value: cloneNodeElement,
+                writable: true,
+                configurable: true
+            }
+        });
+
+        var element = document.createElement('clone-node');
+        element.innerHTML = '<div>light dom</div>';
+
+        assert.equal(element.firstChild.localName, 'div');
+
+        window.customElements.define('clone-node', cloneNodeElement);
+
+        window.customElements.whenDefined('clone-node')
+            .then(function () {
+                return element.cloneNode(true);
+            })
+            .then(function (clone) {
+                // If cloneNode was implemented incorrectly,
+                // the firstChild would be a <span>.
+                assert.equal(clone.firstChild.localName, 'div');
+                done();
+            });
+    });
 
 });
 
