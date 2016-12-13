@@ -15,7 +15,15 @@ What you will get if you use it right now:
 - **Browser support** across all of 'the moderns', plus IE10/11
   - IE9 will work as well if you include [YuzuJS/setImmediate](https://github.com/YuzuJS/setImmediate)
 
-## Usage:
+## Browser Compatibility
+
+To help with cross-browser support, this project is receiving tremendous help from **BrowserStack**.
+
+<a href="https://browserstack.com">
+  <img src="https://cdn.rawgit.com/tuespetre/shadow-dom/browserstack-logo/Logo-01.svg" height="75" alt="BrowserStack logo" />
+</a>
+
+## Usage
 
 - Include `dist/shadow-dom.js` or `dist/shadow-dom.min.js` before any other scripts.
 It wouldn't be wise to use the `async` attribute for the `<script>`. Use the `defer` 
@@ -28,7 +36,7 @@ set `window.forceCustomElementsPolyfill = true` before the script is included.
 > **Note:** For a performance boost in browsers that don't natively support `setImmediate`, it is recommended 
 > to include [YuzuJS/setImmediate](https://github.com/YuzuJS/setImmediate) before you include this polyfill.
 
-## Caveats:
+## Caveats
 
 - There are no benchmarks yet. Correctness comes first, which means
   benchmarks come after test-verified functionality. 
@@ -41,6 +49,6 @@ set `window.forceCustomElementsPolyfill = true` before the script is included.
   `display: table`, etc.) With that in mind, you may want to adopt a practice
   of explicitly specifying `display` properties for `<slot>` elements.
 
-## License:
+## License
 
 This project is licensed under the MIT license. See the LICENSE file.
