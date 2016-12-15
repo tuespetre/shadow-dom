@@ -12,10 +12,31 @@ What you will get if you use it right now:
   - Shims HTMLElement and kin for browsers that have native support 
     so transpiled and ES5-style classes can work 
     (i.e. via `var self = HTMLElement.call(this)`)
-- **Browser support** across all of 'the moderns', plus IE10/11
-  - IE9 will work as well if you include [YuzuJS/setImmediate](https://github.com/YuzuJS/setImmediate)
 
 ## Browser Compatibility
+
+<table>
+  <thead>
+    <tr>
+      <th>Chrome</th>
+      <th>Firefox</th>
+      <th>Safari</th>
+      <th>Edge</th>
+      <th>Internet Explorer</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>Native support!</td>
+      <td>Yes</td>
+      <td>10, 9 with limitations*</td>
+      <td>Yes</td>
+      <td>11</td>
+    </tr>
+  </tbody>
+</table>
+
+> **Safari 9** is supported except for some things that cannot easily be polyfilled without huge complexity and performance implications, namely `[CEReactions]` support for reflected attributes and `DOMTokenList`/`Element.classList`. 
 
 To help with cross-browser support, this project is receiving tremendous help from **BrowserStack**.
 
