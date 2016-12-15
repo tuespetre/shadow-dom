@@ -18,27 +18,41 @@ What you will get if you use it right now:
 <table>
   <thead>
     <tr>
-      <th>Chrome</th>
-      <th>Firefox</th>
-      <th>Safari</th>
-      <th>Edge</th>
-      <th>Internet Explorer</th>
+      <th>Browser</th>
+      <th>Version</th>
+      <th>Notes</th>
     </tr>
   </thead>
   <tbody>
     <tr>
-      <td>Native support!</td>
-      <td>Yes</td>
-      <td>10, 9 with limitations*</td>
-      <td>Yes</td>
+      <th>Chrome</th>
+      <td>43</td>
+      <td>Chrome natively supports Shadow DOM since version 53 and Custom Elements since version 54.</td>
+    </tr>
+    <tr>
+      <th>Safari</th>
+      <td>9</td>
+      <td>Safari natively supports Shadow DOM since version 10. Safari 9 is supported except for some things that cannot easily be polyfilled without huge complexity and performance implications, namely `[CEReactions]` support for reflected attributes and `DOMTokenList`/`Element.classList`.</td>
+    </tr>
+    <tr>
+      <th>Firefox</th>
+      <td>34</td>
+      <td></td>
+    </tr>
+    <tr>
+      <th>Edge</th>
+      <td>13</td>
+      <td>Edge 12 may be supported but it has not been verified.</td>
+    </tr>
+    <tr>
+      <th>Internet Explorer</th>
       <td>11</td>
+      <td>IE 11 requires you to bring your own Promise polyfill if you want to use `customElements.whenDefined('my-element')`. IE 10 has some issues with transpiled ES6 custom element classes and requires you to bring your own Object.setPrototypeOf polyfill.</td>
     </tr>
   </tbody>
 </table>
 
-> **Safari 9** is supported except for some things that cannot easily be polyfilled without huge complexity and performance implications, namely `[CEReactions]` support for reflected attributes and `DOMTokenList`/`Element.classList`. 
-
-To help with cross-browser support, this project is receiving tremendous help from **BrowserStack**.
+To help with testing for cross-browser support, this project is receiving tremendous help from **BrowserStack**.
 
 <a href="https://browserstack.com">
   <img src="https://cdn.rawgit.com/tuespetre/shadow-dom/browserstack-logo/Logo-01.svg" height="75" alt="BrowserStack logo" />
