@@ -6,6 +6,25 @@ suite('Slots & Slotables', function () {
 
     suite('Slots', function () {
 
+        suite('get childNodes()', function () {
+
+            test('properly patched after nodes are assigned', function () {
+                var slotable = document.createElement('span');
+                var host = document.createElement('div');
+                host.append(slotable);
+                var slot = document.createElement('slot');
+                var fallback1 = document.createElement('span');
+                var fallback2 = document.createElement('span');
+                slot.append(fallback1, fallback2);
+                host.attachShadow({ mode: 'open' }).append(slot);
+
+                assert.equal(slot.childNodes.length, 2);
+                assert.equal(fallback1.parentNode, slot);
+                assert.equal(fallback2.parentNode, slot);
+            });
+
+        });
+
         suite('assignedNodes()', function () {
 
             test('empty after the slot is removed', function () {

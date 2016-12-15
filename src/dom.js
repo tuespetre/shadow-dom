@@ -1075,6 +1075,13 @@ function assignSlotableToSlot(slotable, slot, suppressSignaling) {
         // rendering
         if (!slotState.childNodes) {
             slotState.childNodes = Array.prototype.slice.call(slot.childNodes);
+            const fallbackNodes = slotState.childNodes;
+            const fallbackNodesCount = fallbackNodes.length;
+            for (let i = 0; i < fallbackNodesCount; i++) {
+               const fallbackNode = fallbackNodes[i];
+               const fallbackNodeState = $utils.getShadowState(fallbackNode) || $utils.setShadowState(fallbackNode, {});
+               fallbackNodeState.parentNode = slot;
+            }
         }
         const fallbackNodes = slotState.childNodes;
         const fallbackNodesCount = fallbackNodes.length;
@@ -1113,7 +1120,6 @@ function unassignSlotableFromSlot(slotable, slot, suppressSignaling) {
     }
     
     // rendering
-    slotableState.physicalParent = null;
     nodeRemoveChildDescriptor.value.call(slot, slotable);
     if (slotAssignedNodes.length === 0) {
         const fallbackNodes = slotState.childNodes;
@@ -1289,10 +1295,8 @@ function insert(node, parent, child, suppressObservers) {
             }
             const nodeState = $utils.getShadowState(node) || $utils.setShadowState(node, {});
             nodeState.parentNode = parent;
-            nodeState.physicalParent = null;
             // If it's a shadow root, perform physical insert on the host.
             if (parentIsShadowRoot) {
-                nodeState.physicalParent = parentState.host;
                 nodeInsertBeforeDescriptor.value.call(parentState.host, node, child);
             }
         }
@@ -1531,11 +1535,9 @@ function remove(node, parent, suppressObservers) {
         const nodeIndex = parentState.childNodes.indexOf(node);
         parentState.childNodes.splice(nodeIndex, 1);
         // Should always have nodeState if we got here.
-        const physicalParent = nodeState.physicalParent;
         nodeState.parentNode = null;
-        nodeState.physicalParent = null;
-        if (physicalParent) {
-            nodeRemoveChildDescriptor.value.call(physicalParent, node);
+        if (isShadowRoot(parent)) {
+            nodeRemoveChildDescriptor.value.call(parent.host, node);
         }
     }
     else {

@@ -8,6 +8,8 @@ export default {
     install
 };
 
+const ieBrowserToolsCallbackMagicString = 'function __BROWSERTOOLS_CONSOLE_SAFEFUNC(){try{return n(arguments)}catch(i){t(i)}}';
+
 const eventTargetDescriptor = $utils.descriptor(Event, 'target');
 
 const focusEventRelatedTargetDescriptor = $utils.descriptor(FocusEvent, 'relatedTarget');
@@ -44,6 +46,11 @@ const $EventTarget = function (base) {
                 return;
             }
 
+            if (this instanceof Document && callback.toString() === ieBrowserToolsCallbackMagicString) {
+                native.addEventListener.call(this, type, callback, options);
+                return;
+            }
+
             const listener = { callback };
             let capture = false;
 
@@ -67,6 +74,11 @@ const $EventTarget = function (base) {
 
         removeEventListener(type, callback, options) {
             if (typeof (callback) !== 'function') {
+                return;
+            }
+
+            if (this instanceof Document && callback.toString() === ieBrowserToolsCallbackMagicString) {
+                native.removeEventListener.call(this, type, callback, options);
                 return;
             }
 

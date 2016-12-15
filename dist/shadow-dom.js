@@ -1900,18 +1900,25 @@ function assignSlotableToSlot(slotable, slot, suppressSignaling) {
         // rendering
         if (!slotState.childNodes) {
             slotState.childNodes = Array.prototype.slice.call(slot.childNodes);
+            var _fallbackNodes = slotState.childNodes;
+            var _fallbackNodesCount = _fallbackNodes.length;
+            for (var i = 0; i < _fallbackNodesCount; i++) {
+                var fallbackNode = _fallbackNodes[i];
+                var fallbackNodeState = _utils2.default.getShadowState(fallbackNode) || _utils2.default.setShadowState(fallbackNode, {});
+                fallbackNodeState.parentNode = slot;
+            }
         }
         var fallbackNodes = slotState.childNodes;
         var fallbackNodesCount = fallbackNodes.length;
-        for (var i = 0; i < fallbackNodesCount; i++) {
-            nodeRemoveChildDescriptor.value.call(slot, fallbackNodes[i]);
+        for (var _i3 = 0; _i3 < fallbackNodesCount; _i3++) {
+            nodeRemoveChildDescriptor.value.call(slot, fallbackNodes[_i3]);
         }
         nodeAppendChildDescriptor.value.call(slot, slotable);
     } else {
         var referenceNode = null;
         var referenceNodeIndex = 0;
-        for (var _i3 = 0; _i3 < assignedNodesCount; _i3++) {
-            var assignedNode = assignedNodes[_i3];
+        for (var _i4 = 0; _i4 < assignedNodesCount; _i4++) {
+            var assignedNode = assignedNodes[_i4];
             if (assignedNode.compareDocumentPosition(slotable) === Node.DOCUMENT_POSITION_FOLLOWING) {
                 break;
             }
@@ -1937,7 +1944,6 @@ function unassignSlotableFromSlot(slotable, slot, suppressSignaling) {
     }
 
     // rendering
-    slotableState.physicalParent = null;
     nodeRemoveChildDescriptor.value.call(slot, slotable);
     if (slotAssignedNodes.length === 0) {
         var fallbackNodes = slotState.childNodes;
@@ -2084,8 +2090,8 @@ function insert(node, parent, child, suppressObservers) {
         for (var i = 0; i < count; i++) {
             nodes[i] = nodeChildNodes[i];
         }
-        for (var _i4 = 0; _i4 < count; _i4++) {
-            remove(nodes[_i4], node, true);
+        for (var _i5 = 0; _i5 < count; _i5++) {
+            remove(nodes[_i5], node, true);
         }
         // 5. If node is a DocumentFragment node, queue a mutation record of "childList" for node with removedNodes nodes.
         queueMutationRecord(MO_TYPE_CHILD_LIST, node, null, null, null, null, nodes);
@@ -2099,8 +2105,8 @@ function insert(node, parent, child, suppressObservers) {
     var parentIsConnected = parent.isConnected;
     var parentIsShadowRoot = isShadowRoot(parent);
     var parentTree = root(parent);
-    for (var _i5 = 0; _i5 < count; _i5++) {
-        var _node = nodes[_i5];
+    for (var _i6 = 0; _i6 < count; _i6++) {
+        var _node = nodes[_i6];
         // 1. Insert node into parent before child or at the end of parent if child is null.
         if (parentStateChildNodes) {
             if (child) {
@@ -2111,10 +2117,8 @@ function insert(node, parent, child, suppressObservers) {
             }
             var nodeState = _utils2.default.getShadowState(_node) || _utils2.default.setShadowState(_node, {});
             nodeState.parentNode = parent;
-            nodeState.physicalParent = null;
             // If it's a shadow root, perform physical insert on the host.
             if (parentIsShadowRoot) {
-                nodeState.physicalParent = parentState.host;
                 nodeInsertBeforeDescriptor.value.call(parentState.host, _node, child);
             }
         } else {
@@ -2283,16 +2287,16 @@ function replaceAll(node, parent) {
         var nodeChildNodes = node.childNodes;
         var nodeChildNodesLength = nodeChildNodes.length;
         addedNodes = new Array(nodeChildNodesLength);
-        for (var _i6 = 0; _i6 < nodeChildNodesLength; _i6++) {
-            addedNodes[_i6] = nodeChildNodes[_i6];
+        for (var _i7 = 0; _i7 < nodeChildNodesLength; _i7++) {
+            addedNodes[_i7] = nodeChildNodes[_i7];
         }
     } else {
         addedNodes = [node];
     }
 
     // 4. Remove all parent’s children, in tree order, with the suppress observers flag set.
-    for (var _i7 = 0; _i7 < removedNodesCount; _i7++) {
-        remove(removedNodes[_i7], parent, true);
+    for (var _i8 = 0; _i8 < removedNodesCount; _i8++) {
+        remove(removedNodes[_i8], parent, true);
     }
 
     // 5. If node is not null, insert node into parent before null with the suppress observers flag set.
@@ -2348,11 +2352,9 @@ function remove(node, parent, suppressObservers) {
         var nodeIndex = parentState.childNodes.indexOf(node);
         parentState.childNodes.splice(nodeIndex, 1);
         // Should always have nodeState if we got here.
-        var physicalParent = nodeState.physicalParent;
         nodeState.parentNode = null;
-        nodeState.physicalParent = null;
-        if (physicalParent) {
-            nodeRemoveChildDescriptor.value.call(physicalParent, node);
+        if (isShadowRoot(parent)) {
+            nodeRemoveChildDescriptor.value.call(parent.host, node);
         }
     } else {
         nodeRemoveChildDescriptor.value.call(parent, node);
@@ -2592,8 +2594,8 @@ function queueMutationRecord(type, target, name, nameSpace, oldValue, addedNodes
     }
 
     // 4. Then, for each observer in interested observers, run these substeps:
-    for (var _i8 = 0; _i8 < interestedObservers.length; _i8++) {
-        var _observer = interestedObservers[_i8];
+    for (var _i9 = 0; _i9 < interestedObservers.length; _i9++) {
+        var _observer = interestedObservers[_i9];
         // 1. Let record be a new MutationRecord object with its type set to type and target set to target.
         var record = {
             type: type,
@@ -2628,7 +2630,7 @@ function queueMutationRecord(type, target, name, nameSpace, oldValue, addedNodes
             record.nextSibling = nextSibling;
         }
         // 7. If observer has a paired string, set record’s oldValue to observer’s paired string.
-        record.oldValue = pairedStrings[_i8];
+        record.oldValue = pairedStrings[_i9];
         // 8. Append record to observer’s record queue.
         _observer.queue.push(record);
     }
@@ -2653,8 +2655,8 @@ function notifyMutationObservers() {
         notifyList[i] = mutationObservers[i];
     }
     var signalList = signalSlotList.splice(0, signalSlotList.length);
-    for (var _i9 = 0; _i9 < notifyList.length; _i9++) {
-        var observer = notifyList[_i9];
+    for (var _i10 = 0; _i10 < notifyList.length; _i10++) {
+        var observer = notifyList[_i10];
         var queue = observer.queue.splice(0, observer.queue.length);
         for (var j = mutationObservers.length - 1; j >= 0; j--) {
             var transientObserver = mutationObservers[j];
@@ -2671,8 +2673,8 @@ function notifyMutationObservers() {
             }
         }
     }
-    for (var _i10 = 0; _i10 < signalList.length; _i10++) {
-        var slot = signalList[_i10];
+    for (var _i11 = 0; _i11 < signalList.length; _i11++) {
+        var slot = signalList[_i11];
         var event = slot.ownerDocument.createEvent(EVENT);
         event.initEvent(EVT_SLOT_CHANGE, true, false);
         try {
@@ -3631,6 +3633,8 @@ exports.default = {
     install: install
 }; // https://dom.spec.whatwg.org/#interface-eventtarget
 
+var ieBrowserToolsCallbackMagicString = 'function __BROWSERTOOLS_CONSOLE_SAFEFUNC(){try{return n(arguments)}catch(i){t(i)}}';
+
 var eventTargetDescriptor = _utils2.default.descriptor(Event, 'target');
 
 var focusEventRelatedTargetDescriptor = _utils2.default.descriptor(FocusEvent, 'relatedTarget');
@@ -3672,6 +3676,11 @@ var $EventTarget = function $EventTarget(base) {
                 return;
             }
 
+            if (this instanceof Document && callback.toString() === ieBrowserToolsCallbackMagicString) {
+                native.addEventListener.call(this, type, callback, options);
+                return;
+            }
+
             var listener = { callback: callback };
             var capture = false;
 
@@ -3691,6 +3700,11 @@ var $EventTarget = function $EventTarget(base) {
         },
         removeEventListener: function removeEventListener(type, callback, options) {
             if (typeof callback !== 'function') {
+                return;
+            }
+
+            if (this instanceof Document && callback.toString() === ieBrowserToolsCallbackMagicString) {
+                native.removeEventListener.call(this, type, callback, options);
                 return;
             }
 
