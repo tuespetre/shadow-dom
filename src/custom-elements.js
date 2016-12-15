@@ -216,7 +216,7 @@ function makeHtmlConstructor() {
         const constructionStack = definition.constructionStack;
         if (constructionStack.length === 0) {
             const element = nativeCreateElement.call(window.document, definition.localName);
-            $utils.setPrototypeOf(element, prototype);
+            Object.setPrototypeOf(element, prototype);
             setPrivateState(element, {
                 customElementState: CE_STATE_CUSTOM,
                 customElementDefinition: definition
@@ -232,7 +232,7 @@ function makeHtmlConstructor() {
             throw $utils.makeDOMException('InvalidStateError', 'This element instance is already constructed');
         }
         // 11. set prototype
-        $utils.setPrototypeOf(element, prototype);
+        Object.setPrototypeOf(element, prototype);
         // 12. replace last entry
         constructionStack[lastIndex] = alreadyConstructedMarker;
         // 13. return element
@@ -296,7 +296,7 @@ function createAnElement(document, qualifiedOrLocalName, nameSpace, prefix, is, 
         }
         else {
             result = nativeCreateElement.call(document, qualifiedOrLocalName);
-            $utils.setPrototypeOf(result, HTMLElement.prototype);
+            Object.setPrototypeOf(result, HTMLElement.prototype);
             enqueueUpgradeReaction(result, definition);
         }
     }

@@ -1,32 +1,6 @@
-// NOTE: setTimeout with args does not work in IE9. There is a note in the README about this.
 const setImmediate = 'setImmediate' in window ? window.setImmediate.bind(window) : function (callback, ...args) {
     return setTimeout(callback, 0, ...args);
 };
-
-const setPrototypeOf = (function () {
-    if (Object.setPrototypeOf) {
-        return Object.setPrototypeOf;
-    }
-
-    const test = {};
-    const proto = {};
-    test.__proto__ = proto;
-    if (Object.getPrototypeOf(test) === proto) {
-        return function (object, proto) {
-            object.__proto__ = proto;
-            return object;
-        }
-    }
-
-    return function (object, proto) {
-        const names = Object.getOwnPropertyNames(proto);
-        for (let i = 0; i < names.length; i++) {
-            const name = names[i];
-            const descriptor = Object.getOwnPropertyDescriptor(proto, name);
-            Object.defineProperty(object, name, descriptor);
-        }
-    }
-})();
 
 const brokenAccessors = typeof descriptor(Node, 'childNodes').get === 'undefined';
 
@@ -37,7 +11,6 @@ export default {
     brokenAccessors,
     descriptor,
     setImmediate,
-    setPrototypeOf,
     makeDOMException,
     reportError,
     extend,

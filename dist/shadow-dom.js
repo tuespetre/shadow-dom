@@ -232,7 +232,7 @@ function makeHtmlConstructor() {
         var constructionStack = definition.constructionStack;
         if (constructionStack.length === 0) {
             var _element = nativeCreateElement.call(window.document, definition.localName);
-            _utils2.default.setPrototypeOf(_element, prototype);
+            Object.setPrototypeOf(_element, prototype);
             setPrivateState(_element, {
                 customElementState: CE_STATE_CUSTOM,
                 customElementDefinition: definition
@@ -248,7 +248,7 @@ function makeHtmlConstructor() {
             throw _utils2.default.makeDOMException('InvalidStateError', 'This element instance is already constructed');
         }
         // 11. set prototype
-        _utils2.default.setPrototypeOf(element, prototype);
+        Object.setPrototypeOf(element, prototype);
         // 12. replace last entry
         constructionStack[lastIndex] = alreadyConstructedMarker;
         // 13. return element
@@ -305,7 +305,7 @@ function createAnElement(document, qualifiedOrLocalName, nameSpace, prefix, is, 
             }
         } else {
             result = nativeCreateElement.call(document, qualifiedOrLocalName);
-            _utils2.default.setPrototypeOf(result, HTMLElement.prototype);
+            Object.setPrototypeOf(result, HTMLElement.prototype);
             enqueueUpgradeReaction(result, definition);
         }
     } else {
@@ -6612,7 +6612,6 @@ function install() {
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-// NOTE: setTimeout with args does not work in IE9. There is a note in the README about this.
 var setImmediate = 'setImmediate' in window ? window.setImmediate.bind(window) : function (callback) {
     for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
         args[_key - 1] = arguments[_key];
@@ -6620,31 +6619,6 @@ var setImmediate = 'setImmediate' in window ? window.setImmediate.bind(window) :
 
     return setTimeout.apply(undefined, [callback, 0].concat(args));
 };
-
-var setPrototypeOf = function () {
-    if (Object.setPrototypeOf) {
-        return Object.setPrototypeOf;
-    }
-
-    var test = {};
-    var proto = {};
-    test.__proto__ = proto;
-    if (Object.getPrototypeOf(test) === proto) {
-        return function (object, proto) {
-            object.__proto__ = proto;
-            return object;
-        };
-    }
-
-    return function (object, proto) {
-        var names = Object.getOwnPropertyNames(proto);
-        for (var i = 0; i < names.length; i++) {
-            var name = names[i];
-            var _descriptor = Object.getOwnPropertyDescriptor(proto, name);
-            Object.defineProperty(object, name, _descriptor);
-        }
-    };
-}();
 
 var brokenAccessors = typeof descriptor(Node, 'childNodes').get === 'undefined';
 
@@ -6655,7 +6629,6 @@ exports.default = {
     brokenAccessors: brokenAccessors,
     descriptor: descriptor,
     setImmediate: setImmediate,
-    setPrototypeOf: setPrototypeOf,
     makeDOMException: makeDOMException,
     reportError: reportError,
     extend: extend,
