@@ -391,8 +391,12 @@ const interfaces = {
 
 function reflectString(attributeName) {
     return function (type, name) {
-        attributeName = attributeName || name.toLowerCase();
         const descriptor = $utils.descriptor(type, name);
+        if (descriptor && !descriptor.configurable) {
+            //console.warn(`Unable to configure property '${name}'`);
+            return;
+        }
+        attributeName = attributeName || name.toLowerCase();
         Object.defineProperty(type.prototype, name, {
             configurable: true,
             enumerable: true,
@@ -408,6 +412,11 @@ function reflectString(attributeName) {
 
 function reflectBoolean(attributeName) {
     return function (type, name) {
+        const descriptor = $utils.descriptor(type, name);
+        if (descriptor && !descriptor.configurable) {
+            //console.warn(`Unable to configure property '${name}'`);
+            return;
+        }
         attributeName = attributeName || name.toLowerCase();
         Object.defineProperty(type.prototype, name, {
             configurable: true,
@@ -430,6 +439,11 @@ function reflectBoolean(attributeName) {
 // TODO: minValue, errors
 function reflectInteger(minValue, defaultValue) {
     return function (type, name) {
+        const descriptor = $utils.descriptor(type, name);
+        if (descriptor && !descriptor.configurable) {
+            //console.warn(`Unable to configure property '${name}'`);
+            return;
+        }
         const attributeName = name.toLowerCase();
         defaultValue = defaultValue || 0;
         Object.defineProperty(type.prototype, name, {
@@ -452,6 +466,11 @@ function reflectInteger(minValue, defaultValue) {
 // TODO: minValue, errors
 function reflectFloat(minValue, defaultValue) {
     return function (type, name) {
+        const descriptor = $utils.descriptor(type, name);
+        if (descriptor && !descriptor.configurable) {
+            //console.warn(`Unable to configure property '${name}'`);
+            return;
+        }
         const attributeName = name.toLowerCase();
         defaultValue = defaultValue || 0;
         Object.defineProperty(type.prototype, name, {
@@ -473,6 +492,11 @@ function reflectFloat(minValue, defaultValue) {
 
 function reflectDOMTokenList(localName) {
     return function (type, name) {
+        const descriptor = $utils.descriptor(type, name);
+        if (descriptor && !descriptor.configurable) {
+            //console.warn(`Unable to configure property '${name}'`);
+            return;
+        }
         Object.defineProperty(type.prototype, name, {
             configurable: true,
             enumerable: true,
@@ -488,6 +512,11 @@ function reflectDOMTokenList(localName) {
 
 function reflectHTMLElement(candidateType, readOnly) {
     return function (type, name) {
+        const descriptor = $utils.descriptor(type, name);
+        if (descriptor && !descriptor.configurable) {
+            //console.warn(`Unable to configure property '${name}'`);
+            return;
+        }
         const attributeName = name.toLowerCase();
         Object.defineProperty(type.prototype, name, {
             configurable: true,
@@ -522,6 +551,11 @@ function reflectHTMLElement(candidateType, readOnly) {
 
 function reflectTextContent() {
     return function (type, name) {
+        const descriptor = $utils.descriptor(type, name);
+        if (descriptor && !descriptor.configurable) {
+            //console.warn(`Unable to configure property '${name}'`);
+            return;
+        }
         Object.defineProperty(type.prototype, name, {
             configurable: true,
             enumerable: true,

@@ -4,145 +4,33 @@ import $dom from '../dom.js';
 import $ce from '../custom-elements.js';
 import $utils from '../utils.js';
 
-const attrValueDescriptor = $utils.descriptor(Attr, 'value');
-const characterDataDataDescriptor = $utils.descriptor(CharacterData, 'data');
-const elementAttributesDescriptor = $utils.descriptor(Element, 'attributes') || $utils.descriptor(Node, 'attributes');
-const nodeChildNodesDescriptor = $utils.descriptor(Node, 'childNodes');
-const nodeHasChildNodesDescriptor = $utils.descriptor(Node, 'hasChildNodes');
-const nodeFirstChildDescriptor = $utils.descriptor(Node, 'firstChild');
-const nodeLastChildDescriptor = $utils.descriptor(Node, 'lastChild');
-const nodePreviousSiblingDescriptor = $utils.descriptor(Node, 'previousSibling');
-const nodeNextSiblingDescriptor = $utils.descriptor(Node, 'nextSibling');
-const nodeParentNodeDescriptor = $utils.descriptor(Node, 'parentNode');
-const nodeNodeValueDescriptor = $utils.descriptor(Node, 'nodeValue');
-
 export default {
+    install
+};
 
-    get isConnected() {
-        return $dom.shadowIncludingRoot(this).nodeType === Node.DOCUMENT_NODE;
-    },
+const nodeHasChildNodesDescriptor = $utils.descriptor(Node, 'hasChildNodes');
 
-    getRootNode(options) {
-        const composed = options && (options.composed === true);
-        return composed ? $dom.shadowIncludingRoot(this) : $dom.root(this);
-    },
-
-    get parentNode() {
-        let parentNode;
-        const nodeState = $utils.getShadowState(this);
-        if (nodeState) {
-            parentNode = nodeState.parentNode;
-        }
-
-        return parentNode || nodeParentNodeDescriptor.get.call(this);
-    },
+const propertyDescriptors = {
 
     get parentElement() {
         const parentNode = this.parentNode;
         if (parentNode && parentNode.nodeType === Node.ELEMENT_NODE) {
             return parentNode;
         }
-
         return null;
-    },
-
-    // TODO: tests
-    hasChildNodes() {
-        const nodeState = $utils.getShadowState(this);
-        if (nodeState) {
-            const childNodes = nodeState.childNodes;
-            if (childNodes) {
-                return childNodes.length > 0;
-            }
-        }
-
-        return nodeHasChildNodesDescriptor.value.call(this);
-    },
-
-    // TODO: tests
-    get childNodes() {
-        const nodeState = $utils.getShadowState(this);
-        if (nodeState) {
-            const childNodes = nodeState.childNodes;
-            if (childNodes) {
-                const childNodesLength = childNodes.length;
-                const result = new Array(childNodesLength);
-                for (let i = 0; i < childNodesLength; i++) {
-                    result[i] = childNodes[i];
-                }
-                return result;
-            }
-        }
-
-        return nodeChildNodesDescriptor.get.call(this);
-    },
-
-    // TODO: tests
-    get firstChild() {
-        const nodeState = $utils.getShadowState(this);
-        if (nodeState) {
-            const childNodes = nodeState.childNodes;
-            if (childNodes) {
-                if (childNodes.length) {
-                    return childNodes[0];
-                }
-                return null;
-            }
-        }
-
-        return nodeFirstChildDescriptor.get.call(this);
-    },
-
-    // TODO: tests
-    get lastChild() {
-        const nodeState = $utils.getShadowState(this);
-        if (nodeState) {
-            const childNodes = nodeState.childNodes;
-            if (childNodes) {
-                if (childNodes.length) {
-                    return childNodes[childNodes.length - 1];
-                }
-                return null;
-            }
-        }
-
-        return nodeLastChildDescriptor.get.call(this);
-    },
-
-    // TODO: tests
-    get previousSibling() {
-        const nodeState = $utils.getShadowState(this);
-        if (nodeState) {
-            const parentNode = nodeState.parentNode;
-            if (parentNode) {
-                const childNodes = $utils.getShadowState(parentNode).childNodes;
-                const siblingIndex = childNodes.indexOf(this) - 1;
-                return siblingIndex < 0 ? null : childNodes[siblingIndex];
-            }
-        }
-
-        return nodePreviousSiblingDescriptor.get.call(this);
-    },
-
-    // TODO: tests
-    get nextSibling() {
-        const nodeState = $utils.getShadowState(this);
-        if (nodeState) {
-            const parentNode = nodeState.parentNode;
-            if (parentNode) {
-                const childNodes = $utils.getShadowState(parentNode).childNodes;
-                const siblingIndex = childNodes.indexOf(this) + 1;
-                return siblingIndex === childNodes.length ? null : childNodes[siblingIndex];
-            }
-        }
-
-        return nodeNextSiblingDescriptor.get.call(this);
     },
 
     // TODO: consider creating a raw property descriptor
     // that uses the native get instead of a pass-through function
     get nodeValue() {
-        return nodeNodeValueDescriptor.get.call(this);
+        switch (this.nodeType) {
+            case Node.ATTRIBUTE_NODE:
+                return this.value;
+            case Node.TEXT_NODE:
+            case Node.PROCESSING_INSTRUCTION_NODE:
+            case Node.COMMENT_NODE:
+                return this.data;
+        }
     },
 
     // TODO: MutationObserver tests
@@ -150,13 +38,12 @@ export default {
         return $ce.executeCEReactions(() => {
             switch (this.nodeType) {
                 case Node.ATTRIBUTE_NODE:
-                    $dom.setExistingAttributeValue(this, value);
+                    this.value = value;
                     break;
                 case Node.TEXT_NODE:
                 case Node.PROCESSING_INSTRUCTION_NODE:
                 case Node.COMMENT_NODE:
-                    const length = characterDataDataDescriptor.get.call(this).length;
-                    $dom.replaceData(this, 0, length, value);
+                    this.replaceData(0, this.data.length, value);
                     break;
             }
         });
@@ -168,11 +55,11 @@ export default {
             case Node.ELEMENT_NODE:
                 return elementTextContent(this);
             case Node.ATTRIBUTE_NODE:
-                return attrValueDescriptor.get.call(this);
+                return this.value;
             case Node.TEXT_NODE:
             case Node.PROCESSING_INSTRUCTION_NODE:
             case Node.COMMENT_NODE:
-                return characterDataDataDescriptor.get.call(this);
+                return this.data;
             default:
                 return null;
         }
@@ -191,15 +78,41 @@ export default {
                     $dom.replaceAll(node, this);
                     break;
                 case Node.ATTRIBUTE_NODE:
-                    $dom.setExistingAttributeValue(this, value);
+                    this.value = value;
                     break;
                 case Node.TEXT_NODE:
                 case Node.PROCESSING_INSTRUCTION_NODE:
                 case Node.COMMENT_NODE:
-                    $dom.replaceData(this, 0, this.data.length, value);
+                    this.replaceData(0, this.data.length, value);
                     break;
             }
         });
+    },
+
+};
+
+const methodDescriptors = {
+
+    get isConnected() {
+        return $dom.shadowIncludingRoot(this).nodeType === Node.DOCUMENT_NODE;
+    },
+
+    getRootNode(options) {
+        const composed = options && (options.composed === true);
+        return composed ? $dom.shadowIncludingRoot(this) : $dom.root(this);
+    },
+
+    // TODO: tests
+    hasChildNodes() {
+        const nodeState = $utils.getShadowState(this);
+        if (nodeState) {
+            const childNodes = nodeState.childNodes;
+            if (childNodes) {
+                return childNodes.length > 0;
+            }
+        }
+
+        return nodeHasChildNodesDescriptor.value.call(this);
     },
 
     // TODO: tests
@@ -212,7 +125,7 @@ export default {
             for (let i = 0; i < childNodes.length; i++) {
                 let childNode = childNodes[i];
                 if (childNode.nodeType === Node.TEXT_NODE) {
-                    let length = characterDataDataDescriptor.get.call(childNode).length;
+                    let length = childNode.data.length;
                     if (length === 0) {
                         $dom.remove(childNode, this);
                         continue;
@@ -222,10 +135,10 @@ export default {
                     let contiguousCount = 0;
                     let next = childNode;
                     while (next = next.nextSibling && next.nodeType === Node.TEXT_NODE) {
-                        data += characterDataDataDescriptor.get.call(next);
+                        data += next.data;
                         contiguousTextNodes[contiguousCount++] = next;
                     }
-                    $dom.replaceData(childNode, length, 0, data);
+                    childNode.replaceData(length, 0, data);
                     // TODO: (Range)
                     for (let j = 0; j < contiguousCount; j++) {
                         $dom.remove(contiguousTextNodes[j], this);
@@ -283,8 +196,8 @@ export default {
                     this.localName !== other.localName) {
                     return false;
                 }
-                thisAttributes = elementAttributesDescriptor.get.call(this);
-                otherAttributes = elementAttributesDescriptor.get.call(other);
+                thisAttributes = this.attributes;
+                otherAttributes = other.attributes;
                 if (thisAttributes.length != otherAttributes.length) {
                     return false;
                 }
@@ -456,6 +369,68 @@ export default {
         });
     },
 
+};
+
+function install() {
+    if ($utils.brokenAccessors) {
+        [Document, DocumentFragment, Element, Attr, CharacterData].forEach(type => {
+            const parentNodeDescriptor = {};
+            parentNodeDescriptor.get = makeGetterForParentNode(makeGhostGetter(type, 'parentNode', parentNodeDescriptor));
+            $utils.defineProperty(type.prototype, 'parentNode', parentNodeDescriptor);
+
+            const childNodesDescriptor = {};
+            childNodesDescriptor.get = makeGetterForChildNodes(makeGhostGetter(type, 'childNodes', childNodesDescriptor));
+            $utils.defineProperty(type.prototype, 'childNodes', childNodesDescriptor);
+
+            const firstChildDescriptor = {};
+            firstChildDescriptor.get = makeGetterForFirstChild(makeGhostGetter(type, 'firstChild', firstChildDescriptor));
+            $utils.defineProperty(type.prototype, 'firstChild', firstChildDescriptor);
+
+            const lastChildDescriptor = {};
+            lastChildDescriptor.get = makeGetterForLastChild(makeGhostGetter(type, 'lastChild', lastChildDescriptor));
+            $utils.defineProperty(type.prototype, 'lastChild', lastChildDescriptor);
+
+            const previousSiblingDescriptor = {};
+            previousSiblingDescriptor.get = makeGetterForPreviousSibling(makeGhostGetter(type, 'previousSibling', previousSiblingDescriptor));
+            $utils.defineProperty(type.prototype, 'previousSibling', previousSiblingDescriptor);
+
+            const nextSiblingDescriptor = {};
+            nextSiblingDescriptor.get = makeGetterForNextSibling(makeGhostGetter(type, 'nextSibling', nextSiblingDescriptor));
+            $utils.defineProperty(type.prototype, 'nextSibling', nextSiblingDescriptor);
+
+            $utils.extend(type, propertyDescriptors);            
+            $utils.extend(type, methodDescriptors);
+        });
+    }
+    else {
+        const accessorDescriptors = {
+            parentNode: {
+                get: makeGetterForParentNode($utils.descriptor(Node, 'parentNode').get)
+            },
+            childNodes: {
+                get: makeGetterForChildNodes($utils.descriptor(Node, 'childNodes').get)
+            },
+            firstChild: {
+                get: makeGetterForFirstChild($utils.descriptor(Node, 'firstChild').get)
+            },
+            lastChild: {
+                get: makeGetterForLastChild($utils.descriptor(Node, 'lastChild').get)
+            },
+            previousSibling: {
+                get: makeGetterForPreviousSibling($utils.descriptor(Node, 'previousSibling').get)
+            },
+            nextSibling: {
+                get: makeGetterForNextSibling($utils.descriptor(Node, 'nextSibling').get)
+            },
+        };
+
+        $utils.extend(Node, Object.create(null, accessorDescriptors));
+        $utils.extend(Node, propertyDescriptors);
+        $utils.extend(Node, methodDescriptors);
+
+        // Cleanup for IE, Edge
+        $utils.deleteProperty(Node, 'attributes');
+    }
 }
 
 function ancestorOf(node, ancestor) {
@@ -529,9 +504,116 @@ function elementTextContent(element) {
                 result += elementTextContent(childNode);
                 break;
             case Node.TEXT_NODE:
-                result += characterDataDataDescriptor.get.call(childNode);
+                result += childNode.data;
                 break;
         }
     }
     return result;
+}
+
+function makeGetterForParentNode(getter) {
+    return function () {
+        const nodeState = $utils.getShadowState(this);
+        if (nodeState) {
+            const parentNode = nodeState.parentNode;
+            if (parentNode) {
+                return parentNode;
+            }
+        }
+        return getter.call(this);
+    };
+}
+
+// TODO: tests
+function makeGetterForChildNodes(getter) {
+    return function () {
+        const nodeState = $utils.getShadowState(this);
+        if (nodeState) {
+            const childNodes = nodeState.childNodes;
+            if (childNodes) {
+                const childNodesLength = childNodes.length;
+                const result = new Array(childNodesLength);
+                for (let i = 0; i < childNodesLength; i++) {
+                    result[i] = childNodes[i];
+                }
+                return result;
+            }
+        }
+        return getter.call(this);
+    };
+}
+
+// TODO: tests
+function makeGetterForFirstChild(getter) {
+    return function () {
+        const nodeState = $utils.getShadowState(this);
+        if (nodeState) {
+            const childNodes = nodeState.childNodes;
+            if (childNodes) {
+                if (childNodes.length) {
+                    return childNodes[0];
+                }
+                return null;
+            }
+        }
+        return getter.call(this);
+    };
+}
+
+// TODO: tests
+function makeGetterForLastChild(getter) {
+    return function () {
+        const nodeState = $utils.getShadowState(this);
+        if (nodeState) {
+            const childNodes = nodeState.childNodes;
+            if (childNodes) {
+                if (childNodes.length) {
+                    return childNodes[childNodes.length - 1];
+                }
+                return null;
+            }
+        }
+        return getter.call(this);
+    };
+}
+
+// TODO: tests
+function makeGetterForPreviousSibling(getter) {
+    return function () {
+        const nodeState = $utils.getShadowState(this);
+        if (nodeState) {
+            const parentNode = nodeState.parentNode;
+            if (parentNode) {
+                const childNodes = $utils.getShadowState(parentNode).childNodes;
+                const siblingIndex = childNodes.indexOf(this) - 1;
+                return siblingIndex < 0 ? null : childNodes[siblingIndex];
+            }
+        }
+        return getter.call(this);
+    };
+}
+
+// TODO: tests
+function makeGetterForNextSibling(getter) {
+    return function () {
+        const nodeState = $utils.getShadowState(this);
+        if (nodeState) {
+            const parentNode = nodeState.parentNode;
+            if (parentNode) {
+                const childNodes = $utils.getShadowState(parentNode).childNodes;
+                const siblingIndex = childNodes.indexOf(this) + 1;
+                return siblingIndex === childNodes.length ? null : childNodes[siblingIndex];
+            }
+        }
+        return getter.call(this);
+    };
+}
+
+function makeGhostGetter(type, name, descriptor) {
+    return function () {
+        delete type.prototype[name];
+        const value = this[name];
+        Object.defineProperty(type.prototype, name, descriptor);
+        return value;
+    };
 }

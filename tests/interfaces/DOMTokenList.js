@@ -2,6 +2,10 @@
 
 suite('DOMTokenList', function () {
 
+    if (!Object.getOwnPropertyDescriptor(Element.prototype, 'classList').configurable) {
+        return;
+    }
+
     var assert = chai.assert;
 
     suite('add(...tokens)', function () {

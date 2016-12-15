@@ -844,19 +844,26 @@ var _customElements2 = _interopRequireDefault(_customElements);
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 exports.default = {
+
     treeOrderRecursiveSelectAll: treeOrderRecursiveSelectAll,
     treeOrderRecursiveSelectFirst: treeOrderRecursiveSelectFirst,
     isShadowRoot: isShadowRoot,
+
     parseHTMLFragment: parseHTMLFragment,
     serializeHTMLFragment: serializeHTMLFragment,
+
     root: root,
+
     convertNodesIntoANode: convertNodesIntoANode,
+
     clone: clone,
     adopt: adopt,
+
     shadowIncludingRoot: shadowIncludingRoot,
     shadowIncludingInclusiveAncestor: shadowIncludingInclusiveAncestor,
     closedShadowHidden: closedShadowHidden,
     retarget: retarget,
+
     changeAttribute: changeAttribute,
     appendAttribute: appendAttribute,
     removeAttribute: removeAttribute,
@@ -864,13 +871,19 @@ exports.default = {
     setAttributeValue: setAttributeValue,
     removeAttributeByName: removeAttributeByName,
     removeAttributeByNamespace: removeAttributeByNamespace,
+
     insertAdjacent: insertAdjacent,
+
     listOfElementsWithQualifiedName: listOfElementsWithQualifiedName,
     listOfElementsWithNamespaceAndLocalName: listOfElementsWithNamespaceAndLocalName,
     listOfElementsWithClassNames: listOfElementsWithClassNames,
+
     setExistingAttributeValue: setExistingAttributeValue,
+
     replaceData: replaceData,
+
     findFlattenedSlotables: findFlattenedSlotables,
+
     preInsert: preInsert,
     insert: insert,
     append: append,
@@ -878,24 +891,20 @@ exports.default = {
     replaceAll: replaceAll,
     preRemove: preRemove,
     remove: remove,
+
     createMutationObserver: createMutationObserver
 };
 
 
-var attrValueDescriptor = _utils2.default.descriptor(Attr, 'value');
-var characterDataDataDescriptor = _utils2.default.descriptor(CharacterData, 'data');
-var elementAttributesDescriptor = _utils2.default.descriptor(Element, 'attributes') || _utils2.default.descriptor(Node, 'attributes');
-var elementInnerHTMLDescriptor = _utils2.default.descriptor(Element, 'innerHTML') || _utils2.default.descriptor(HTMLElement, 'innerHTML');
 var elementRemoveAttributeNSDescriptor = _utils2.default.descriptor(Element, 'removeAttributeNS');
 var elementSetAttributeDescriptor = _utils2.default.descriptor(Element, 'setAttribute');
 var namedNodeMapSetNamedItemNSDescriptor = _utils2.default.descriptor(NamedNodeMap, 'setNamedItemNS');
 var nodeAppendChildDescriptor = _utils2.default.descriptor(Node, 'appendChild');
-var nodeChildNodesDescriptor = _utils2.default.descriptor(Node, 'childNodes');
 var nodeCloneNodeDescriptor = _utils2.default.descriptor(Node, 'cloneNode');
-var nodeFirstChildDescriptor = _utils2.default.descriptor(Node, 'firstChild');
 var nodeInsertBeforeDescriptor = _utils2.default.descriptor(Node, 'insertBefore');
-var nodeParentNodeDescriptor = _utils2.default.descriptor(Node, 'parentNode');
 var nodeRemoveChildDescriptor = _utils2.default.descriptor(Node, 'removeChild');
+
+var attrValueDescriptor = _utils2.default.descriptor(Attr, 'value');
 
 var ATTR_NAME = 'name';
 var EMPTY_STRING = '';
@@ -904,7 +913,7 @@ var ERROR_HIERARCHY_REQUEST = 'HierarchyRequestError';
 var ERROR_INDEX_SIZE = 'IndexSizeError';
 var ERROR_NOT_FOUND = 'NotFoundError';
 var ERROR_SYNTAX = 'SyntaxError';
-var EVENT = 'event';
+var EVENT = 'Event'; // Capitalized to work with older WebKit
 var EVT_SLOT_CHANGE = 'slotchange';
 var MO_TYPE_ATTRIBUTES = 'attributes';
 var MO_TYPE_CHILD_LIST = 'childList';
@@ -995,24 +1004,21 @@ function isShadowRoot(node) {
 
 // https://www.w3.org/TR/DOM-Parsing/
 
-// PERF: This function uses a recycled div element
-// and a recycled document fragment stored in the passed 
-// element's owner document so it can avoid allocation.
+// PERF: This function uses a recycled document fragment stored 
+// in the passed element's owner document so it can avoid allocation.
 // Callers must empty the returned fragment.
+var parser = new DOMParser();
 function parseHTMLFragment(markup, context) {
     var document = context.ownerDocument;
     var documentState = _utils2.default.getShadowState(document) || _utils2.default.setShadowState(document, {});
-    var parsingElement = documentState.parsingElement;
-    if (!parsingElement) {
-        parsingElement = documentState.parsingElement = document.createElement('div');
-    }
     var parsingFragment = documentState.parsingFragment;
     if (!documentState.parsingFragment) {
         parsingFragment = documentState.parsingFragment = document.createDocumentFragment();
     }
-    elementInnerHTMLDescriptor.set.call(parsingElement, markup);
+    // The surrounding body tags are required to preserve all of the original markup (comments, etc.)
+    var parsingResult = parser.parseFromString('<body>' + markup + '</body>', 'text/html').body;
     var firstChild = void 0;
-    while (firstChild = nodeFirstChildDescriptor.get.call(parsingElement)) {
+    while (firstChild = parsingResult.firstChild) {
         nodeAppendChildDescriptor.value.call(parsingFragment, firstChild);
     }
     return parsingFragment;
@@ -1053,7 +1059,7 @@ function serializeHTMLFragment(node) {
                         break;
                 }
                 s += '<' + tagName;
-                var attributes = elementAttributesDescriptor.get.call(currentNode);
+                var attributes = currentNode.attributes;
                 for (var j = 0; j < attributes.length; j++) {
                     var attribute = attributes[j];
                     s += ' ' + serializeAttributeName(attribute);
@@ -1431,7 +1437,7 @@ function changeAttribute(attribute, element, value) {
 
     var name = attribute.localName;
     var nameSpace = attribute.namespaceURI;
-    var oldValue = attrValueDescriptor.get.call(attribute);
+    var oldValue = attribute.value;
     var newValue = value;
 
     // 1. Queue a mutation record...
@@ -1456,7 +1462,7 @@ function appendAttribute(attribute, element) {
     var name = attribute.localName;
     var nameSpace = attribute.namespaceURI;
     var oldValue = null;
-    var newValue = attrValueDescriptor.get.call(attribute);
+    var newValue = attribute.value;
 
     // 1. Queue a mutation record...
     queueMutationRecord(MO_TYPE_ATTRIBUTES, element, name, nameSpace, oldValue);
@@ -1482,7 +1488,7 @@ function removeAttribute(attribute, element) {
 
     var name = attribute.localName;
     var nameSpace = attribute.namespaceURI;
-    var oldValue = attrValueDescriptor.get.call(attribute);
+    var oldValue = attribute.value;
     var newValue = null;
 
     // 1. Queue a mutation record...
@@ -1510,8 +1516,8 @@ function replaceAttribute(oldAttr, newAttr, element) {
 
     var name = oldAttr.localName;
     var nameSpace = oldAttr.namespaceURI;
-    var oldValue = attrValueDescriptor.get.call(oldAttr);
-    var newValue = attrValueDescriptor.get.call(newAttr);
+    var oldValue = oldAttr.value;
+    var newValue = newAttr.value;
 
     // 1. Queue a mutation record...
     queueMutationRecord(MO_TYPE_ATTRIBUTES, element, name, nameSpace, oldValue);
@@ -1539,7 +1545,7 @@ function setAttribute(attr, element, nativeSetAttributeNodeDescriptor) {
     if (attr.ownerElement != null && attr.ownerElement !== element) {
         throw _utils2.default.makeDOMException(ERROR_IN_USE_ATTRIBUTE);
     }
-    var attributes = elementAttributesDescriptor.get.call(element);
+    var attributes = element.attributes;
     var oldAttr = attributes.getNamedItemNS(attr.namespaceURI, attr.localName);
     if (oldAttr === attr) {
         return attr;
@@ -1556,7 +1562,7 @@ function setAttribute(attr, element, nativeSetAttributeNodeDescriptor) {
 function setAttributeValue(element, localName, value, prefix, ns) {
     prefix = prefix || null;
     ns = ns || null;
-    var attributes = elementAttributesDescriptor.get.call(element);
+    var attributes = element.attributes;
     var attribute = attributes.getNamedItemNS(ns, localName);
     if (!attribute) {
         elementSetAttributeDescriptor.value.call(element, localName, value);
@@ -1568,7 +1574,7 @@ function setAttributeValue(element, localName, value, prefix, ns) {
 }
 
 function removeAttributeByName(qualifiedName, element) {
-    var attributes = elementAttributesDescriptor.get.call(element);
+    var attributes = element.attributes;
     var attr = attributes.getNamedItem(qualifiedName);
     if (attr) {
         removeAttribute(attr, element);
@@ -1577,7 +1583,7 @@ function removeAttributeByName(qualifiedName, element) {
 }
 
 function removeAttributeByNamespace(nameSpace, localName, element) {
-    var attributes = elementAttributesDescriptor.get.call(element);
+    var attributes = element.attributes;
     var attr = attributes.getNamedItemNS(nameSpace, localName);
     if (attr) {
         removeAttribute(attr, element);
@@ -1715,12 +1721,12 @@ function setExistingAttributeValue(attribute, value) {
 
 // https://dom.spec.whatwg.org/#interface-characterdata
 
-function replaceData(node, offset, count, data) {
+function replaceData(node, offset, count, data, setter) {
     // https://dom.spec.whatwg.org/#concept-cd-replace
     if (data == null) {
         data = EMPTY_STRING;
     }
-    var oldValue = characterDataDataDescriptor.get.call(node);
+    var oldValue = node.data;
     var length = oldValue.length;
     if (offset > length) {
         throw _utils2.default.makeDOMException(ERROR_INDEX_SIZE);
@@ -1730,7 +1736,7 @@ function replaceData(node, offset, count, data) {
     }
     queueMutationRecord(MO_TYPE_CHARACTER_DATA, node, null, null, oldValue);
     var newValue = oldValue.slice(0, offset) + data + oldValue.slice(offset + count);
-    characterDataDataDescriptor.set.call(node, newValue);
+    setter.call(node, newValue);
     // TODO: (Range)
 }
 
@@ -1872,100 +1878,111 @@ function assignSlotables(slot, suppressSignaling) {
     // nodes are not identical, then run signal a slot change for slot.
     var identical = true;
     var slotState = _utils2.default.getShadowState(slot) || _utils2.default.setShadowState(slot, {});
-    var assignedNodes = slotState.assignedNodes || [];
+    var oldAssignedNodes = slotState.assignedNodes || [];
     for (var i = 0; i < slotables.length; i++) {
-        if (slotables[i] !== assignedNodes[i]) {
+        if (slotables[i] !== oldAssignedNodes[i]) {
             identical = false;
             break;
         }
     }
-    if (!suppressSignaling && !identical) {
+
+    if (identical) {
+        return;
+    }
+
+    if (!suppressSignaling) {
         signalASlotChange(slot);
+    }
+
+    // If we haven't tracked them yet, track the slot's logical children
+    if (!slotState.childNodes) {
+        var slotChildNodes = slot.childNodes;
+        var slotChildNodesLength = slotChildNodes.length;
+        slotState.childNodes = new Array(slotChildNodesLength);
+        for (var _i3 = 0; _i3 < slotChildNodesLength; _i3++) {
+            var slotChildNode = slotChildNodes[_i3];
+            var slotChildNodeState = _utils2.default.getShadowState(slotChildNode) || _utils2.default.setShadowState(slotChildNode, {});
+            slotChildNodeState.parentNode = slot;
+            slotState.childNodes[_i3] = slotChildNodes[_i3];
+        }
     }
 
     // 3. Set slot’s assigned nodes to slotables.
     slotState.assignedNodes = slotables;
 
     // 4. For each slotable in slotables, set slotable’s assigned slot to slot.
-    for (var _i3 = 0; _i3 < slotables.length; _i3++) {
-        var slotable = slotables[_i3];
-        // If it's a slotable it should already have an associated state object.
-        _utils2.default.getShadowState(slotable).assignedSlot = slot;
+    for (var _i4 = 0; _i4 < slotables.length; _i4++) {
+        var slotable = slotables[_i4];
+        var slotableState = _utils2.default.getShadowState(slotable);
+        slotableState.assignedSlot = slot;
     }
 
-    // 4a. If we haven't tracked them yet, track the slot's logical children
-    if (!slotState.childNodes) {
-        var slotChildNodes = nodeChildNodesDescriptor.get.call(slot);
-        var slotChildNodesLength = slotChildNodes.length;
-        slotState.childNodes = new Array(slotChildNodesLength);
-        for (var _i4 = 0; _i4 < slotChildNodesLength; _i4++) {
-            slotState.childNodes[_i4] = slotChildNodes[_i4];
-        }
-    }
+    var slotablesCount = slotables.length;
+    var oldAssignedNodesCount = oldAssignedNodes.length;
 
-    if (!identical) {
-        renderSlot(slot);
-    }
-}
-
-function renderSlot(slot) {
-    var slotState = _utils2.default.getShadowState(slot);
-    var slotables = slotState.assignedNodes;
-    var slotableCount = slotables.length;
-
-    if (slotableCount) {
-        // Take a copy of the list of rendered child nodes of the slot.
-        var physicalChildNodeList = nodeChildNodesDescriptor.get.call(slot);
-        var physicalCount = physicalChildNodeList.length;
-        var physicalChildNodes = new Array(physicalCount);
-        for (var i = 0; i < physicalCount; i++) {
-            physicalChildNodes[i] = physicalChildNodeList[i];
-        }
-        // If there are any physical child nodes that do not have this slot
-        // for their assigned slot then remove them. This covers:
-        // - Node is removed
-        // - Node is fallback content of slot
-        // - Slot's name is changed
-        // - Node's slot is changed
-        for (var _i5 = physicalCount; _i5 !== 0; _i5--) {
-            var physicalChild = physicalChildNodes[_i5 - 1];
-            var state = _utils2.default.getShadowState(physicalChild);
-            if (!state || state.assignedSlot !== slot) {
-                nodeRemoveChildDescriptor.value.call(slot, physicalChild);
-                physicalChildNodes.splice(_i5, 1);
-                physicalCount--;
+    if (slotablesCount !== 0 && oldAssignedNodesCount !== 0) {
+        // Clean out the slot of any formerly assigned nodes
+        var physicalNodesCount = oldAssignedNodesCount;
+        for (var _i5 = 0; _i5 < oldAssignedNodesCount; _i5++) {
+            var assignedNode = oldAssignedNodes[_i5];
+            var assignedNodeState = _utils2.default.getShadowState(assignedNode);
+            if (assignedNodeState.assignedSlot !== slot) {
+                assignedNodeState.physicalParent = null;
+                nodeRemoveChildDescriptor.value.call(slot, assignedNode);
+                oldAssignedNodes.splice(_i5, 1);
+                physicalNodesCount--;
             }
         }
-        // If we have more slotables than physical nodes, insert the
-        // slotables in the correct places. This covers:
-        // - Nodes are added to shadow host
-        if (slotableCount > physicalCount) {
+        // Place any new slotables where they belong.
+        if (slotableCount > physicalNodesCount) {
             var _i6 = 0;
             var j = 0;
             while (_i6 < slotableCount) {
-                var slotable = slotables[_i6];
-                var physical = physicalChildNodes[j];
-                if (slotable === physical) {
+                var _slotable = slotables[_i6];
+                var physical = oldAssignedNodes[j];
+                if (_slotable === physical) {
                     _i6++;
                     j++;
                     continue;
                 } else {
-                    nodeInsertBeforeDescriptor.value.call(slot, slotable, physical);
+                    nodeInsertBeforeDescriptor.value.call(slot, _slotable, physical);
                     _i6++;
                     continue;
                 }
             }
         }
-    } else {
-        // Clean out the slot
-        var firstChild = void 0;
-        while (firstChild = nodeFirstChildDescriptor.get.call(slot)) {
-            nodeRemoveChildDescriptor.value.call(slot, firstChild);
-        }
-        // Append the fallback content
+    } else if (slotablesCount !== 0) {
+        // Clean out the slot of fallback content
         var childNodes = slotState.childNodes;
         for (var _i7 = 0; _i7 < childNodes.length; _i7++) {
-            nodeAppendChildDescriptor.value.call(slot, childNodes[_i7]);
+            var fallbackNode = childNodes[_i7];
+            var fallbackNodeState = _utils2.default.getShadowState(fallbackNode);
+            fallbackNodeState.physicalParent = null;
+            nodeRemoveChildDescriptor.value.call(slot, fallbackNode);
+        }
+        // Append the slotables
+        for (var _i8 = 0; _i8 < slotablesCount; _i8++) {
+            var slotableNode = slotables[_i8];
+            var slotableNodeState = _utils2.default.getShadowState(slotableNode);
+            slotableNodeState.physicalParent = slot;
+            nodeAppendChildDescriptor.value.call(slot, slotables[_i8]);
+        }
+    } else {
+        // Clean out the slot of assigned nodes
+        for (var _i9 = 0; _i9 < oldAssignedNodes.length; _i9++) {
+            var _assignedNode = oldAssignedNodes[_i9];
+            var _assignedNodeState = _utils2.default.getShadowState(_assignedNode);
+            _assignedNodeState.physicalParent = null;
+            nodeRemoveChildDescriptor.value.call(slot, _assignedNode);
+        }
+        // Append the fallback content
+        var _childNodes = slotState.childNodes;
+        var childNodesCount = _childNodes.length;
+        for (var _i10 = 0; _i10 < childNodesCount; _i10++) {
+            var _fallbackNode = _childNodes[_i10];
+            var _fallbackNodeState = _utils2.default.getShadowState(_fallbackNode);
+            _fallbackNodeState.physicalParent = slot;
+            nodeAppendChildDescriptor.value.call(slot, _childNodes[_i10]);
         }
     }
 }
@@ -2101,8 +2118,8 @@ function insert(node, parent, child, suppressObservers) {
         for (var i = 0; i < count; i++) {
             nodes[i] = nodeChildNodes[i];
         }
-        for (var _i8 = 0; _i8 < count; _i8++) {
-            remove(nodes[_i8], node, true);
+        for (var _i11 = 0; _i11 < count; _i11++) {
+            remove(nodes[_i11], node, true);
         }
         // 5. If node is a DocumentFragment node, queue a mutation record of "childList" for node with removedNodes nodes.
         queueMutationRecord(MO_TYPE_CHILD_LIST, node, null, null, null, null, nodes);
@@ -2112,25 +2129,26 @@ function insert(node, parent, child, suppressObservers) {
 
     // 6. For each node in nodes, in tree order, run these substeps:
     var parentState = _utils2.default.getShadowState(parent);
-    var parentIsShadow = isShadowRoot(parent);
     var parentStateChildNodes = parentState ? parentState.childNodes : null;
     var parentIsConnected = parent.isConnected;
-    for (var _i9 = 0; _i9 < count; _i9++) {
-        var _node = nodes[_i9];
+    var parentIsShadowRoot = isShadowRoot(parent);
+    var parentIsSlot = parent.localName === TAG_SLOT;
+    for (var _i12 = 0; _i12 < count; _i12++) {
+        var _node = nodes[_i12];
         // 1. Insert node into parent before child or at the end of parent if child is null.
         if (parentStateChildNodes) {
             if (child) {
                 var childIndex = parentStateChildNodes.indexOf(child);
-                // TODO: PERF: Probably not worth the readability sacrifice to manually 
-                // roll a splice algorithm here, but will come back to this later
                 parentStateChildNodes.splice(childIndex, 0, _node);
             } else {
                 parentStateChildNodes.push(_node);
             }
             var nodeState = _utils2.default.getShadowState(_node) || _utils2.default.setShadowState(_node, {});
             nodeState.parentNode = parent;
+            nodeState.physicalParent = null;
             // If it's a shadow root, perform physical insert on the host.
-            if (parentIsShadow) {
+            if (parentIsShadowRoot) {
+                nodeState.physicalParent = parentState.host;
                 nodeInsertBeforeDescriptor.value.call(parentState.host, _node, child);
             }
         } else {
@@ -2144,23 +2162,35 @@ function insert(node, parent, child, suppressObservers) {
 
         // 3. If parent is a slot whose assigned nodes is the empty list, 
         // then run signal a slot change for parent.
-        if (parent.localName === TAG_SLOT && (!parentState || !parentState.assignedNodes || parentState.assignedNodes.length === 0)) {
+        if (parentIsSlot && (!parentState || !parentState.assignedNodes || parentState.assignedNodes.length === 0)) {
             // 3a. Physically append the child into the slot.
-            nodeAppendChildDescriptor.value.call(parent, _node);
+            if (parentState) {
+                var _nodeState = _utils2.default.getShadowState(_node) || _utils2.default.setShadowState(_node, {});
+                _nodeState.physicalParent = parent;
+            }
+            nodeInsertBeforeDescriptor.value.call(parent, _node, child);
             // 3b. Do what the spec said
             signalASlotChange(parent);
         }
 
         // 4. Run assign slotables for a tree with node’s tree and a set containing 
         // each inclusive descendant of node that is a slot.
-        var inclusiveSlotDescendants = [];
-        if (_node.localName === TAG_SLOT) {
-            inclusiveSlotDescendants[0] = _node;
+        // TODO: Can this be skipped if parent's root is not a shadow root?
+        // If parent's root is not a shadow root then neither this node nor any
+        // of its descendant slots will need to have slotables assigned to them,
+        // and this node and any descendant slots should also have already been 
+        // removed or be a new node (the only place calling this right now is 
+        // Text.splitText with a new text node.)
+        {
+            var inclusiveSlotDescendants = [];
+            if (_node.localName === TAG_SLOT) {
+                inclusiveSlotDescendants[0] = _node;
+            }
+            treeOrderRecursiveSelectAll(_node, inclusiveSlotDescendants, function (descendant) {
+                return descendant.localName === TAG_SLOT;
+            });
+            assignSlotablesForATree(_node, inclusiveSlotDescendants);
         }
-        treeOrderRecursiveSelectAll(_node, inclusiveSlotDescendants, function (descendant) {
-            return descendant.localName === TAG_SLOT;
-        });
-        assignSlotablesForATree(_node, inclusiveSlotDescendants);
 
         if (parentIsConnected && _customElements2.default.isInstalled()) {
             // 5. For each shadow-including inclusive descendant inclusiveDescendant of node, 
@@ -2300,16 +2330,16 @@ function replaceAll(node, parent) {
         var nodeChildNodes = node.childNodes;
         var nodeChildNodesLength = nodeChildNodes.length;
         addedNodes = new Array(nodeChildNodesLength);
-        for (var _i10 = 0; _i10 < nodeChildNodesLength; _i10++) {
-            addedNodes[_i10] = nodeChildNodes[_i10];
+        for (var _i13 = 0; _i13 < nodeChildNodesLength; _i13++) {
+            addedNodes[_i13] = nodeChildNodes[_i13];
         }
     } else {
         addedNodes = [node];
     }
 
     // 4. Remove all parent’s children, in tree order, with the suppress observers flag set.
-    for (var _i11 = 0; _i11 < removedNodesCount; _i11++) {
-        remove(removedNodes[_i11], parent, true);
+    for (var _i14 = 0; _i14 < removedNodesCount; _i14++) {
+        remove(removedNodes[_i14], parent, true);
     }
 
     // 5. If node is not null, insert node into parent before null with the suppress observers flag set.
@@ -2365,9 +2395,12 @@ function remove(node, parent, suppressObservers) {
         var nodeIndex = parentState.childNodes.indexOf(node);
         parentState.childNodes.splice(nodeIndex, 1);
         // Should always have nodeState if we got here.
+        var physicalParent = nodeState.physicalParent;
         nodeState.parentNode = null;
-        var parentNode = nodeParentNodeDescriptor.get.call(node);
-        nodeRemoveChildDescriptor.value.call(parentNode, node);
+        nodeState.physicalParent = null;
+        if (physicalParent) {
+            nodeRemoveChildDescriptor.value.call(physicalParent, node);
+        }
     } else {
         nodeRemoveChildDescriptor.value.call(parent, node);
     }
@@ -2385,19 +2418,24 @@ function remove(node, parent, suppressObservers) {
     }
 
     // 12. If node has an inclusive descendant that is a slot, then:
-    var inclusiveSlotDescendants = [];
-    if (node.localName === TAG_SLOT) {
-        inclusiveSlotDescendants[0] = node;
-    }
-    treeOrderRecursiveSelectAll(node, inclusiveSlotDescendants, function (descendant) {
-        return descendant.localName === TAG_SLOT;
-    });
-    if (inclusiveSlotDescendants.length) {
-        // 1. Run assign slotables for a tree with parent’s tree.
-        assignSlotablesForATree(parent);
-        // 2. Run assign slotables for a tree with node’s tree and a 
-        // set containing each inclusive descendant of node that is a slot.
-        assignSlotablesForATree(node, inclusiveSlotDescendants);
+    // TODO: Can this be skipped when node's root was not a shadow root?
+    // If node's root was not a shadow root, then neither it nor any of
+    // its descendant slots should have any assigned nodes.
+    {
+        var inclusiveSlotDescendants = [];
+        if (node.localName === TAG_SLOT) {
+            inclusiveSlotDescendants[0] = node;
+        }
+        treeOrderRecursiveSelectAll(node, inclusiveSlotDescendants, function (descendant) {
+            return descendant.localName === TAG_SLOT;
+        });
+        if (inclusiveSlotDescendants.length) {
+            // 1. Run assign slotables for a tree with parent’s tree.
+            assignSlotablesForATree(parent);
+            // 2. Run assign slotables for a tree with node’s tree and a 
+            // set containing each inclusive descendant of node that is a slot.
+            assignSlotablesForATree(node, inclusiveSlotDescendants);
+        }
     }
 
     // 13. Run the removing steps with node and parent.
@@ -2608,8 +2646,8 @@ function queueMutationRecord(type, target, name, nameSpace, oldValue, addedNodes
     }
 
     // 4. Then, for each observer in interested observers, run these substeps:
-    for (var _i12 = 0; _i12 < interestedObservers.length; _i12++) {
-        var _observer = interestedObservers[_i12];
+    for (var _i15 = 0; _i15 < interestedObservers.length; _i15++) {
+        var _observer = interestedObservers[_i15];
         // 1. Let record be a new MutationRecord object with its type set to type and target set to target.
         var record = {
             type: type,
@@ -2644,7 +2682,7 @@ function queueMutationRecord(type, target, name, nameSpace, oldValue, addedNodes
             record.nextSibling = nextSibling;
         }
         // 7. If observer has a paired string, set record’s oldValue to observer’s paired string.
-        record.oldValue = pairedStrings[_i12];
+        record.oldValue = pairedStrings[_i15];
         // 8. Append record to observer’s record queue.
         _observer.queue.push(record);
     }
@@ -2669,8 +2707,8 @@ function notifyMutationObservers() {
         notifyList[i] = mutationObservers[i];
     }
     var signalList = signalSlotList.splice(0, signalSlotList.length);
-    for (var _i13 = 0; _i13 < notifyList.length; _i13++) {
-        var observer = notifyList[_i13];
+    for (var _i16 = 0; _i16 < notifyList.length; _i16++) {
+        var observer = notifyList[_i16];
         var queue = observer.queue.splice(0, observer.queue.length);
         for (var j = mutationObservers.length - 1; j >= 0; j--) {
             var transientObserver = mutationObservers[j];
@@ -2687,8 +2725,8 @@ function notifyMutationObservers() {
             }
         }
     }
-    for (var _i14 = 0; _i14 < signalList.length; _i14++) {
-        var slot = signalList[_i14];
+    for (var _i17 = 0; _i17 < signalList.length; _i17++) {
+        var slot = signalList[_i17];
         var event = slot.ownerDocument.createEvent(EVENT);
         event.initEvent(EVT_SLOT_CHANGE, true, false);
         try {
@@ -2720,23 +2758,27 @@ var _utils2 = _interopRequireDefault(_utils);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var attrValueDescriptor = _utils2.default.descriptor(Attr, 'value'); // https://dom.spec.whatwg.org/#interface-attr
-
 exports.default = {
+    install: install
+}; // https://dom.spec.whatwg.org/#interface-attr
 
-    get value() {
-        return attrValueDescriptor.get.call(this);
-    },
+function install() {
+    // TODO: Patch attribute instances elsewhere when there are broken accessors.
+    if (!_utils2.default.brokenAccessors) {
+        var originalValueDescriptor = _utils2.default.descriptor(Attr, 'value');
+        var newValueDescriptor = {
+            get: originalValueDescriptor.get,
+            set: function set(value) {
+                var _this = this;
 
-    set value(value) {
-        var _this = this;
-
-        return _customElements2.default.executeCEReactions(function () {
-            _dom2.default.setExistingAttributeValue(_this, value);
-        });
+                return _customElements2.default.executeCEReactions(function () {
+                    _dom2.default.setExistingAttributeValue(_this, value);
+                });
+            }
+        };
+        _utils2.default.defineProperty(Attr.prototype, 'value', newValueDescriptor);
     }
-
-};
+}
 
 },{"../custom-elements.js":1,"../dom.js":2,"../utils.js":29}],4:[function(require,module,exports){
 'use strict';
@@ -2757,33 +2799,69 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 // https://dom.spec.whatwg.org/#interface-characterdata
 
-var characterDataDataDescriptor = _utils2.default.descriptor(CharacterData, 'data');
-
 exports.default = {
-
-    get data() {
-        return characterDataDataDescriptor.get.call(this);
-    },
-
-    set data(value) {
-        var length = characterDataDataDescriptor.get.call(this).length;
-        _dom2.default.replaceData(this, 0, length, value);
-    },
-
-    appendData: function appendData(data) {
-        var length = characterDataDataDescriptor.get.call(this).length;
-        _dom2.default.replaceData(this, length, 0, data);
-    },
-    insertData: function insertData(offset, data) {
-        _dom2.default.replaceData(this, offset, 0, data);
-    },
-    deleteData: function deleteData(offset, count) {
-        _dom2.default.replaceData(this, offset, count, '');
-    },
-    replaceData: function replaceData(offset, count, data) {
-        _dom2.default.replaceData(this, offset, count, data);
-    }
+    install: install
 };
+
+
+function install() {
+    if (_utils2.default.brokenAccessors) {
+        [Text, ProcessingInstruction, Comment].forEach(function (type) {
+            var passthroughSetter = function passthroughSetter(value) {
+                this.data = value;
+            };
+            var newDataDescriptor = {
+                get: function get() {
+                    delete type.prototype['data'];
+                    var value = this.data;
+                    _utils2.default.defineProperty(type.prototype, 'data', newDataDescriptor);
+                    return value;
+                },
+                set: function set(value) {
+                    delete type.prototype['data'];
+                    _dom2.default.replaceData(this, 0, this.data.length, value, passthroughSetter);
+                    _utils2.default.defineProperty(type.prototype, 'data', newDataDescriptor);
+                    return void 0;
+                }
+            };
+            _utils2.default.defineProperty(type.prototype, 'data', newDataDescriptor);
+            _utils2.default.extend(type, makeMethodDescriptors(function (value) {
+                delete type.prototype['data'];
+                this.data = value;
+                _utils2.default.defineProperty(type.prototype, 'data', newDataDescriptor);
+            }));
+        });
+    } else {
+        (function () {
+            var originalDataDescriptor = _utils2.default.descriptor(CharacterData, 'data');
+            var newDataDescriptor = {
+                get: originalDataDescriptor.get,
+                set: function set(value) {
+                    _dom2.default.replaceData(this, 0, this.data.length, value, originalDataDescriptor.set);
+                }
+            };
+            _utils2.default.defineProperty(CharacterData.prototype, 'data', newDataDescriptor);
+            _utils2.default.extend(CharacterData, makeMethodDescriptors(originalDataDescriptor.set));
+        })();
+    }
+}
+
+function makeMethodDescriptors(dataSetter) {
+    return {
+        appendData: function appendData(data) {
+            _dom2.default.replaceData(this, this.data.length, 0, data, dataSetter);
+        },
+        insertData: function insertData(offset, data) {
+            _dom2.default.replaceData(this, offset, 0, data, dataSetter);
+        },
+        deleteData: function deleteData(offset, count) {
+            _dom2.default.replaceData(this, offset, count, '', dataSetter);
+        },
+        replaceData: function replaceData(offset, count, data) {
+            _dom2.default.replaceData(this, offset, count, data, dataSetter);
+        }
+    };
+}
 
 },{"../dom.js":2,"../utils.js":29}],5:[function(require,module,exports){
 'use strict';
@@ -3081,30 +3159,71 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 // https://dom.spec.whatwg.org/#interface-element
 
-var elementAttributesDescriptor = _utils2.default.descriptor(Element, 'attributes') || _utils2.default.descriptor(Node, 'attributes');
+exports.default = {
+    install: function install() {
+        if (_utils2.default.brokenAccessors) {
+            (function () {
+                var attributesDescriptor = {
+                    get: function get() {
+                        delete HTMLElement.prototype['attributes'];
+                        var attributes = this.attributes;
+                        _utils2.default.defineProperty(HTMLElement.prototype, 'attributes', attributesDescriptor);
+                        var shadowState = _utils2.default.getShadowState(attributes);
+                        if (!shadowState) {
+                            _utils2.default.setShadowState(attributes, { element: this });
+                        }
+                        return attributes;
+                    }
+                };
+
+                _utils2.default.extend(Element, elementMixin);
+                _utils2.default.extend(HTMLElement, htmlElementMixin);
+                _utils2.default.defineProperty(HTMLElement.prototype, 'attributes', attributesDescriptor);
+            })();
+        } else {
+            var _attributesDescriptor = {
+                get: function get() {
+                    var attributes = elementAttributesDescriptor.get.call(this);
+                    var shadowState = _utils2.default.getShadowState(attributes);
+                    if (!shadowState) {
+                        _utils2.default.setShadowState(attributes, { element: this });
+                    }
+                    return attributes;
+                }
+            };
+
+            _utils2.default.extend(Element, elementMixin);
+            _utils2.default.extend(Element, htmlElementMixin);
+            _utils2.default.defineProperty(Element.prototype, 'attributes', _attributesDescriptor);
+
+            // Cleanup for IE, Edge
+            _utils2.default.deleteProperty(HTMLElement, 'classList');
+            _utils2.default.deleteProperty(HTMLElement, 'children');
+            _utils2.default.deleteProperty(HTMLElement, 'parentElement');
+            _utils2.default.deleteProperty(HTMLElement, 'innerHTML');
+            _utils2.default.deleteProperty(HTMLElement, 'outerHTML');
+            _utils2.default.deleteProperty(HTMLElement, 'contains');
+            _utils2.default.deleteProperty(HTMLElement, 'insertAdjacentText');
+            _utils2.default.deleteProperty(HTMLElement, 'insertAdjacentElement');
+            _utils2.default.deleteProperty(HTMLElement, 'insertAdjacentHTML');
+        }
+    }
+};
+
+
 var elementSetAttributeDescriptor = _utils2.default.descriptor(Element, 'setAttribute');
 var elementSetAttributeNSDescriptor = _utils2.default.descriptor(Element, 'setAttributeNS');
-var nodeChildNodesDescriptor = _utils2.default.descriptor(Node, 'childNodes');
 var nodeRemoveChildDescriptor = _utils2.default.descriptor(Node, 'removeChild');
+var elementAttributesDescriptor = _utils2.default.descriptor(Element, 'attributes') || _utils2.default.descriptor(Node, 'attributes');
 
-exports.default = {
-
-    // TODO: tests
-    get attributes() {
-        var attributes = elementAttributesDescriptor.get.call(this);
-        var shadowState = _utils2.default.getShadowState(attributes);
-        if (!shadowState) {
-            _utils2.default.setShadowState(attributes, { element: this });
-        }
-        return attributes;
-    },
+var elementMixin = {
 
     // TODO: tests
     setAttribute: function setAttribute(qualifiedName, value) {
         var _this = this;
 
         return _customElements2.default.executeCEReactions(function () {
-            var attributes = elementAttributesDescriptor.get.call(_this);
+            var attributes = _this.attributes;
             var attribute = attributes.getNamedItem(qualifiedName);
             if (!attribute) {
                 elementSetAttributeDescriptor.value.call(_this, qualifiedName, value);
@@ -3122,7 +3241,7 @@ exports.default = {
         var _this2 = this;
 
         return _customElements2.default.executeCEReactions(function () {
-            var attributes = elementAttributesDescriptor.get.call(_this2);
+            var attributes = _this2.attributes;
             var parts = qualifiedName.split(':', 2);
             var localName = parts[parts.length - 1];
             var attribute = attributes.getNamedItemNS(nameSpace, localName);
@@ -3226,7 +3345,7 @@ exports.default = {
             childNodes: []
         });
 
-        var originalChildNodes = nodeChildNodesDescriptor.get.call(this);
+        var originalChildNodes = this.childNodes;
         var removeChild = nodeRemoveChildDescriptor.value;
         var savedChildNodes = new Array(originalChildNodes.length);
         var firstChild = void 0;
@@ -3304,6 +3423,21 @@ exports.default = {
     },
 
 
+    // TODO: tests
+    insertAdjacentHTML: function insertAdjacentHTML(position, text) {
+        var _this9 = this;
+
+        return _customElements2.default.executeCEReactions(function () {
+            // https://w3c.github.io/DOM-Parsing/#dom-element-insertadjacenthtml
+            // We aren't going to go exactly by the books for this one.
+            var fragment = _dom2.default.parseHTMLFragment(text, _this9);
+            _dom2.default.insertAdjacent(_this9, position, fragment);
+        });
+    }
+};
+
+var htmlElementMixin = {
+
     // https://w3c.github.io/DOM-Parsing/#extensions-to-the-element-interface
 
     // TODO: more thorough tests of the serialization
@@ -3314,16 +3448,16 @@ exports.default = {
 
     // TODO: MutationObserver tests
     set innerHTML(value) {
-        var _this9 = this;
+        var _this10 = this;
 
         return _customElements2.default.executeCEReactions(function () {
             // https://w3c.github.io/DOM-Parsing/#dom-element-innerhtml
-            var fragment = _dom2.default.parseHTMLFragment(value, _this9);
-            var content = _this9['content'];
+            var fragment = _dom2.default.parseHTMLFragment(value, _this10);
+            var content = _this10['content'];
             if (content instanceof DocumentFragment) {
                 _dom2.default.replaceAll(fragment, content);
             } else {
-                _dom2.default.replaceAll(fragment, _this9);
+                _dom2.default.replaceAll(fragment, _this10);
             }
         });
     },
@@ -3336,11 +3470,11 @@ exports.default = {
 
     // TODO: tests
     set outerHTML(value) {
-        var _this10 = this;
+        var _this11 = this;
 
         return _customElements2.default.executeCEReactions(function () {
             // https://w3c.github.io/DOM-Parsing/#dom-element-outerhtml
-            var parent = _this10.parentNode;
+            var parent = _this11.parentNode;
             if (parent === null) {
                 return;
             }
@@ -3348,24 +3482,13 @@ exports.default = {
                 throw _utils2.default.makeDOMException('NoModificationAllowedError');
             }
             if (parent.nodeType === Node.DOCUMENT_FRAGMENT_NODE) {
-                parent = _this10.ownerDocument.createElement('body');
+                parent = _this11.ownerDocument.createElement('body');
             }
             var fragment = _dom2.default.parseHTMLFragment(value, parent);
-            _dom2.default.replace(_this10, fragment, _this10.parentNode);
-        });
-    },
-
-    // TODO: tests
-    insertAdjacentHTML: function insertAdjacentHTML(position, text) {
-        var _this11 = this;
-
-        return _customElements2.default.executeCEReactions(function () {
-            // https://w3c.github.io/DOM-Parsing/#dom-element-insertadjacenthtml
-            // We aren't going to go exactly by the books for this one.
-            var fragment = _dom2.default.parseHTMLFragment(text, _this11);
-            _dom2.default.insertAdjacent(_this11, position, fragment);
+            _dom2.default.replace(_this11, fragment, _this11.parentNode);
         });
     }
+
 };
 
 },{"../custom-elements.js":1,"../dom.js":2,"../interfaces/ShadowRoot.js":18,"../utils.js":29}],9:[function(require,module,exports){
@@ -3374,8 +3497,6 @@ exports.default = {
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-exports.hasRelatedTarget = undefined;
-exports.default = $Event;
 
 var _dom = require('../dom.js');
 
@@ -3389,12 +3510,18 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 // https://dom.spec.whatwg.org/#interface-event
 
+exports.default = {
+    install: install
+};
+
+
+var eventStopImmediatePropagationDescriptor = _utils2.default.descriptor(Event, 'stopImmediatePropagation');
 var eventCurrentTargetDescriptor = _utils2.default.descriptor(Event, 'currentTarget');
 var eventTargetDescriptor = _utils2.default.descriptor(Event, 'target');
 var focusEventRelatedTargetDescriptor = _utils2.default.descriptor(FocusEvent, 'relatedTarget');
 var mouseEventRelatedTargetDescriptor = _utils2.default.descriptor(MouseEvent, 'relatedTarget');
 
-function $Event(type, init) {
+function eventConstructor(type, init) {
     var bubbles = false;
     var cancelable = false;
     var composed = false;
@@ -3403,33 +3530,70 @@ function $Event(type, init) {
         cancelable = init.cancelable === true;
         composed = init.composed === true;
     }
-    var event = document.createEvent('event');
+    var event = document.createEvent('Event'); // Capitalized to work with older WebKit
     event.initEvent(type, bubbles, cancelable);
     _utils2.default.setShadowState(event, { composed: composed });
     return event;
+};
+
+function install() {
+    if (!_utils2.default.brokenAccessors) {
+        _utils2.default.extend(Event, {
+            get currentTarget() {
+                var shadowState = _utils2.default.getShadowState(this);
+                if (shadowState) {
+                    return shadowState.currentTarget;
+                }
+                return eventCurrentTargetDescriptor.get.call(this);
+            },
+            get target() {
+                var shadowState = _utils2.default.getShadowState(this);
+                if (shadowState) {
+                    return shadowState.target;
+                }
+                return eventTargetDescriptor.get.call(this);
+            }
+        });
+
+        // FocusEvent:
+        // relatedTarget will be the element losing or gaining focus
+        _utils2.default.extend(FocusEvent, {
+            get relatedTarget() {
+                var shadowState = _utils2.default.getShadowState(this);
+                if (shadowState) {
+                    return shadowState.relatedTarget;
+                }
+                return focusEventRelatedTargetDescriptor.get.call(this);
+            }
+        });
+
+        // MouseEvent:
+        // relatedTarget will be the element being moved into or out of
+        _utils2.default.extend(MouseEvent, {
+            get relatedTarget() {
+                var shadowState = _utils2.default.getShadowState(this);
+                if (shadowState) {
+                    return shadowState.relatedTarget;
+                }
+                return mouseEventRelatedTargetDescriptor.get.call(this);
+            }
+        });
+    }
+
+    _utils2.default.extend(Event, eventMixin);
+    eventConstructor.prototype = Event.prototype;
+    window.Event = eventConstructor;
 }
 
-$Event.prototype = {
-
-    get currentTarget() {
-        var shadowState = _utils2.default.getShadowState(this);
-        if (shadowState) {
-            return shadowState.currentTarget;
-        }
-        return eventCurrentTargetDescriptor.get.call(this);
-    },
-
-    get target() {
-        var shadowState = _utils2.default.getShadowState(this);
-        if (shadowState) {
-            return shadowState.target;
-        }
-        return eventTargetDescriptor.get.call(this);
-    },
-
+var eventMixin = {
     stopImmediatePropagation: function stopImmediatePropagation() {
-        this.stopPropagation();
-        _utils2.default.getShadowState(this).stopImmediatePropagationFlag = true;
+        var shadowState = _utils2.default.getShadowState(this);
+        if (shadowState) {
+            shadowState.stopImmediatePropagationFlag = true;
+            this.stopPropagation();
+            return;
+        }
+        eventStopImmediatePropagationDescriptor.value.call(this);
     },
     composedPath: function composedPath() {
         // https://dom.spec.whatwg.org/#dom-event-composedpath
@@ -3473,27 +3637,6 @@ $Event.prototype = {
 
 };
 
-// FocusEvent:
-// relatedTarget will be the element losing or gaining focus
-// MouseEvent:
-// relatedTarget will be the element being moved into or out of
-var hasRelatedTarget = exports.hasRelatedTarget = {
-
-    get relatedTarget() {
-        var shadowState = _utils2.default.getShadowState(this);
-        if (shadowState) {
-            return shadowState.relatedTarget;
-        }
-        if (this instanceof FocusEvent) {
-            return focusEventRelatedTargetDescriptor.get.call(this);
-        }
-        if (this instanceof MouseEvent) {
-            return mouseEventRelatedTargetDescriptor.get.call(this);
-        }
-    }
-
-};
-
 var builtInComposedEvents = [
 // FocusEvent
 'blur', 'focus', 'focusin', 'focusout',
@@ -3524,7 +3667,52 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-exports.default = function (base) {
+var _dom = require('../dom.js');
+
+var _dom2 = _interopRequireDefault(_dom);
+
+var _utils = require('../utils.js');
+
+var _utils2 = _interopRequireDefault(_utils);
+
+var _Event = require('./Event.js');
+
+var _Event2 = _interopRequireDefault(_Event);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+exports.default = {
+    install: install
+}; // https://dom.spec.whatwg.org/#interface-eventtarget
+
+var eventTargetDescriptor = _utils2.default.descriptor(Event, 'target');
+
+var focusEventRelatedTargetDescriptor = _utils2.default.descriptor(FocusEvent, 'relatedTarget');
+var mouseEventRelatedTargetDescriptor = _utils2.default.descriptor(MouseEvent, 'relatedTarget');
+
+var getEventTarget = function getEventTarget(event) {
+    return eventTargetDescriptor.get.call(event);
+};
+var getFocusEventRelatedTarget = function getFocusEventRelatedTarget(event) {
+    return focusEventRelatedTargetDescriptor.get.call(event);
+};
+var getMouseEventRelatedTarget = function getMouseEventRelatedTarget(event) {
+    return mouseEventRelatedTargetDescriptor.get.call(event);
+};
+
+if (_utils2.default.brokenAccessors) {
+    getEventTarget = function getEventTarget(event) {
+        var state = _utils2.default.getShadowState(event);
+        return state.nativeEvent.target;
+    };
+    getFocusEventRelatedTarget = function getFocusEventRelatedTarget(event) {
+        var state = _utils2.default.getShadowState(event);
+        return state.nativeEvent.relatedTarget;
+    };
+    getMouseEventRelatedTarget = getFocusEventRelatedTarget;
+}
+
+var $EventTarget = function $EventTarget(base) {
 
     var native = {
         addEventListener: base.prototype.addEventListener,
@@ -3550,7 +3738,7 @@ exports.default = function (base) {
                 listener.passive = options.passive === true;
             }
 
-            var collection = EventListenerCollection.get(this, type, capture) || EventListenerCollection.create(this, type, capture);
+            var collection = getEventListenerCollection(this, type, capture) || createEventListenerCollection(this, type, capture);
 
             collection.addListener(this, listener);
             collection.attach(native.addEventListener);
@@ -3569,7 +3757,7 @@ exports.default = function (base) {
                 capture = options.capture === true;
             }
 
-            var collection = EventListenerCollection.get(this, type, capture);
+            var collection = getEventListenerCollection(this, type, capture);
 
             if (!collection) {
                 return;
@@ -3584,21 +3772,16 @@ exports.default = function (base) {
     };
 };
 
-var _dom = require('../dom.js');
-
-var _dom2 = _interopRequireDefault(_dom);
-
-var _utils = require('../utils.js');
-
-var _utils2 = _interopRequireDefault(_utils);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-// https://dom.spec.whatwg.org/#interface-eventtarget
-
-var eventTargetDescriptor = _utils2.default.descriptor(Event, 'target');
-var focusEventRelatedTargetDescriptor = _utils2.default.descriptor(FocusEvent, 'relatedTarget');
-var mouseEventRelatedTargetDescriptor = _utils2.default.descriptor(MouseEvent, 'relatedTarget');
+function install() {
+    // In IE and Safari < 10, EventTarget is not exposed and Window's
+    // EventTarget methods are not the same as Node's.
+    if ('EventTarget' in Window) {
+        _utils2.default.extend(EventTarget, $EventTarget(EventTarget));
+    } else {
+        _utils2.default.extend(Window, $EventTarget(Window));
+        _utils2.default.extend(Node, $EventTarget(Node));
+    }
+}
 
 var EventListenerCollection = function EventListenerCollection(target, type, capture) {
     var _this = this;
@@ -3606,38 +3789,50 @@ var EventListenerCollection = function EventListenerCollection(target, type, cap
     this.target = target;
     this.type = type;
     this.capture = capture;
-
     this.hostListeners = [];
     this.shadowListeners = [];
 
     this.callback = function (event) {
-        var shadowRoot = null;
-        var targetState = _utils2.default.getShadowState(target);
-        if (targetState) {
-            shadowRoot = targetState.shadowRoot;
-        }
-        switch (event.eventPhase) {
+        var phase = event.eventPhase;
+        switch (phase) {
             case Event.prototype.CAPTURING_PHASE:
-                _this.invokeListeners(event, _this.target, _this.hostListeners);
-                if (shadowRoot) {
-                    _this.invokeListeners(event, shadowRoot, _this.shadowListeners);
+                if (_this.hostListeners.length) {
+                    _this.invokeListeners(event, _this.target, _this.hostListeners);
+                }
+                if (_this.shadowListeners.length) {
+                    _this.invokeListeners(event, _utils2.default.getShadowState(target).shadowRoot, _this.shadowListeners);
                 }
                 break;
             case Event.prototype.AT_TARGET:
-                var nativeTarget = eventTargetDescriptor.get.call(event);
-                _this.invokeListeners(event, nativeTarget, _this.getListeners(nativeTarget));
+                var nativeTarget = getEventTarget(event);
+                var listeners = _this.getListeners(nativeTarget);
+                if (listeners.length) {
+                    _this.invokeListeners(event, nativeTarget, listeners);
+                }
                 break;
             case Event.prototype.BUBBLING_PHASE:
-                if (shadowRoot) {
-                    _this.invokeListeners(event, shadowRoot, _this.shadowListeners);
+                if (_this.shadowListeners.length) {
+                    _this.invokeListeners(event, _utils2.default.getShadowState(target).shadowRoot, _this.shadowListeners);
                 }
-                _this.invokeListeners(event, _this.target, _this.hostListeners);
+                if (_this.hostListeners.length) {
+                    _this.invokeListeners(event, _this.target, _this.hostListeners);
+                }
                 break;
         }
     };
+
+    if (_utils2.default.brokenAccessors) {
+        (function () {
+            var innerCallback = _this.callback;
+            _this.callback = function (event) {
+                var wrapper = wrapEventWithBrokenAccessors(event);
+                innerCallback(wrapper);
+            };
+        })();
+    }
 };
 
-EventListenerCollection.get = function (target, type, capture) {
+function getEventListenerCollection(target, type, capture) {
     var targetState = _utils2.default.getShadowState(target);
     var nativeTarget = target;
     var nativeTargetState = targetState;
@@ -3658,7 +3853,7 @@ EventListenerCollection.get = function (target, type, capture) {
     return null;
 };
 
-EventListenerCollection.create = function (target, type, capture) {
+function createEventListenerCollection(target, type, capture) {
     var targetState = _utils2.default.getShadowState(target);
     var nativeTarget = target;
     var nativeTargetState = targetState;
@@ -3770,14 +3965,14 @@ function calculatePath(event) {
     var path = [];
     var p = 0;
 
-    var target = eventTargetDescriptor.get.call(event);
+    var target = getEventTarget(event);
 
-    var relatedTargetDescriptor = null;
+    var getRelatedTarget = null;
 
     if (event instanceof FocusEvent) {
-        relatedTargetDescriptor = focusEventRelatedTargetDescriptor;
+        getRelatedTarget = getFocusEventRelatedTarget;
     } else if (event instanceof MouseEvent) {
-        relatedTargetDescriptor = mouseEventRelatedTargetDescriptor;
+        getRelatedTarget = getMouseEventRelatedTarget;
     }
 
     // 1. Set event’s dispatch flag.
@@ -3791,8 +3986,8 @@ function calculatePath(event) {
     // against target if event’s relatedTarget is non-null, and null otherwise.
     var originalRelatedTarget = null;
     var relatedTarget = null;
-    if (relatedTargetDescriptor) {
-        originalRelatedTarget = relatedTargetDescriptor.get.call(event);
+    if (getRelatedTarget) {
+        originalRelatedTarget = getRelatedTarget(event);
         if (originalRelatedTarget) {
             relatedTarget = _dom2.default.retarget(originalRelatedTarget, target);
         }
@@ -3916,7 +4111,81 @@ function calculateTarget(currentTarget, path) {
     return null;
 }
 
-},{"../dom.js":2,"../utils.js":29}],11:[function(require,module,exports){
+function wrapEventWithBrokenAccessors(event) {
+    var eventState = _utils2.default.getShadowState(event) || _utils2.default.setShadowState(event, {});
+
+    if (eventState.wrapper) {
+        return eventState.wrapper;
+    }
+
+    eventState.nativeEvent = event;
+
+    var descriptors = {
+        type: {
+            get: function get() {
+                return event.type;
+            }
+        },
+        target: {
+            get: function get() {
+                return eventState.target || event.target;
+            }
+        },
+        currentTarget: {
+            get: function get() {
+                return eventState.currentTarget || event.currentTarget;
+            }
+        },
+        eventPhase: {
+            get: function get() {
+                return event.eventPhase;
+            }
+        },
+        bubbles: {
+            get: function get() {
+                return event.bubbles;
+            }
+        },
+        cancelable: {
+            get: function get() {
+                return event.cancelable;
+            }
+        },
+        preventDefault: {
+            value: function value() {
+                return event.preventDefault();
+            }
+        },
+        defaultPrevented: {
+            get: function get() {
+                return event.defaultPrevented;
+            }
+        },
+        stopPropagation: {
+            value: function value() {
+                return event.stopPropagation();
+            }
+        }
+    };
+
+    if ('relatedTarget' in event) {
+        descriptors.relatedTarget = {
+            get: function get() {
+                return eventState.relatedTarget || event.relatedTarget;
+            }
+        };
+    }
+
+    var wrapper = Object.create(event, descriptors);
+
+    _utils2.default.setShadowState(wrapper, eventState);
+
+    eventState.wrapper = wrapper;
+
+    return wrapper;
+}
+
+},{"../dom.js":2,"../utils.js":29,"./Event.js":9}],11:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4228,148 +4497,33 @@ var _utils2 = _interopRequireDefault(_utils);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var attrValueDescriptor = _utils2.default.descriptor(Attr, 'value'); // https://dom.spec.whatwg.org/#interface-node
-
-var characterDataDataDescriptor = _utils2.default.descriptor(CharacterData, 'data');
-var elementAttributesDescriptor = _utils2.default.descriptor(Element, 'attributes') || _utils2.default.descriptor(Node, 'attributes');
-var nodeChildNodesDescriptor = _utils2.default.descriptor(Node, 'childNodes');
-var nodeHasChildNodesDescriptor = _utils2.default.descriptor(Node, 'hasChildNodes');
-var nodeFirstChildDescriptor = _utils2.default.descriptor(Node, 'firstChild');
-var nodeLastChildDescriptor = _utils2.default.descriptor(Node, 'lastChild');
-var nodePreviousSiblingDescriptor = _utils2.default.descriptor(Node, 'previousSibling');
-var nodeNextSiblingDescriptor = _utils2.default.descriptor(Node, 'nextSibling');
-var nodeParentNodeDescriptor = _utils2.default.descriptor(Node, 'parentNode');
-var nodeNodeValueDescriptor = _utils2.default.descriptor(Node, 'nodeValue');
-
 exports.default = {
+    install: install
+}; // https://dom.spec.whatwg.org/#interface-node
 
-    get isConnected() {
-        return _dom2.default.shadowIncludingRoot(this).nodeType === Node.DOCUMENT_NODE;
-    },
+var nodeHasChildNodesDescriptor = _utils2.default.descriptor(Node, 'hasChildNodes');
 
-    getRootNode: function getRootNode(options) {
-        var composed = options && options.composed === true;
-        return composed ? _dom2.default.shadowIncludingRoot(this) : _dom2.default.root(this);
-    },
-
-
-    get parentNode() {
-        var parentNode = void 0;
-        var nodeState = _utils2.default.getShadowState(this);
-        if (nodeState) {
-            parentNode = nodeState.parentNode;
-        }
-
-        return parentNode || nodeParentNodeDescriptor.get.call(this);
-    },
+var propertyDescriptors = {
 
     get parentElement() {
         var parentNode = this.parentNode;
         if (parentNode && parentNode.nodeType === Node.ELEMENT_NODE) {
             return parentNode;
         }
-
         return null;
-    },
-
-    // TODO: tests
-    hasChildNodes: function hasChildNodes() {
-        var nodeState = _utils2.default.getShadowState(this);
-        if (nodeState) {
-            var childNodes = nodeState.childNodes;
-            if (childNodes) {
-                return childNodes.length > 0;
-            }
-        }
-
-        return nodeHasChildNodesDescriptor.value.call(this);
-    },
-
-
-    // TODO: tests
-    get childNodes() {
-        var nodeState = _utils2.default.getShadowState(this);
-        if (nodeState) {
-            var childNodes = nodeState.childNodes;
-            if (childNodes) {
-                var childNodesLength = childNodes.length;
-                var result = new Array(childNodesLength);
-                for (var i = 0; i < childNodesLength; i++) {
-                    result[i] = childNodes[i];
-                }
-                return result;
-            }
-        }
-
-        return nodeChildNodesDescriptor.get.call(this);
-    },
-
-    // TODO: tests
-    get firstChild() {
-        var nodeState = _utils2.default.getShadowState(this);
-        if (nodeState) {
-            var childNodes = nodeState.childNodes;
-            if (childNodes) {
-                if (childNodes.length) {
-                    return childNodes[0];
-                }
-                return null;
-            }
-        }
-
-        return nodeFirstChildDescriptor.get.call(this);
-    },
-
-    // TODO: tests
-    get lastChild() {
-        var nodeState = _utils2.default.getShadowState(this);
-        if (nodeState) {
-            var childNodes = nodeState.childNodes;
-            if (childNodes) {
-                if (childNodes.length) {
-                    return childNodes[childNodes.length - 1];
-                }
-                return null;
-            }
-        }
-
-        return nodeLastChildDescriptor.get.call(this);
-    },
-
-    // TODO: tests
-    get previousSibling() {
-        var nodeState = _utils2.default.getShadowState(this);
-        if (nodeState) {
-            var parentNode = nodeState.parentNode;
-            if (parentNode) {
-                var childNodes = _utils2.default.getShadowState(parentNode).childNodes;
-                var siblingIndex = childNodes.indexOf(this) - 1;
-                return siblingIndex < 0 ? null : childNodes[siblingIndex];
-            }
-        }
-
-        return nodePreviousSiblingDescriptor.get.call(this);
-    },
-
-    // TODO: tests
-    get nextSibling() {
-        var nodeState = _utils2.default.getShadowState(this);
-        if (nodeState) {
-            var parentNode = nodeState.parentNode;
-            if (parentNode) {
-                var childNodes = _utils2.default.getShadowState(parentNode).childNodes;
-                var siblingIndex = childNodes.indexOf(this) + 1;
-                return siblingIndex === childNodes.length ? null : childNodes[siblingIndex];
-            }
-        }
-
-        return nodeNextSiblingDescriptor.get.call(this);
     },
 
     // TODO: consider creating a raw property descriptor
     // that uses the native get instead of a pass-through function
     get nodeValue() {
-        return nodeNodeValueDescriptor.get.call(this);
+        switch (this.nodeType) {
+            case Node.ATTRIBUTE_NODE:
+                return this.value;
+            case Node.TEXT_NODE:
+            case Node.PROCESSING_INSTRUCTION_NODE:
+            case Node.COMMENT_NODE:
+                return this.data;
+        }
     },
 
     // TODO: MutationObserver tests
@@ -4379,13 +4533,12 @@ exports.default = {
         return _customElements2.default.executeCEReactions(function () {
             switch (_this.nodeType) {
                 case Node.ATTRIBUTE_NODE:
-                    _dom2.default.setExistingAttributeValue(_this, value);
+                    _this.value = value;
                     break;
                 case Node.TEXT_NODE:
                 case Node.PROCESSING_INSTRUCTION_NODE:
                 case Node.COMMENT_NODE:
-                    var length = characterDataDataDescriptor.get.call(_this).length;
-                    _dom2.default.replaceData(_this, 0, length, value);
+                    _this.replaceData(0, _this.data.length, value);
                     break;
             }
         });
@@ -4397,11 +4550,11 @@ exports.default = {
             case Node.ELEMENT_NODE:
                 return elementTextContent(this);
             case Node.ATTRIBUTE_NODE:
-                return attrValueDescriptor.get.call(this);
+                return this.value;
             case Node.TEXT_NODE:
             case Node.PROCESSING_INSTRUCTION_NODE:
             case Node.COMMENT_NODE:
-                return characterDataDataDescriptor.get.call(this);
+                return this.data;
             default:
                 return null;
         }
@@ -4422,16 +4575,44 @@ exports.default = {
                     _dom2.default.replaceAll(node, _this2);
                     break;
                 case Node.ATTRIBUTE_NODE:
-                    _dom2.default.setExistingAttributeValue(_this2, value);
+                    _this2.value = value;
                     break;
                 case Node.TEXT_NODE:
                 case Node.PROCESSING_INSTRUCTION_NODE:
                 case Node.COMMENT_NODE:
-                    _dom2.default.replaceData(_this2, 0, _this2.data.length, value);
+                    _this2.replaceData(0, _this2.data.length, value);
                     break;
             }
         });
+    }
+
+};
+
+var methodDescriptors = {
+
+    get isConnected() {
+        return _dom2.default.shadowIncludingRoot(this).nodeType === Node.DOCUMENT_NODE;
     },
+
+    getRootNode: function getRootNode(options) {
+        var composed = options && options.composed === true;
+        return composed ? _dom2.default.shadowIncludingRoot(this) : _dom2.default.root(this);
+    },
+
+
+    // TODO: tests
+    hasChildNodes: function hasChildNodes() {
+        var nodeState = _utils2.default.getShadowState(this);
+        if (nodeState) {
+            var childNodes = nodeState.childNodes;
+            if (childNodes) {
+                return childNodes.length > 0;
+            }
+        }
+
+        return nodeHasChildNodesDescriptor.value.call(this);
+    },
+
 
     // TODO: tests
     normalize: function normalize() {
@@ -4445,7 +4626,7 @@ exports.default = {
             for (var i = 0; i < childNodes.length; i++) {
                 var childNode = childNodes[i];
                 if (childNode.nodeType === Node.TEXT_NODE) {
-                    var length = characterDataDataDescriptor.get.call(childNode).length;
+                    var length = childNode.data.length;
                     if (length === 0) {
                         _dom2.default.remove(childNode, _this3);
                         continue;
@@ -4455,10 +4636,10 @@ exports.default = {
                     var contiguousCount = 0;
                     var next = childNode;
                     while (next = next.nextSibling && next.nodeType === Node.TEXT_NODE) {
-                        data += characterDataDataDescriptor.get.call(next);
+                        data += next.data;
                         contiguousTextNodes[contiguousCount++] = next;
                     }
-                    _dom2.default.replaceData(childNode, length, 0, data);
+                    childNode.replaceData(length, 0, data);
                     // TODO: (Range)
                     for (var j = 0; j < contiguousCount; j++) {
                         _dom2.default.remove(contiguousTextNodes[j], _this3);
@@ -4515,8 +4696,8 @@ exports.default = {
                 if (this.namespaceURI !== other.namespaceURI || this.prefix !== other.prefix || this.localName !== other.localName) {
                     return false;
                 }
-                thisAttributes = elementAttributesDescriptor.get.call(this);
-                otherAttributes = elementAttributesDescriptor.get.call(other);
+                thisAttributes = this.attributes;
+                otherAttributes = other.attributes;
                 if (thisAttributes.length != otherAttributes.length) {
                     return false;
                 }
@@ -4692,6 +4873,66 @@ exports.default = {
     }
 };
 
+function install() {
+    if (_utils2.default.brokenAccessors) {
+        [Document, DocumentFragment, Element, Attr, CharacterData].forEach(function (type) {
+            var parentNodeDescriptor = {};
+            parentNodeDescriptor.get = makeGetterForParentNode(makeGhostGetter(type, 'parentNode', parentNodeDescriptor));
+            _utils2.default.defineProperty(type.prototype, 'parentNode', parentNodeDescriptor);
+
+            var childNodesDescriptor = {};
+            childNodesDescriptor.get = makeGetterForChildNodes(makeGhostGetter(type, 'childNodes', childNodesDescriptor));
+            _utils2.default.defineProperty(type.prototype, 'childNodes', childNodesDescriptor);
+
+            var firstChildDescriptor = {};
+            firstChildDescriptor.get = makeGetterForFirstChild(makeGhostGetter(type, 'firstChild', firstChildDescriptor));
+            _utils2.default.defineProperty(type.prototype, 'firstChild', firstChildDescriptor);
+
+            var lastChildDescriptor = {};
+            lastChildDescriptor.get = makeGetterForLastChild(makeGhostGetter(type, 'lastChild', lastChildDescriptor));
+            _utils2.default.defineProperty(type.prototype, 'lastChild', lastChildDescriptor);
+
+            var previousSiblingDescriptor = {};
+            previousSiblingDescriptor.get = makeGetterForPreviousSibling(makeGhostGetter(type, 'previousSibling', previousSiblingDescriptor));
+            _utils2.default.defineProperty(type.prototype, 'previousSibling', previousSiblingDescriptor);
+
+            var nextSiblingDescriptor = {};
+            nextSiblingDescriptor.get = makeGetterForNextSibling(makeGhostGetter(type, 'nextSibling', nextSiblingDescriptor));
+            _utils2.default.defineProperty(type.prototype, 'nextSibling', nextSiblingDescriptor);
+
+            _utils2.default.extend(type, propertyDescriptors);
+            _utils2.default.extend(type, methodDescriptors);
+        });
+    } else {
+        var accessorDescriptors = {
+            parentNode: {
+                get: makeGetterForParentNode(_utils2.default.descriptor(Node, 'parentNode').get)
+            },
+            childNodes: {
+                get: makeGetterForChildNodes(_utils2.default.descriptor(Node, 'childNodes').get)
+            },
+            firstChild: {
+                get: makeGetterForFirstChild(_utils2.default.descriptor(Node, 'firstChild').get)
+            },
+            lastChild: {
+                get: makeGetterForLastChild(_utils2.default.descriptor(Node, 'lastChild').get)
+            },
+            previousSibling: {
+                get: makeGetterForPreviousSibling(_utils2.default.descriptor(Node, 'previousSibling').get)
+            },
+            nextSibling: {
+                get: makeGetterForNextSibling(_utils2.default.descriptor(Node, 'nextSibling').get)
+            }
+        };
+
+        _utils2.default.extend(Node, Object.create(null, accessorDescriptors));
+        _utils2.default.extend(Node, propertyDescriptors);
+        _utils2.default.extend(Node, methodDescriptors);
+
+        // Cleanup for IE, Edge
+        _utils2.default.deleteProperty(Node, 'attributes');
+    }
+}
 
 function ancestorOf(node, ancestor) {
     var parent = node.parentNode;
@@ -4762,11 +5003,118 @@ function elementTextContent(element) {
                 result += elementTextContent(childNode);
                 break;
             case Node.TEXT_NODE:
-                result += characterDataDataDescriptor.get.call(childNode);
+                result += childNode.data;
                 break;
         }
     }
     return result;
+}
+
+function makeGetterForParentNode(getter) {
+    return function () {
+        var nodeState = _utils2.default.getShadowState(this);
+        if (nodeState) {
+            var parentNode = nodeState.parentNode;
+            if (parentNode) {
+                return parentNode;
+            }
+        }
+        return getter.call(this);
+    };
+}
+
+// TODO: tests
+function makeGetterForChildNodes(getter) {
+    return function () {
+        var nodeState = _utils2.default.getShadowState(this);
+        if (nodeState) {
+            var childNodes = nodeState.childNodes;
+            if (childNodes) {
+                var childNodesLength = childNodes.length;
+                var result = new Array(childNodesLength);
+                for (var i = 0; i < childNodesLength; i++) {
+                    result[i] = childNodes[i];
+                }
+                return result;
+            }
+        }
+        return getter.call(this);
+    };
+}
+
+// TODO: tests
+function makeGetterForFirstChild(getter) {
+    return function () {
+        var nodeState = _utils2.default.getShadowState(this);
+        if (nodeState) {
+            var childNodes = nodeState.childNodes;
+            if (childNodes) {
+                if (childNodes.length) {
+                    return childNodes[0];
+                }
+                return null;
+            }
+        }
+        return getter.call(this);
+    };
+}
+
+// TODO: tests
+function makeGetterForLastChild(getter) {
+    return function () {
+        var nodeState = _utils2.default.getShadowState(this);
+        if (nodeState) {
+            var childNodes = nodeState.childNodes;
+            if (childNodes) {
+                if (childNodes.length) {
+                    return childNodes[childNodes.length - 1];
+                }
+                return null;
+            }
+        }
+        return getter.call(this);
+    };
+}
+
+// TODO: tests
+function makeGetterForPreviousSibling(getter) {
+    return function () {
+        var nodeState = _utils2.default.getShadowState(this);
+        if (nodeState) {
+            var parentNode = nodeState.parentNode;
+            if (parentNode) {
+                var childNodes = _utils2.default.getShadowState(parentNode).childNodes;
+                var siblingIndex = childNodes.indexOf(this) - 1;
+                return siblingIndex < 0 ? null : childNodes[siblingIndex];
+            }
+        }
+        return getter.call(this);
+    };
+}
+
+// TODO: tests
+function makeGetterForNextSibling(getter) {
+    return function () {
+        var nodeState = _utils2.default.getShadowState(this);
+        if (nodeState) {
+            var parentNode = nodeState.parentNode;
+            if (parentNode) {
+                var childNodes = _utils2.default.getShadowState(parentNode).childNodes;
+                var siblingIndex = childNodes.indexOf(this) + 1;
+                return siblingIndex === childNodes.length ? null : childNodes[siblingIndex];
+            }
+        }
+        return getter.call(this);
+    };
+}
+
+function makeGhostGetter(type, name, descriptor) {
+    return function () {
+        delete type.prototype[name];
+        var value = this[name];
+        Object.defineProperty(type.prototype, name, descriptor);
+        return value;
+    };
 }
 
 },{"../custom-elements.js":1,"../dom.js":2,"../utils.js":29}],18:[function(require,module,exports){
@@ -4857,7 +5205,7 @@ exports.default = {
             _dom2.default.insert(newNode, parent, this.nextSibling);
             // TODO: (Range)
         }
-        _dom2.default.replaceData(this, offset, count, '');
+        this.replaceData(offset, count, '');
         // TODO: (Range)
         // if (!parent) { }
         return newNode;
@@ -5127,11 +5475,6 @@ Object.defineProperty(exports, "__esModule", {
 
 exports.default = function (base) {
 
-    var nodePreviousSiblingDescriptor = _utils2.default.descriptor(Node, 'previousSibling');
-    var nodeNextSiblingDescriptor = _utils2.default.descriptor(Node, 'nextSibling');
-    var basePreviousElementSiblingDescriptor = _utils2.default.descriptor(base, 'previousElementSibling');
-    var baseNextElementSiblingDescriptor = _utils2.default.descriptor(base, 'nextElementSibling');
-
     return {
 
         // TODO: tests
@@ -5147,12 +5490,9 @@ exports.default = function (base) {
                     }
                 };
                 return null;
-            } else if (basePreviousElementSiblingDescriptor) {
-                return basePreviousElementSiblingDescriptor.get.call(this);
             } else {
-                var getPreviousSibling = nodePreviousSiblingDescriptor.get;
                 var previousSibling = this;
-                while (previousSibling = getPreviousSibling.call(previousSibling)) {
+                while (previousSibling = previousSibling.previousSibling) {
                     if (previousSibling.nodeType === Node.ELEMENT_NODE) {
                         return previousSibling;
                     }
@@ -5174,12 +5514,9 @@ exports.default = function (base) {
                     }
                 };
                 return null;
-            } else if (baseNextElementSiblingDescriptor) {
-                return baseNextElementSiblingDescriptor.get.call(this);
             } else {
-                var getNextSibling = nodeNextSiblingDescriptor.get;
                 var nextSibling = this;
-                while (nextSibling = getNextSibling.call(nextSibling)) {
+                while (nextSibling = nextSibling.nextSibling) {
                     if (nextSibling.nodeType === Node.ELEMENT_NODE) {
                         return nextSibling;
                     }
@@ -5242,13 +5579,6 @@ Object.defineProperty(exports, "__esModule", {
 
 exports.default = function (base) {
 
-    var native = {
-        children: _utils2.default.descriptor(base, 'children'),
-        firstElementChild: _utils2.default.descriptor(base, 'firstElementChild'),
-        lastElementChild: _utils2.default.descriptor(base, 'lastElementChild'),
-        childElementCount: _utils2.default.descriptor(base, 'childElementCount')
-    };
-
     return {
 
         get children() {
@@ -5260,9 +5590,6 @@ exports.default = function (base) {
             }
 
             if (!childNodes) {
-                if (native.children) {
-                    return native.children.get.call(this);
-                }
                 childNodes = this.childNodes;
             }
 
@@ -5289,9 +5616,6 @@ exports.default = function (base) {
             }
 
             if (!childNodes) {
-                if (native.firstElementChild) {
-                    return native.firstElementChild.get.call(this);
-                }
                 childNodes = this.childNodes;
             }
 
@@ -5314,9 +5638,6 @@ exports.default = function (base) {
             }
 
             if (!childNodes) {
-                if (native.lastElementChild) {
-                    return native.lastElementChild.get.call(this);
-                }
                 childNodes = this.childNodes;
             }
 
@@ -5339,9 +5660,6 @@ exports.default = function (base) {
             }
 
             if (!childNodes) {
-                if (native.childElementCount) {
-                    return native.childElementCount.get.call(this);
-                }
                 childNodes = this.childNodes;
             }
 
@@ -5870,15 +6188,12 @@ var interfaces = {
 
 function reflectString(attributeName) {
     return function (type, name) {
-        attributeName = attributeName || name.toLowerCase();
         var descriptor = _utils2.default.descriptor(type, name);
-        if (!descriptor) {
+        if (descriptor && !descriptor.configurable) {
+            //console.warn(`Unable to configure property '${name}'`);
             return;
         }
-        if (!descriptor.configurable) {
-            console.warn('Unable to reconfigure property: ' + name);
-            return;
-        }
+        attributeName = attributeName || name.toLowerCase();
         Object.defineProperty(type.prototype, name, {
             configurable: true,
             enumerable: true,
@@ -5894,15 +6209,12 @@ function reflectString(attributeName) {
 
 function reflectBoolean(attributeName) {
     return function (type, name) {
-        attributeName = attributeName || name.toLowerCase();
         var descriptor = _utils2.default.descriptor(type, name);
-        if (!descriptor) {
+        if (descriptor && !descriptor.configurable) {
+            //console.warn(`Unable to configure property '${name}'`);
             return;
         }
-        if (!descriptor.configurable) {
-            console.warn('Unable to reconfigure property: ' + name);
-            return;
-        }
+        attributeName = attributeName || name.toLowerCase();
         Object.defineProperty(type.prototype, name, {
             configurable: true,
             enumerable: true,
@@ -5924,11 +6236,8 @@ function reflectBoolean(attributeName) {
 function reflectInteger(minValue, defaultValue) {
     return function (type, name) {
         var descriptor = _utils2.default.descriptor(type, name);
-        if (!descriptor) {
-            return;
-        }
-        if (!descriptor.configurable) {
-            console.warn('Unable to reconfigure property: ' + name);
+        if (descriptor && !descriptor.configurable) {
+            //console.warn(`Unable to configure property '${name}'`);
             return;
         }
         var attributeName = name.toLowerCase();
@@ -5954,11 +6263,8 @@ function reflectInteger(minValue, defaultValue) {
 function reflectFloat(minValue, defaultValue) {
     return function (type, name) {
         var descriptor = _utils2.default.descriptor(type, name);
-        if (!descriptor) {
-            return;
-        }
-        if (!descriptor.configurable) {
-            console.warn('Unable to reconfigure property: ' + name);
+        if (descriptor && !descriptor.configurable) {
+            //console.warn(`Unable to configure property '${name}'`);
             return;
         }
         var attributeName = name.toLowerCase();
@@ -5983,11 +6289,8 @@ function reflectFloat(minValue, defaultValue) {
 function reflectDOMTokenList(localName) {
     return function (type, name) {
         var descriptor = _utils2.default.descriptor(type, name);
-        if (!descriptor) {
-            return;
-        }
-        if (!descriptor.configurable) {
-            console.warn('Unable to reconfigure property: ' + name);
+        if (descriptor && !descriptor.configurable) {
+            //console.warn(`Unable to configure property '${name}'`);
             return;
         }
         Object.defineProperty(type.prototype, name, {
@@ -6006,11 +6309,8 @@ function reflectDOMTokenList(localName) {
 function reflectHTMLElement(candidateType, readOnly) {
     return function (type, name) {
         var descriptor = _utils2.default.descriptor(type, name);
-        if (!descriptor) {
-            return;
-        }
-        if (!descriptor.configurable) {
-            console.warn('Unable to reconfigure property: ' + name);
+        if (descriptor && !descriptor.configurable) {
+            //console.warn(`Unable to configure property '${name}'`);
             return;
         }
         var attributeName = name.toLowerCase();
@@ -6048,11 +6348,8 @@ function reflectHTMLElement(candidateType, readOnly) {
 function reflectTextContent() {
     return function (type, name) {
         var descriptor = _utils2.default.descriptor(type, name);
-        if (!descriptor) {
-            return;
-        }
-        if (!descriptor.configurable) {
-            console.warn('Unable to reconfigure property: ' + name);
+        if (descriptor && !descriptor.configurable) {
+            //console.warn(`Unable to configure property '${name}'`);
             return;
         }
         Object.defineProperty(type.prototype, name, {
@@ -6089,6 +6386,10 @@ function patchAll() {
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+
+var _dom = require('./dom.js');
+
+var _dom2 = _interopRequireDefault(_dom);
 
 var _utils = require('./utils.js');
 
@@ -6218,42 +6519,32 @@ function install() {
     }
 
     // Attr interface
-    _utils2.default.extend(Attr, _Attr2.default);
+    _Attr2.default.install();
 
     // CharacterData interface
-    _utils2.default.extend(CharacterData, _CharacterData2.default);
+    _CharacterData2.default.install();
 
     // CustomEvent interface
     window.CustomEvent = _CustomEvent2.default;
 
     // Document interface
-    _utils2.default.extend(Document, _Document2.default);
+    if (!_utils2.default.brokenAccessors) {
+        _utils2.default.extend(Document, _Document2.default);
+    } else {
+        _utils2.default.extend(HTMLDocument, _Document2.default);
+    }
 
     // DOMTokenList interface
-    if ('DOMTokenList' in window) {
-        // TODO: what about IE9?
-        _utils2.default.extend(DOMTokenList, _DOMTokenList2.default);
-    }
+    _utils2.default.extend(DOMTokenList, _DOMTokenList2.default);
 
     // Element interface
-    _utils2.default.extend(Element, _Element2.default);
+    _Element2.default.install();
 
     // Event interface
-    _utils2.default.extend(Event, _Event2.default);
-    _utils2.default.extend(FocusEvent, _Event.hasRelatedTarget);
-    _utils2.default.extend(MouseEvent, _Event.hasRelatedTarget);
-    _Event2.default.prototype = Event.prototype;
-    window.Event = _Event2.default;
+    _Event2.default.install();
 
     // EventTarget
-    if ('EventTarget' in Window) {
-        _utils2.default.extend(EventTarget, (0, _EventTarget2.default)(EventTarget));
-    } else {
-        // In IE, EventTarget is not exposed and Window's
-        // EventTarget methods are not the same as Node's.
-        _utils2.default.extend(Window, (0, _EventTarget2.default)(Window));
-        _utils2.default.extend(Node, (0, _EventTarget2.default)(Node));
-    }
+    _EventTarget2.default.install();
 
     // HTMLSlotElement interface
     _utils2.default.extend('HTMLSlotElement' in window ? HTMLSlotElement : HTMLUnknownElement, _HTMLSlotElement2.default);
@@ -6274,7 +6565,7 @@ function install() {
     _utils2.default.extend(NamedNodeMap, _NamedNodeMap2.default);
 
     // Node interface
-    _utils2.default.extend(Node, _Node2.default);
+    _Node2.default.install();
 
     // TODO: implement Range interface
 
@@ -6299,28 +6590,23 @@ function install() {
     _utils2.default.extend(DocumentFragment, (0, _NonElementParentNode2.default)(DocumentFragment));
 
     // ParentNode mixin
+    // There doesn't seem to be a need to implement this directly 
+    // on Document or DocumentFragment.
     _utils2.default.extend(Document, (0, _ParentNode2.default)(Document));
     _utils2.default.extend(DocumentFragment, (0, _ParentNode2.default)(DocumentFragment));
-    _utils2.default.extend(Element, (0, _ParentNode2.default)(Element));
+    _utils2.default.extend(_ShadowRoot2.default, (0, _ParentNode2.default)(_ShadowRoot2.default));
+    if (_utils2.default.brokenAccessors) {
+        _utils2.default.extend(HTMLElement, (0, _ParentNode2.default)(HTMLElement));
+    } else {
+        _utils2.default.extend(Element, (0, _ParentNode2.default)(Element));
+    }
 
     // Slotable mixin
     _utils2.default.extend(Element, (0, _Slotable2.default)(Element));
     _utils2.default.extend(Text, (0, _Slotable2.default)(Text));
-
-    // Cleanup for IE, Edge
-    delete Node.prototype.attributes;
-    delete HTMLElement.prototype.classList;
-    delete HTMLElement.prototype.children;
-    delete HTMLElement.prototype.parentElement;
-    delete HTMLElement.prototype.innerHTML;
-    delete HTMLElement.prototype.outerHTML;
-    delete HTMLElement.prototype.insertAdjacentText;
-    delete HTMLElement.prototype.insertAdjacentElement;
-    delete HTMLElement.prototype.insertAdjacentHTML;
-    delete HTMLElement.prototype.contains;
 }
 
-},{"./interfaces/Attr.js":3,"./interfaces/CharacterData.js":4,"./interfaces/CustomEvent.js":5,"./interfaces/DOMTokenList.js":6,"./interfaces/Document.js":7,"./interfaces/Element.js":8,"./interfaces/Event.js":9,"./interfaces/EventTarget.js":10,"./interfaces/HTMLSlotElement.js":11,"./interfaces/HTMLTableElement.js":12,"./interfaces/HTMLTableRowElement.js":13,"./interfaces/HTMLTableSectionElement.js":14,"./interfaces/MutationObserver.js":15,"./interfaces/NamedNodeMap.js":16,"./interfaces/Node.js":17,"./interfaces/ShadowRoot.js":18,"./interfaces/Text.js":19,"./mixins/ChildNode.js":21,"./mixins/DocumentOrShadowRoot.js":22,"./mixins/NonDocumentTypeChildNode.js":23,"./mixins/NonElementParentNode.js":24,"./mixins/ParentNode.js":25,"./mixins/Slotable.js":26,"./reflect.js":27,"./utils.js":29}],29:[function(require,module,exports){
+},{"./dom.js":2,"./interfaces/Attr.js":3,"./interfaces/CharacterData.js":4,"./interfaces/CustomEvent.js":5,"./interfaces/DOMTokenList.js":6,"./interfaces/Document.js":7,"./interfaces/Element.js":8,"./interfaces/Event.js":9,"./interfaces/EventTarget.js":10,"./interfaces/HTMLSlotElement.js":11,"./interfaces/HTMLTableElement.js":12,"./interfaces/HTMLTableRowElement.js":13,"./interfaces/HTMLTableSectionElement.js":14,"./interfaces/MutationObserver.js":15,"./interfaces/NamedNodeMap.js":16,"./interfaces/Node.js":17,"./interfaces/ShadowRoot.js":18,"./interfaces/Text.js":19,"./mixins/ChildNode.js":21,"./mixins/DocumentOrShadowRoot.js":22,"./mixins/NonDocumentTypeChildNode.js":23,"./mixins/NonElementParentNode.js":24,"./mixins/ParentNode.js":25,"./mixins/Slotable.js":26,"./reflect.js":27,"./utils.js":29}],29:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -6360,16 +6646,21 @@ var setPrototypeOf = function () {
     };
 }();
 
+var brokenAccessors = typeof descriptor(Node, 'childNodes').get === 'undefined';
+
 var nodeAppendChildDescriptor = descriptor(Node, 'appendChild');
 var documentCreateElementDescriptor = descriptor(Document, 'createElement');
 
 exports.default = {
+    brokenAccessors: brokenAccessors,
     descriptor: descriptor,
     setImmediate: setImmediate,
     setPrototypeOf: setPrototypeOf,
     makeDOMException: makeDOMException,
     reportError: reportError,
     extend: extend,
+    defineProperty: defineProperty,
+    deleteProperty: deleteProperty,
     getShadowState: getShadowState,
     setShadowState: setShadowState,
     isElementNode: isElementNode,
@@ -6379,7 +6670,7 @@ exports.default = {
 
 
 function descriptor(type, name) {
-    return Object.getOwnPropertyDescriptor(type.prototype, name);
+    return Object.getOwnPropertyDescriptor(type.prototype || type, name);
 }
 
 // TODO: analyze usages and provide brief but descriptive messages
@@ -6416,30 +6707,75 @@ function makeDOMException(name, message) {
     }
 }
 
+function reportWarning(message) {
+    if ('console' in window && 'warn' in window.console) {
+        window.console.warn(message);
+    }
+}
+
 function reportError(error) {
     if ('console' in window && 'error' in window.console) {
         window.console.error(error);
     }
 }
 
-function extend(object) {
-    for (var _len2 = arguments.length, mixins = Array(_len2 > 1 ? _len2 - 1 : 0), _key2 = 1; _key2 < _len2; _key2++) {
-        mixins[_key2 - 1] = arguments[_key2];
-    }
-
-    for (var i = 0; i < mixins.length; i++) {
-        var mixin = mixins[i];
-        var prototype = mixin.prototype || mixin;
-        var names = Object.getOwnPropertyNames(prototype);
-        for (var j = 0; j < names.length; j++) {
-            var name = names[j];
-            if (name === 'constructor') {
-                continue;
+function extend(extending, mixin) {
+    mixin = mixin.prototype || mixin;
+    var names = Object.getOwnPropertyNames(mixin);
+    for (var j = 0; j < names.length; j++) {
+        var name = names[j];
+        if (name === 'constructor') {
+            continue;
+        }
+        var newDescriptor = Object.getOwnPropertyDescriptor(mixin, name);
+        newDescriptor.configurable = true;
+        if (extending.prototype) {
+            var oldDescriptor = Object.getOwnPropertyDescriptor(extending.prototype, name);
+            if (oldDescriptor) {
+                if ('value' in newDescriptor) {
+                    if (!oldDescriptor.writable) {
+                        //reportWarning('Unable to configure data property: ' + name);
+                        continue;
+                    }
+                    extending.prototype[name] = newDescriptor.value;
+                    continue;
+                }
+                if (('get' in newDescriptor || 'set' in newDescriptor) && !oldDescriptor.configurable) {
+                    //reportWarning('Unable to configure accessor property: ' + name);
+                    continue;
+                }
             }
-            var _descriptor2 = Object.getOwnPropertyDescriptor(prototype, name);
-            Object.defineProperty(object.prototype || object, name, _descriptor2);
+            Object.defineProperty(extending.prototype, name, newDescriptor);
+        } else {
+            Object.defineProperty(extending, name, newDescriptor);
         }
     }
+}
+
+function defineProperty(prototype, name, newDescriptor) {
+    newDescriptor.configurable = true;
+    newDescriptor.enumerable = true;
+    var oldDescriptor = Object.getOwnPropertyDescriptor(prototype, name);
+    if ('value' in newDescriptor) {
+        newDescriptor.writable = true;
+        if (oldDescriptor && !oldDescriptor.configurable) {
+            prototype[name] = newDescriptor.value;
+            return;
+        }
+    }
+    Object.defineProperty(prototype, name, newDescriptor);
+}
+
+function deleteProperty(constructor, name) {
+    var descriptor = Object.getOwnPropertyDescriptor(constructor.prototype, name);
+    if (!descriptor) {
+        return;
+    }
+    if (!descriptor.configurable) {
+        console.warn('Warning: unable to delete property \'' + name + '\' of ' + constructor.name);
+        return;
+    }
+    delete constructor.prototype[name];
 }
 
 function getShadowState(object) {

@@ -28,16 +28,21 @@ const setPrototypeOf = (function () {
     }
 })();
 
+const brokenAccessors = typeof descriptor(Node, 'childNodes').get === 'undefined';
+
 const nodeAppendChildDescriptor = descriptor(Node, 'appendChild');
 const documentCreateElementDescriptor = descriptor(Document, 'createElement');
 
 export default {
+    brokenAccessors,
     descriptor,
     setImmediate,
     setPrototypeOf,
     makeDOMException,
     reportError,
     extend,
+    defineProperty,
+    deleteProperty,
     getShadowState,
     setShadowState,
     isElementNode,
@@ -46,7 +51,7 @@ export default {
 };
 
 function descriptor(type, name) {
-    return Object.getOwnPropertyDescriptor(type.prototype, name);
+    return Object.getOwnPropertyDescriptor(type.prototype || type, name);
 }
 
 // TODO: analyze usages and provide brief but descriptive messages
@@ -84,26 +89,76 @@ function makeDOMException(name, message) {
     }
 }
 
+function reportWarning(message) {
+    if ('console' in window && 'warn' in window.console) {
+        window.console.warn(message);
+    }
+}
+
 function reportError(error) {
     if ('console' in window && 'error' in window.console) {
         window.console.error(error);
     }
 }
 
-function extend(object, ...mixins) {
-    for (let i = 0; i < mixins.length; i++) {
-        const mixin = mixins[i];
-        const prototype = mixin.prototype || mixin;
-        const names = Object.getOwnPropertyNames(prototype);
-        for (let j = 0; j < names.length; j++) {
-            const name = names[j];
-            if (name === 'constructor') {
-                continue;
+function extend(extending, mixin) {
+    mixin = mixin.prototype || mixin;
+    const names = Object.getOwnPropertyNames(mixin);
+    for (let j = 0; j < names.length; j++) {
+        const name = names[j];
+        if (name === 'constructor') {
+            continue;
+        }
+        const newDescriptor = Object.getOwnPropertyDescriptor(mixin, name);
+        newDescriptor.configurable = true;
+        if (extending.prototype) {
+            const oldDescriptor = Object.getOwnPropertyDescriptor(extending.prototype, name);
+            if (oldDescriptor) {
+                if ('value' in newDescriptor) {
+                    if (!oldDescriptor.writable) {
+                        //reportWarning('Unable to configure data property: ' + name);
+                        continue;
+                    }
+                    extending.prototype[name] = newDescriptor.value;
+                    continue;
+                }
+                if (('get' in newDescriptor || 'set' in newDescriptor) && !oldDescriptor.configurable) {
+                    //reportWarning('Unable to configure accessor property: ' + name);
+                    continue;
+                }
             }
-            const descriptor = Object.getOwnPropertyDescriptor(prototype, name);
-            Object.defineProperty(object.prototype || object, name, descriptor);
+            Object.defineProperty(extending.prototype, name, newDescriptor);
+        }
+        else {
+            Object.defineProperty(extending, name, newDescriptor);
         }
     }
+}
+
+function defineProperty(prototype, name, newDescriptor) {
+    newDescriptor.configurable = true;
+    newDescriptor.enumerable = true;
+    const oldDescriptor = Object.getOwnPropertyDescriptor(prototype, name);
+    if ('value' in newDescriptor) {
+        newDescriptor.writable = true;
+        if (oldDescriptor && !oldDescriptor.configurable) {
+            prototype[name] = newDescriptor.value;
+            return;
+        }
+    }
+    Object.defineProperty(prototype, name, newDescriptor);
+}
+
+function deleteProperty(constructor, name) {
+    const descriptor = Object.getOwnPropertyDescriptor(constructor.prototype, name);
+    if (!descriptor) {
+        return;
+    }
+    if (!descriptor.configurable) {
+        console.warn(`Warning: unable to delete property '${name}' of ${constructor.name}`);
+        return;
+    }
+    delete constructor.prototype[name];
 }
 
 function getShadowState(object) {

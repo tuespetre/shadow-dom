@@ -21,8 +21,10 @@ suite('EventTarget', function () {
                 phase = event.eventPhase;
             };
             parent.append(target);
+            document.body.append(parent);
             parent.addEventListener('test', handler, true);
             target.dispatchEvent(new Event('test'));
+            parent.remove();
             assert.equal(phase, Event.prototype.CAPTURING_PHASE);
         });
 
@@ -34,8 +36,10 @@ suite('EventTarget', function () {
                 phase = event.eventPhase;
             };
             parent.append(target);
+            document.body.append(parent);
             parent.addEventListener('test', handler, { capture: true });
             target.dispatchEvent(new Event('test'));
+            parent.remove();
             assert.equal(phase, Event.prototype.CAPTURING_PHASE);
         });
 
@@ -71,9 +75,11 @@ suite('EventTarget', function () {
                 phases.push(event.eventPhase);
             };
             parent.append(target);
+            document.body.append(parent);
             parent.addEventListener('test', handler, true);
             parent.addEventListener('test', handler, false);
             target.dispatchEvent(new Event('test', { bubbles: true }));
+            parent.remove();
             assert.sameMembers(phases, [Event.prototype.CAPTURING_PHASE, Event.prototype.BUBBLING_PHASE]);
         });
 
@@ -101,6 +107,7 @@ suite('EventTarget', function () {
             var handler = function (event) {
                 count++;
             };
+            document.body.appendChild(target);
             target.addEventListener('test', handler, true);
             target.addEventListener('test', handler, false);
             target.dispatchEvent(new Event('test'));
@@ -111,6 +118,7 @@ suite('EventTarget', function () {
             target.removeEventListener('test', handler, false);
             target.dispatchEvent(new Event('test'));
             assert.equal(count, 3);
+            document.body.removeChild(target);
         });
 
         test('respects options.capture', function () {
@@ -119,6 +127,7 @@ suite('EventTarget', function () {
             var handler = function (event) {
                 count++;
             };
+            document.body.appendChild(target);
             target.addEventListener('test', handler, { capture: true });
             target.addEventListener('test', handler, { capture: false });
             target.dispatchEvent(new Event('test'));
@@ -129,6 +138,7 @@ suite('EventTarget', function () {
             target.removeEventListener('test', handler, { capture: false });
             target.dispatchEvent(new Event('test'));
             assert.equal(count, 3);
+            document.body.removeChild(target);
         });
 
     });

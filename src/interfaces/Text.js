@@ -19,7 +19,7 @@ export default {
             $dom.insert(newNode, parent, this.nextSibling);
             // TODO: (Range)
         }
-        $dom.replaceData(this, offset, count, '');
+        this.replaceData(offset, count, '');
         // TODO: (Range)
         // if (!parent) { }
         return newNode;

@@ -4,18 +4,22 @@ import $dom from '../dom.js';
 import $ce from '../custom-elements.js';
 import $utils from '../utils.js';
 
-const attrValueDescriptor = $utils.descriptor(Attr, 'value');
-
 export default {
-
-    get value() {
-        return attrValueDescriptor.get.call(this);
-    },
-
-    set value(value) {
-        return $ce.executeCEReactions(() => {
-            $dom.setExistingAttributeValue(this, value);
-        });
-    },
-
+    install
 };
+
+function install() {
+    // TODO: Patch attribute instances elsewhere when there are broken accessors.
+    if (!$utils.brokenAccessors) {
+        const originalValueDescriptor = $utils.descriptor(Attr, 'value');
+        const newValueDescriptor = {
+            get: originalValueDescriptor.get,
+            set: function (value) {
+                return $ce.executeCEReactions(() => {
+                    $dom.setExistingAttributeValue(this, value);
+                });
+            }
+        };
+        $utils.defineProperty(Attr.prototype, 'value', newValueDescriptor);
+    }
+}

@@ -2,12 +2,34 @@
 
 import $dom from '../dom.js';
 import $utils from '../utils.js';
+import $Event from './Event.js';
+
+export default {
+    install
+};
 
 const eventTargetDescriptor = $utils.descriptor(Event, 'target');
+
 const focusEventRelatedTargetDescriptor = $utils.descriptor(FocusEvent, 'relatedTarget');
 const mouseEventRelatedTargetDescriptor = $utils.descriptor(MouseEvent, 'relatedTarget');
 
-export default function (base) {
+let getEventTarget = event => eventTargetDescriptor.get.call(event);
+let getFocusEventRelatedTarget = event => focusEventRelatedTargetDescriptor.get.call(event);
+let getMouseEventRelatedTarget = event => mouseEventRelatedTargetDescriptor.get.call(event);
+
+if ($utils.brokenAccessors) {
+    getEventTarget = function (event) {
+        const state = $utils.getShadowState(event);
+        return state.nativeEvent.target;
+    };
+    getFocusEventRelatedTarget = function (event) {
+        const state = $utils.getShadowState(event);
+        return state.nativeEvent.relatedTarget;
+    };
+    getMouseEventRelatedTarget = getFocusEventRelatedTarget;
+}
+
+const $EventTarget = function (base) {
 
     const native = {
         addEventListener: base.prototype.addEventListener,
@@ -36,8 +58,8 @@ export default function (base) {
             }
 
             let collection =
-                EventListenerCollection.get(this, type, capture) ||
-                EventListenerCollection.create(this, type, capture);
+                getEventListenerCollection(this, type, capture) ||
+                createEventListenerCollection(this, type, capture);
 
             collection.addListener(this, listener);
             collection.attach(native.addEventListener);
@@ -58,7 +80,7 @@ export default function (base) {
                 capture = options.capture === true;
             }
 
-            let collection = EventListenerCollection.get(this, type, capture);
+            let collection = getEventListenerCollection(this, type, capture);
 
             if (!collection) {
                 return;
@@ -75,42 +97,64 @@ export default function (base) {
 
 }
 
+function install() {
+    // In IE and Safari < 10, EventTarget is not exposed and Window's
+    // EventTarget methods are not the same as Node's.
+    if ('EventTarget' in Window) {
+        $utils.extend(EventTarget, $EventTarget(EventTarget));
+    }
+    else {
+        $utils.extend(Window, $EventTarget(Window));
+        $utils.extend(Node, $EventTarget(Node));
+    }
+}
+
 const EventListenerCollection = function (target, type, capture) {
     this.target = target;
     this.type = type;
     this.capture = capture;
-
     this.hostListeners = [];
     this.shadowListeners = [];
 
     this.callback = event => {
-        let shadowRoot = null;
-        let targetState = $utils.getShadowState(target);
-        if (targetState) {
-            shadowRoot = targetState.shadowRoot;
-        }
-        switch (event.eventPhase) {
+        const phase = event.eventPhase;
+        switch (phase) {
             case Event.prototype.CAPTURING_PHASE:
-                this.invokeListeners(event, this.target, this.hostListeners);
-                if (shadowRoot) {
-                    this.invokeListeners(event, shadowRoot, this.shadowListeners);
+                if (this.hostListeners.length) {
+                    this.invokeListeners(event, this.target, this.hostListeners);
+                }
+                if (this.shadowListeners.length) {
+                    this.invokeListeners(event, $utils.getShadowState(target).shadowRoot, this.shadowListeners);
                 }
                 break;
             case Event.prototype.AT_TARGET:
-                const nativeTarget = eventTargetDescriptor.get.call(event);
-                this.invokeListeners(event, nativeTarget, this.getListeners(nativeTarget));
+                const nativeTarget = getEventTarget(event);
+                const listeners = this.getListeners(nativeTarget);
+                if (listeners.length) {
+                    this.invokeListeners(event, nativeTarget, listeners);
+                }
                 break;
             case Event.prototype.BUBBLING_PHASE:
-                if (shadowRoot) {
-                    this.invokeListeners(event, shadowRoot, this.shadowListeners);
+                if (this.shadowListeners.length) {
+                    this.invokeListeners(event, $utils.getShadowState(target).shadowRoot, this.shadowListeners);
                 }
-                this.invokeListeners(event, this.target, this.hostListeners);
+                if (this.hostListeners.length) {
+                    this.invokeListeners(event, this.target, this.hostListeners);
+                }
                 break;
         }
     };
+
+    if ($utils.brokenAccessors) {
+        const innerCallback = this.callback;
+        this.callback = event => {
+            const wrapper = wrapEventWithBrokenAccessors(event);
+            innerCallback(wrapper);
+        };
+    }
 };
 
-EventListenerCollection.get = function (target, type, capture) {
+function getEventListenerCollection(target, type, capture) {
     let targetState = $utils.getShadowState(target);
     let nativeTarget = target;
     let nativeTargetState = targetState;
@@ -133,7 +177,7 @@ EventListenerCollection.get = function (target, type, capture) {
     return null;
 };
 
-EventListenerCollection.create = function (target, type, capture) {
+function createEventListenerCollection(target, type, capture) {
     let targetState = $utils.getShadowState(target);
     let nativeTarget = target;
     let nativeTargetState = targetState;
@@ -255,15 +299,15 @@ function calculatePath(event) {
     const path = [];
     let p = 0;
 
-    let target = eventTargetDescriptor.get.call(event);
+    let target = getEventTarget(event);
 
-    let relatedTargetDescriptor = null;
+    let getRelatedTarget = null;
 
     if (event instanceof FocusEvent) {
-        relatedTargetDescriptor = focusEventRelatedTargetDescriptor;
+        getRelatedTarget = getFocusEventRelatedTarget;
     }
     else if (event instanceof MouseEvent) {
-        relatedTargetDescriptor = mouseEventRelatedTargetDescriptor;
+        getRelatedTarget = getMouseEventRelatedTarget;
     }
 
     // 1. Set event’s dispatch flag.
@@ -277,8 +321,8 @@ function calculatePath(event) {
     // against target if event’s relatedTarget is non-null, and null otherwise.
     let originalRelatedTarget = null;
     let relatedTarget = null;
-    if (relatedTargetDescriptor) {
-        originalRelatedTarget = relatedTargetDescriptor.get.call(event);
+    if (getRelatedTarget) {
+        originalRelatedTarget = getRelatedTarget(event);
         if (originalRelatedTarget) {
             relatedTarget = $dom.retarget(originalRelatedTarget, target);
         }
@@ -400,4 +444,78 @@ function calculateTarget(currentTarget, path) {
         }
     }
     return null;
+}
+
+function wrapEventWithBrokenAccessors(event) {
+    const eventState = $utils.getShadowState(event) || $utils.setShadowState(event, {});
+
+    if (eventState.wrapper) {
+        return eventState.wrapper;
+    }
+    
+    eventState.nativeEvent = event;
+
+    const descriptors = {
+        type: {
+            get: function () {
+                return event.type;
+            }
+        },
+        target: {
+            get: function () {
+                return eventState.target || event.target;
+            }
+        },
+        currentTarget: {
+            get: function () {
+                return eventState.currentTarget || event.currentTarget;
+            }
+        },
+        eventPhase: {
+            get: function () {
+                return event.eventPhase;
+            }
+        },
+        bubbles: {
+            get: function () {
+                return event.bubbles;
+            }
+        },
+        cancelable: {
+            get: function () {
+                return event.cancelable;
+            }
+        },
+        preventDefault: {
+            value: function () {
+                return event.preventDefault();
+            }
+        },
+        defaultPrevented: {
+            get: function () {
+                return event.defaultPrevented;
+            }
+        },
+        stopPropagation: {
+            value: function () {
+                return event.stopPropagation();
+            }
+        }
+    };
+
+    if ('relatedTarget' in event) {
+        descriptors.relatedTarget = {
+            get: function () {
+                return eventState.relatedTarget || event.relatedTarget;
+            }
+        }
+    }
+
+    const wrapper = Object.create(event, descriptors);
+
+    $utils.setShadowState(wrapper, eventState);
+
+    eventState.wrapper = wrapper;
+
+    return wrapper;
 }

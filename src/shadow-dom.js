@@ -1,3 +1,4 @@
+import $dom from './dom.js';
 import $utils from './utils.js';
 import * as reflect from './reflect.js';
 
@@ -54,43 +55,33 @@ function install() {
     }
 
     // Attr interface
-    $utils.extend(Attr, $Attr);
+    $Attr.install();
 
     // CharacterData interface
-    $utils.extend(CharacterData, $CharacterData);
+    $CharacterData.install();
 
     // CustomEvent interface
     window.CustomEvent = $CustomEvent;
 
     // Document interface
-    $utils.extend(Document, $Document);
-
-    // DOMTokenList interface
-    if ('DOMTokenList' in window) {
-        // TODO: what about IE9?
-        $utils.extend(DOMTokenList, $DOMTokenList);
-    }
-
-    // Element interface
-    $utils.extend(Element, $Element);
-
-    // Event interface
-    $utils.extend(Event, $Event);
-    $utils.extend(FocusEvent, hasRelatedTarget);
-    $utils.extend(MouseEvent, hasRelatedTarget);
-    $Event.prototype = Event.prototype;
-    window.Event = $Event;
-
-    // EventTarget
-    if ('EventTarget' in Window) {
-        $utils.extend(EventTarget, $EventTarget(EventTarget));
+    if (!$utils.brokenAccessors) {
+        $utils.extend(Document, $Document);
     }
     else {
-        // In IE, EventTarget is not exposed and Window's
-        // EventTarget methods are not the same as Node's.
-        $utils.extend(Window, $EventTarget(Window));
-        $utils.extend(Node, $EventTarget(Node));
+        $utils.extend(HTMLDocument, $Document);
     }
+
+    // DOMTokenList interface
+    $utils.extend(DOMTokenList, $DOMTokenList);
+
+    // Element interface
+    $Element.install();
+
+    // Event interface
+    $Event.install();
+
+    // EventTarget
+    $EventTarget.install();
 
     // HTMLSlotElement interface
     $utils.extend('HTMLSlotElement' in window ? HTMLSlotElement : HTMLUnknownElement, $HTMLSlotElement);
@@ -111,7 +102,7 @@ function install() {
     $utils.extend(NamedNodeMap, $NamedNodeMap);
 
     // Node interface
-    $utils.extend(Node, $Node);
+    $Node.install();
 
     // TODO: implement Range interface
 
@@ -136,24 +127,19 @@ function install() {
     $utils.extend(DocumentFragment, $NonElementParentNode(DocumentFragment));
 
     // ParentNode mixin
+    // There doesn't seem to be a need to implement this directly 
+    // on Document or DocumentFragment.
     $utils.extend(Document, $ParentNode(Document));
     $utils.extend(DocumentFragment, $ParentNode(DocumentFragment));
-    $utils.extend(Element, $ParentNode(Element));
+    $utils.extend($ShadowRoot, $ParentNode($ShadowRoot));
+    if ($utils.brokenAccessors) {
+        $utils.extend(HTMLElement, $ParentNode(HTMLElement));
+    }
+    else {
+        $utils.extend(Element, $ParentNode(Element));
+    }
 
     // Slotable mixin
     $utils.extend(Element, $Slotable(Element));
     $utils.extend(Text, $Slotable(Text));
-
-    // Cleanup for IE, Edge
-    delete Node.prototype.attributes;
-    delete HTMLElement.prototype.classList;
-    delete HTMLElement.prototype.children;
-    delete HTMLElement.prototype.parentElement;
-    delete HTMLElement.prototype.innerHTML;
-    delete HTMLElement.prototype.outerHTML;
-    delete HTMLElement.prototype.insertAdjacentText;
-    delete HTMLElement.prototype.insertAdjacentElement;
-    delete HTMLElement.prototype.insertAdjacentHTML;
-    delete HTMLElement.prototype.contains;
-
 }

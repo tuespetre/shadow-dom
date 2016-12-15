@@ -6,13 +6,6 @@ import $utils from '../utils.js';
 
 export default function (base) {
 
-    const native = {
-        children: $utils.descriptor(base, 'children'),
-        firstElementChild: $utils.descriptor(base, 'firstElementChild'),
-        lastElementChild: $utils.descriptor(base, 'lastElementChild'),
-        childElementCount: $utils.descriptor(base, 'childElementCount'),
-    };
-
     return {
 
         get children() {
@@ -24,9 +17,6 @@ export default function (base) {
             }
 
             if (!childNodes) {
-                if (native.children) {
-                    return native.children.get.call(this);
-                }
                 childNodes = this.childNodes;
             }
 
@@ -53,9 +43,6 @@ export default function (base) {
             }
 
             if (!childNodes) {
-                if (native.firstElementChild) {
-                    return native.firstElementChild.get.call(this);
-                }
                 childNodes = this.childNodes;
             }
 
@@ -78,9 +65,6 @@ export default function (base) {
             }
 
             if (!childNodes) {
-                if (native.lastElementChild) {
-                    return native.lastElementChild.get.call(this);
-                }
                 childNodes = this.childNodes;
             }
 
@@ -103,9 +87,6 @@ export default function (base) {
             }
 
             if (!childNodes) {
-                if (native.childElementCount) {
-                    return native.childElementCount.get.call(this);
-                }
                 childNodes = this.childNodes;
             }
 

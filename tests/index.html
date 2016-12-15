@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html>
-
 <head>
   <meta charset="utf-8">
   <title>Mocha Tests</title>
@@ -17,7 +16,6 @@
     }
   </style>
 </head>
-
 <body>
   <nav id="tests-nav">
     <a id="all-tests-link" href="./index.html">Run all tests</a>
@@ -61,13 +59,8 @@
   <script src="./mixins/ParentNode.js"></script>
   <script src="./mixins/Slotable.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', function () {
-      mocha.checkLeaks();
-      mocha.globals([
-        '$0', '$1', '$2', '$3', '$4', '$_', '__BROWSERTOOLS_DOMEXPLORER_ADDED' // IE/Edge developer tools
-      ]);
-      mocha.run();
-      
+    window.failedTests = [];
+    document.addEventListener('DOMContentLoaded', function () {      
       var div = document.createElement('div')
       var span = document.createElement('span');
       span.append('This is here as a demonstration of an element with a shadow root and a slot.');
@@ -80,8 +73,18 @@
       inner.append(document.createElement('slot'));
       div.shadowRoot.append(inner);
       document.body.append(div);
+
+      mocha.checkLeaks();
+      mocha.globals([
+        'failedTests',
+        '_shadow',
+        '_custom',
+        '$0', '$1', '$2', '$3', '$4', '$_', '__BROWSERTOOLS_DOMEXPLORER_ADDED' // IE/Edge developer tools
+      ]);
+      mocha.run().on('fail', function (test, error) {
+        window.failedTests.push({ test: test.title, error: error });
+      });
     });
   </script>
 </body>
-
 </html>

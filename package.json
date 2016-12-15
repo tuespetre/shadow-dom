@@ -13,7 +13,9 @@
     "browserify": "latest",
     "concurrently": "latest",
     "exorcist": "latest",
+    "http-server": "^0.9.0",
     "mocha": "^3.1.2",
+    "selenium-webdriver": "^3.0.1",
     "uglify-js": "^2.7.4",
     "uglifyify": "latest",
     "watch": "latest"
@@ -22,6 +24,7 @@
     "build": "node ./build.js",
     "watch": "watch \"npm run build\" ./src",
     "serve": "http-server -s",
-    "start": "concurrently --kill-others \"npm run watch\" \"npm run serve\""
+    "start": "concurrently --kill-others \"npm run watch\" \"npm run serve\"",
+    "test": "node ./test.js"
   }
 }

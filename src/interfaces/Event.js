@@ -1,14 +1,19 @@
 // https://dom.spec.whatwg.org/#interface-event
 
+export default {
+    install
+};
+
 import $dom from '../dom.js';
 import $utils from '../utils.js';
 
+const eventStopImmediatePropagationDescriptor = $utils.descriptor(Event, 'stopImmediatePropagation');
 const eventCurrentTargetDescriptor = $utils.descriptor(Event, 'currentTarget');
 const eventTargetDescriptor = $utils.descriptor(Event, 'target');
 const focusEventRelatedTargetDescriptor = $utils.descriptor(FocusEvent, 'relatedTarget');
 const mouseEventRelatedTargetDescriptor = $utils.descriptor(MouseEvent, 'relatedTarget');
 
-export default function $Event(type, init) {
+function eventConstructor(type, init) {
     let bubbles = false;
     let cancelable = false;
     let composed = false;
@@ -17,33 +22,71 @@ export default function $Event(type, init) {
         cancelable = init.cancelable === true;
         composed = init.composed === true;
     }
-    const event = document.createEvent('event');
+    const event = document.createEvent('Event'); // Capitalized to work with older WebKit
     event.initEvent(type, bubbles, cancelable);
     $utils.setShadowState(event, { composed });
     return event;
+};
+
+function install() {
+    if (!$utils.brokenAccessors) {
+        $utils.extend(Event, {
+            get currentTarget() {
+                const shadowState = $utils.getShadowState(this);
+                if (shadowState) {
+                    return shadowState.currentTarget;
+                }
+                return eventCurrentTargetDescriptor.get.call(this);
+            },
+            get target() {
+                const shadowState = $utils.getShadowState(this);
+                if (shadowState) {
+                    return shadowState.target;
+                }
+                return eventTargetDescriptor.get.call(this);
+            },
+        });
+
+        // FocusEvent:
+        // relatedTarget will be the element losing or gaining focus
+        $utils.extend(FocusEvent, {
+            get relatedTarget() {
+                const shadowState = $utils.getShadowState(this);
+                if (shadowState) {
+                    return shadowState.relatedTarget;
+                }
+                return focusEventRelatedTargetDescriptor.get.call(this);
+            }
+        });
+
+        // MouseEvent:
+        // relatedTarget will be the element being moved into or out of
+        $utils.extend(MouseEvent, {
+            get relatedTarget() {
+                const shadowState = $utils.getShadowState(this);
+                if (shadowState) {
+                    return shadowState.relatedTarget;
+                }
+                return mouseEventRelatedTargetDescriptor.get.call(this);
+            }
+        });
+    }
+
+    $utils.extend(Event, eventMixin);
+    eventConstructor.prototype = Event.prototype;
+    window.Event = eventConstructor;
 }
 
-$Event.prototype = {
-
-    get currentTarget() {
-        const shadowState = $utils.getShadowState(this);
-        if (shadowState) {
-            return shadowState.currentTarget;
-        }
-        return eventCurrentTargetDescriptor.get.call(this);
-    },
-
-    get target() {
-        const shadowState = $utils.getShadowState(this);
-        if (shadowState) {
-            return shadowState.target;
-        }
-        return eventTargetDescriptor.get.call(this);
-    },
+const eventMixin = {
 
     stopImmediatePropagation() {
-        this.stopPropagation();
-        $utils.getShadowState(this).stopImmediatePropagationFlag = true;
+        const shadowState = $utils.getShadowState(this);
+        if (shadowState) {
+            shadowState.stopImmediatePropagationFlag = true;
+            this.stopPropagation();
+            return;
+        }
+        eventStopImmediatePropagationDescriptor.value.call(this);
     },
 
     composedPath() {
@@ -85,27 +128,6 @@ $Event.prototype = {
     get composed() {
         // TODO: Compare against the actual prototype instead of just the type strings
         return $utils.getShadowState(this).composed || builtInComposedEvents.indexOf(this.type) !== -1;
-    },
-
-}
-
-// FocusEvent:
-// relatedTarget will be the element losing or gaining focus
-// MouseEvent:
-// relatedTarget will be the element being moved into or out of
-export const hasRelatedTarget = {
-
-    get relatedTarget() {
-        const shadowState = $utils.getShadowState(this);
-        if (shadowState) {
-            return shadowState.relatedTarget;
-        }
-        if (this instanceof FocusEvent) {
-            return focusEventRelatedTargetDescriptor.get.call(this);
-        }
-        if (this instanceof MouseEvent) {
-            return mouseEventRelatedTargetDescriptor.get.call(this);
-        }
     },
 
 };

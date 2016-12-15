@@ -226,7 +226,7 @@ suite('Custom Elements', function () {
     test('Custom element reactions during cloneNode(true)', function (done) {
         var cloneNodeElement = function () {
             var self = HTMLElement.call(this);
-            this.attachShadow({ mode: 'open' }).innerHTML = '<span>shadow dom</span>';
+            self.attachShadow({ mode: 'open' }).innerHTML = '<span>shadow dom</span>';
             return self;
         };
         cloneNodeElement.prototype = Object.create(HTMLElement.prototype, {

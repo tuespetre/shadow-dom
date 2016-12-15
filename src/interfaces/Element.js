@@ -3,31 +3,69 @@
 import $dom from '../dom.js';
 import $ce from '../custom-elements.js';
 import $utils from '../utils.js';
-
 import $ShadowRoot from '../interfaces/ShadowRoot.js';
 
-const elementAttributesDescriptor = $utils.descriptor(Element, 'attributes') || $utils.descriptor(Node, 'attributes');
+export default {
+    install() {
+        if ($utils.brokenAccessors) {
+            const attributesDescriptor = {
+                get: function () {
+                    delete HTMLElement.prototype['attributes'];
+                    const attributes = this.attributes;
+                    $utils.defineProperty(HTMLElement.prototype, 'attributes', attributesDescriptor);
+                    const shadowState = $utils.getShadowState(attributes);
+                    if (!shadowState) {
+                        $utils.setShadowState(attributes, { element: this });
+                    }
+                    return attributes;
+                }
+            };
+
+            $utils.extend(Element, elementMixin);
+            $utils.extend(HTMLElement, htmlElementMixin);
+            $utils.defineProperty(HTMLElement.prototype, 'attributes', attributesDescriptor);
+        }
+        else {
+            const attributesDescriptor = {
+                get: function () {
+                    const attributes = elementAttributesDescriptor.get.call(this);
+                    const shadowState = $utils.getShadowState(attributes);
+                    if (!shadowState) {
+                        $utils.setShadowState(attributes, { element: this });
+                    }
+                    return attributes;
+                }
+            };
+
+            $utils.extend(Element, elementMixin);
+            $utils.extend(Element, htmlElementMixin);
+            $utils.defineProperty(Element.prototype, 'attributes', attributesDescriptor);
+
+            // Cleanup for IE, Edge
+            $utils.deleteProperty(HTMLElement, 'classList');
+            $utils.deleteProperty(HTMLElement, 'children');
+            $utils.deleteProperty(HTMLElement, 'parentElement');
+            $utils.deleteProperty(HTMLElement, 'innerHTML');
+            $utils.deleteProperty(HTMLElement, 'outerHTML');
+            $utils.deleteProperty(HTMLElement, 'contains');
+            $utils.deleteProperty(HTMLElement, 'insertAdjacentText');
+            $utils.deleteProperty(HTMLElement, 'insertAdjacentElement');
+            $utils.deleteProperty(HTMLElement, 'insertAdjacentHTML');
+        }
+    }
+}
+
 const elementSetAttributeDescriptor = $utils.descriptor(Element, 'setAttribute');
 const elementSetAttributeNSDescriptor = $utils.descriptor(Element, 'setAttributeNS');
-const nodeChildNodesDescriptor = $utils.descriptor(Node, 'childNodes');
 const nodeRemoveChildDescriptor = $utils.descriptor(Node, 'removeChild');
+const elementAttributesDescriptor = $utils.descriptor(Element, 'attributes') || $utils.descriptor(Node, 'attributes');
 
-export default {
-
-    // TODO: tests
-    get attributes() {
-        const attributes = elementAttributesDescriptor.get.call(this);
-        const shadowState = $utils.getShadowState(attributes);
-        if (!shadowState) {
-            $utils.setShadowState(attributes, { element: this });
-        }
-        return attributes;
-    },
+const elementMixin = {
 
     // TODO: tests
     setAttribute(qualifiedName, value) {
         return $ce.executeCEReactions(() => {
-            const attributes = elementAttributesDescriptor.get.call(this);
+            const attributes = this.attributes;
             let attribute = attributes.getNamedItem(qualifiedName);
             if (!attribute) {
                 elementSetAttributeDescriptor.value.call(this, qualifiedName, value);
@@ -43,7 +81,7 @@ export default {
     // TODO: tests
     setAttributeNS(nameSpace, qualifiedName, value) {
         return $ce.executeCEReactions(() => {
-            const attributes = elementAttributesDescriptor.get.call(this);
+            const attributes = this.attributes;
             const parts = qualifiedName.split(':', 2);
             const localName = parts[parts.length - 1];
             let attribute = attributes.getNamedItemNS(nameSpace, localName);
@@ -134,7 +172,7 @@ export default {
             childNodes: []
         });
 
-        const originalChildNodes = nodeChildNodesDescriptor.get.call(this);
+        const originalChildNodes = this.childNodes;
         const removeChild = nodeRemoveChildDescriptor.value;
         const savedChildNodes = new Array(originalChildNodes.length);
         let firstChild;
@@ -210,6 +248,20 @@ export default {
         return;
     },
 
+    // TODO: tests
+    insertAdjacentHTML(position, text) {
+        return $ce.executeCEReactions(() => {
+            // https://w3c.github.io/DOM-Parsing/#dom-element-insertadjacenthtml
+            // We aren't going to go exactly by the books for this one.
+            const fragment = $dom.parseHTMLFragment(text, this);
+            $dom.insertAdjacent(this, position, fragment);
+        });
+    },
+
+};
+
+const htmlElementMixin = {
+
     // https://w3c.github.io/DOM-Parsing/#extensions-to-the-element-interface
 
     // TODO: more thorough tests of the serialization
@@ -257,15 +309,5 @@ export default {
             $dom.replace(this, fragment, this.parentNode);
         });
     },
-
-    // TODO: tests
-    insertAdjacentHTML(position, text) {
-        return $ce.executeCEReactions(() => {
-            // https://w3c.github.io/DOM-Parsing/#dom-element-insertadjacenthtml
-            // We aren't going to go exactly by the books for this one.
-            const fragment = $dom.parseHTMLFragment(text, this);
-            $dom.insertAdjacent(this, position, fragment);
-        });
-    },
-
+    
 };

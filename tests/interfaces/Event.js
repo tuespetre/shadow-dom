@@ -57,7 +57,11 @@ suite('Event', function () {
             div3.addEventListener('test', handler);
             shadow3.addEventListener('test', handler);
             target.addEventListener('test', handler);
+
+            document.body.appendChild(div1);
             target.dispatchEvent(event);
+            document.body.removeChild(div1);
+
             var expected = [target, shadow3, div3, shadow2, div2, shadow1, div1];
             assert.equal(targets.length, expected.length);
             for (var i = 0; i < targets.length; i++) {
@@ -105,7 +109,11 @@ suite('Event', function () {
             div3.addEventListener('test', handler);
             shadow3.addEventListener('test', handler);
             target.addEventListener('test', handler);
+
+            document.body.appendChild(div1);
             target.dispatchEvent(event);
+            document.body.removeChild(div1);
+            
             var expected = [target, target, div3, div3, div2, div2, div1];
             assert.equal(targets.length, expected.length);
             for (var i = 0; i < targets.length; i++) {
@@ -142,7 +150,11 @@ suite('Event', function () {
             shadow3.addEventListener('click', handler);
             target.addEventListener('click', handler);
             event.initMouseEvent('click', true, false, window, 0, 0, 0, 0, 0, false, false, false, false, 0, related);
+
+            document.body.appendChild(div1);
             target.dispatchEvent(event);
+            document.body.removeChild(div1);
+
             var expected = [related, related];
             assert.equal(targets.length, expected.length);
             for (var i = 0; i < targets.length; i++) {
@@ -159,7 +171,6 @@ suite('Event', function () {
             // all the way up to the document's documentElement,
             // but if the document is not the global window.document,
             // the event will not be dispatched at the document.
-            var document = window.document.implementation.createHTMLDocument('test');
             var event = new Event('test', { composed: true, bubbles: true });
             var target = document.createElement('span');
             var div1 = document.createElement('div');
@@ -177,20 +188,25 @@ suite('Event', function () {
                 actual.push(event.composedPath());
             };
             target.addEventListener('test', handler);
-            expected.push([target, shadow3, div3, shadow2, div2, shadow1, div1]);
+            var rootTargets = [document.body, document.documentElement, document, window];
+            expected.push([target, shadow3, div3, shadow2, div2, shadow1, div1].concat(rootTargets));
             shadow3.addEventListener('test', handler);
-            expected.push([target, shadow3, div3, shadow2, div2, shadow1, div1]);
+            expected.push([target, shadow3, div3, shadow2, div2, shadow1, div1].concat(rootTargets));
             div3.addEventListener('test', handler);
-            expected.push([target, shadow3, div3, shadow2, div2, shadow1, div1]);
+            expected.push([target, shadow3, div3, shadow2, div2, shadow1, div1].concat(rootTargets));
             shadow2.addEventListener('test', handler);
-            expected.push([target, shadow3, div3, shadow2, div2, shadow1, div1]);
+            expected.push([target, shadow3, div3, shadow2, div2, shadow1, div1].concat(rootTargets));
             div2.addEventListener('test', handler);
-            expected.push([div2, shadow1, div1]);
+            expected.push([div2, shadow1, div1].concat(rootTargets));
             shadow1.addEventListener('test', handler);
-            expected.push([div2, shadow1, div1]);
+            expected.push([div2, shadow1, div1].concat(rootTargets));
             div1.addEventListener('test', handler);
-            expected.push([div2, shadow1, div1]);
+            expected.push([div2, shadow1, div1].concat(rootTargets));
+
+            document.body.appendChild(div1);
             target.dispatchEvent(event);
+            document.body.removeChild(div1);
+
             assert.equal(actual.length, expected.length);
             for (var i = 0; i < actual.length; i++) {
                 var _actual = actual[i];
