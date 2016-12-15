@@ -924,7 +924,6 @@ var NS_SVG = 'http://www.w3.org/2000/svg';
 var NS_XML = 'http://www.w3.org/XML/1998/namespace';
 var NS_XMLNS = 'http://www.w3.org/2000/xmlns/';
 var NS_XLINK = 'http://www.w3.org/1999/xlink';
-var PROP_ASSIGNED_SLOT = 'assignedSlot';
 var SHADOW_MODE_OPEN = 'open';
 var SHADOW_MODE_CLOSED = 'closed';
 var SHADOW_NODE_NAME = '#shadow-root';
@@ -1000,6 +999,14 @@ function treeOrderRecursiveSelectFirst(node, match) {
 
 function isShadowRoot(node) {
     return node.nodeName === SHADOW_NODE_NAME;
+}
+
+function isSlot(node) {
+    return node.localName === TAG_SLOT;
+}
+
+function isSlotable(node) {
+    return node instanceof Element || node instanceof Text;
 }
 
 // https://www.w3.org/TR/DOM-Parsing/
@@ -1381,7 +1388,7 @@ function retarget(nodeA, nodeB) {
 
 function updateSlotName(element, localName, oldValue, value, nameSpace) {
     // https://dom.spec.whatwg.org/#slot-name
-    if (element.localName === TAG_SLOT) {
+    if (isSlot(element)) {
         if (localName === ATTR_NAME && nameSpace == null) {
             if (value === oldValue) {
                 return;
@@ -1397,7 +1404,10 @@ function updateSlotName(element, localName, oldValue, value, nameSpace) {
             } else {
                 elementSetAttributeDescriptor.value.call(element, ATTR_NAME, value);
             }
-            assignSlotablesForATree(element);
+            var elementTree = root(element);
+            if (isShadowRoot(elementTree)) {
+                assignSlotablesForATree(elementTree);
+            }
         }
     }
 }
@@ -1419,11 +1429,15 @@ function updateSlotableName(element, localName, oldValue, value, nameSpace) {
         } else {
             elementSetAttributeDescriptor.value.call(element, TAG_SLOT, value);
         }
-        var elementState = _utils2.default.getShadowState(element);
-        if (elementState && elementState.assignedSlot) {
-            assignSlotables(elementState.assignedSlot);
+        var parentNode = element.parentNode;
+        if (!parentNode) {
+            return;
         }
-        assignASlot(element);
+        var parentState = _utils2.default.getShadowState(parentNode);
+        if (!parentState || !parentState.shadowRoot) {
+            return;
+        }
+        assignSlotablesForATree(parentState.shadowRoot);
     }
 }
 
@@ -1774,7 +1788,7 @@ function findASlot(slotable, open) {
     var name = slotable instanceof Element ? slotable.slot : EMPTY_STRING;
 
     return treeOrderRecursiveSelectFirst(parentState.shadowRoot.firstChild, function (node) {
-        return node.localName === TAG_SLOT && node.name === name;
+        return isSlot(node) && node.name === name;
     });
 }
 
@@ -1848,7 +1862,7 @@ function findFlattenedSlotables(slot) {
     for (var _i2 = 0; _i2 < slotables.length; _i2++) {
         var node = slotables[_i2];
         // 1. If node is a slot, run these subsubsteps:
-        if (node.localName === TAG_SLOT) {
+        if (isSlot(node)) {
             var temporaryResult = findFlattenedSlotables(node);
             var resultLength = resultLength;
             result.length += temporaryResult.length;
@@ -1866,157 +1880,109 @@ function findFlattenedSlotables(slot) {
 
 // https://dom.spec.whatwg.org/#assigning-slotables-and-slots
 
-function assignSlotables(slot, suppressSignaling) {
-    // https://dom.spec.whatwg.org/#assign-slotables
-    // To assign slotables, for a slot slot with an optional suppress 
-    // signaling flag (unset unless stated otherwise), run these steps:
+// Using custom algorithms instead.
 
-    // 1. Let slotables be the result of finding slotables for slot.
-    var slotables = findSlotables(slot);
+function assignSlotableToSlot(slotable, slot, suppressSignaling) {
+    var slotableState = _utils2.default.getShadowState(slotable);
+    slotableState.assignedSlot = slot;
 
-    // 2. If suppress signaling flag is unset, and slotables and slot’s assigned 
-    // nodes are not identical, then run signal a slot change for slot.
-    var identical = true;
     var slotState = _utils2.default.getShadowState(slot) || _utils2.default.setShadowState(slot, {});
-    var oldAssignedNodes = slotState.assignedNodes || [];
-    for (var i = 0; i < slotables.length; i++) {
-        if (slotables[i] !== oldAssignedNodes[i]) {
-            identical = false;
-            break;
-        }
-    }
-
-    if (identical) {
-        return;
-    }
+    var assignedNodes = slotState.assignedNodes = slotState.assignedNodes || [];
+    var assignedNodesCount = assignedNodes.length;
 
     if (!suppressSignaling) {
         signalASlotChange(slot);
     }
 
-    // If we haven't tracked them yet, track the slot's logical children
-    if (!slotState.childNodes) {
-        var slotChildNodes = slot.childNodes;
-        var slotChildNodesLength = slotChildNodes.length;
-        slotState.childNodes = new Array(slotChildNodesLength);
-        for (var _i3 = 0; _i3 < slotChildNodesLength; _i3++) {
-            var slotChildNode = slotChildNodes[_i3];
-            var slotChildNodeState = _utils2.default.getShadowState(slotChildNode) || _utils2.default.setShadowState(slotChildNode, {});
-            slotChildNodeState.parentNode = slot;
-            slotState.childNodes[_i3] = slotChildNodes[_i3];
-        }
-    }
+    if (assignedNodesCount === 0) {
+        assignedNodes.push(slotable);
 
-    // 3. Set slot’s assigned nodes to slotables.
-    slotState.assignedNodes = slotables;
-
-    // 4. For each slotable in slotables, set slotable’s assigned slot to slot.
-    for (var _i4 = 0; _i4 < slotables.length; _i4++) {
-        var slotable = slotables[_i4];
-        var slotableState = _utils2.default.getShadowState(slotable);
-        slotableState.assignedSlot = slot;
-    }
-
-    var slotablesCount = slotables.length;
-    var oldAssignedNodesCount = oldAssignedNodes.length;
-
-    if (slotablesCount !== 0 && oldAssignedNodesCount !== 0) {
-        // Clean out the slot of any formerly assigned nodes
-        var physicalNodesCount = oldAssignedNodesCount;
-        for (var _i5 = 0; _i5 < oldAssignedNodesCount; _i5++) {
-            var assignedNode = oldAssignedNodes[_i5];
-            var assignedNodeState = _utils2.default.getShadowState(assignedNode);
-            if (assignedNodeState.assignedSlot !== slot) {
-                assignedNodeState.physicalParent = null;
-                nodeRemoveChildDescriptor.value.call(slot, assignedNode);
-                oldAssignedNodes.splice(_i5, 1);
-                physicalNodesCount--;
-            }
+        // rendering
+        if (!slotState.childNodes) {
+            slotState.childNodes = Array.prototype.slice.call(slot.childNodes);
         }
-        // Place any new slotables where they belong.
-        if (slotableCount > physicalNodesCount) {
-            var _i6 = 0;
-            var j = 0;
-            while (_i6 < slotableCount) {
-                var _slotable = slotables[_i6];
-                var physical = oldAssignedNodes[j];
-                if (_slotable === physical) {
-                    _i6++;
-                    j++;
-                    continue;
-                } else {
-                    nodeInsertBeforeDescriptor.value.call(slot, _slotable, physical);
-                    _i6++;
-                    continue;
-                }
-            }
+        var fallbackNodes = slotState.childNodes;
+        var fallbackNodesCount = fallbackNodes.length;
+        for (var i = 0; i < fallbackNodesCount; i++) {
+            nodeRemoveChildDescriptor.value.call(slot, fallbackNodes[i]);
         }
-    } else if (slotablesCount !== 0) {
-        // Clean out the slot of fallback content
-        var childNodes = slotState.childNodes;
-        for (var _i7 = 0; _i7 < childNodes.length; _i7++) {
-            var fallbackNode = childNodes[_i7];
-            var fallbackNodeState = _utils2.default.getShadowState(fallbackNode);
-            fallbackNodeState.physicalParent = null;
-            nodeRemoveChildDescriptor.value.call(slot, fallbackNode);
-        }
-        // Append the slotables
-        for (var _i8 = 0; _i8 < slotablesCount; _i8++) {
-            var slotableNode = slotables[_i8];
-            var slotableNodeState = _utils2.default.getShadowState(slotableNode);
-            slotableNodeState.physicalParent = slot;
-            nodeAppendChildDescriptor.value.call(slot, slotables[_i8]);
-        }
+        nodeAppendChildDescriptor.value.call(slot, slotable);
     } else {
-        // Clean out the slot of assigned nodes
-        for (var _i9 = 0; _i9 < oldAssignedNodes.length; _i9++) {
-            var _assignedNode = oldAssignedNodes[_i9];
-            var _assignedNodeState = _utils2.default.getShadowState(_assignedNode);
-            _assignedNodeState.physicalParent = null;
-            nodeRemoveChildDescriptor.value.call(slot, _assignedNode);
+        var referenceNode = null;
+        var referenceNodeIndex = 0;
+        for (var _i3 = 0; _i3 < assignedNodesCount; _i3++) {
+            var assignedNode = assignedNodes[_i3];
+            if (assignedNode.compareDocumentPosition(slotable) === Node.DOCUMENT_POSITION_FOLLOWING) {
+                break;
+            }
+            referenceNodeIndex++;
         }
-        // Append the fallback content
-        var _childNodes = slotState.childNodes;
-        var childNodesCount = _childNodes.length;
-        for (var _i10 = 0; _i10 < childNodesCount; _i10++) {
-            var _fallbackNode = _childNodes[_i10];
-            var _fallbackNodeState = _utils2.default.getShadowState(_fallbackNode);
-            _fallbackNodeState.physicalParent = slot;
-            nodeAppendChildDescriptor.value.call(slot, _childNodes[_i10]);
+        assignedNodes.splice(referenceNodeIndex, 0, slotable);
+
+        // rendering
+        nodeInsertBeforeDescriptor.value.call(slot, slotable, referenceNode);
+    }
+}
+
+function unassignSlotableFromSlot(slotable, slot, suppressSignaling) {
+    var slotableState = _utils2.default.getShadowState(slotable);
+    slotableState.assignedSlot = null;
+
+    var slotState = _utils2.default.getShadowState(slot);
+    var slotAssignedNodes = slotState.assignedNodes;
+    slotAssignedNodes.splice(slotAssignedNodes.indexOf(slotable), 1);
+
+    if (!suppressSignaling) {
+        signalASlotChange(slot);
+    }
+
+    // rendering
+    slotableState.physicalParent = null;
+    nodeRemoveChildDescriptor.value.call(slot, slotable);
+    if (slotAssignedNodes.length === 0) {
+        var fallbackNodes = slotState.childNodes;
+        var fallbackNodesCount = fallbackNodes.length;
+        for (var i = 0; i < fallbackNodesCount; i++) {
+            nodeAppendChildDescriptor.value.call(slot, fallbackNodes[i]);
         }
     }
 }
 
 function assignSlotablesForATree(tree, noSignalSlots) {
-    // https://dom.spec.whatwg.org/#assign-slotables-for-a-tree
-    // To assign slotables for a tree, given a tree tree and an optional set of slots noSignalSlots
-    // (empty unless stated otherwise), run these steps for each slot slot in tree, in tree order:
+    // Gather slots
     var slots = [];
+    treeOrderRecursiveSelectAll(tree, slots, isSlot);
+    var slotCount = slots.length;
 
-    if (tree.localName === TAG_SLOT) {
-        slots[0] = tree;
-    }
-
-    treeOrderRecursiveSelectAll(tree, slots, function (descendant) {
-        return descendant.localName === TAG_SLOT;
-    });
-
-    for (var i = 0; i < slots.length; i++) {
-        var slot = slots[i];
-
-        // 1. Let suppress signaling flag be set, if slot is in noSignalSlots, and unset otherwise.
-        var suppressSignaling = noSignalSlots && noSignalSlots.indexOf(slot) !== -1;
-
-        // 2. Run assign slotables for slot with suppress signaling flag.
-        assignSlotables(slot, suppressSignaling);
-    }
-}
-
-function assignASlot(slotable) {
-    var slot = findASlot(slotable);
-
-    if (slot != null) {
-        assignSlotables(slot);
+    // Gather slotables and set their assigned slots
+    var hostChildNodes = tree.host.childNodes;
+    var hostChildNodesCount = hostChildNodes.length;
+    for (var i = 0; i < hostChildNodesCount; i++) {
+        var slotable = hostChildNodes[i];
+        if (!isSlotable(slotable)) {
+            continue;
+        }
+        var slotableState = _utils2.default.getShadowState(slotable);
+        var oldAssignedSlot = slotableState.assignedSlot;
+        var newAssignedSlot = null;
+        var name = slotable instanceof Element ? slotable.slot : EMPTY_STRING;
+        for (var j = 0; j < slots.length; j++) {
+            var slot = slots[j];
+            if (slot.name === name) {
+                newAssignedSlot = slot;
+                break;
+            }
+        }
+        if (newAssignedSlot !== oldAssignedSlot) {
+            if (oldAssignedSlot) {
+                var suppress = !noSignalSlots || noSignalSlots.indexOf(oldAssignedSlot) === -1;
+                unassignSlotableFromSlot(slotable, oldAssignedSlot, suppress);
+            }
+            if (newAssignedSlot) {
+                var _suppress = !noSignalSlots || noSignalSlots.indexOf(newAssignedSlot) === -1;
+                assignSlotableToSlot(slotable, newAssignedSlot, _suppress);
+            }
+        }
     }
 }
 
@@ -2118,8 +2084,8 @@ function insert(node, parent, child, suppressObservers) {
         for (var i = 0; i < count; i++) {
             nodes[i] = nodeChildNodes[i];
         }
-        for (var _i11 = 0; _i11 < count; _i11++) {
-            remove(nodes[_i11], node, true);
+        for (var _i4 = 0; _i4 < count; _i4++) {
+            remove(nodes[_i4], node, true);
         }
         // 5. If node is a DocumentFragment node, queue a mutation record of "childList" for node with removedNodes nodes.
         queueMutationRecord(MO_TYPE_CHILD_LIST, node, null, null, null, null, nodes);
@@ -2132,9 +2098,9 @@ function insert(node, parent, child, suppressObservers) {
     var parentStateChildNodes = parentState ? parentState.childNodes : null;
     var parentIsConnected = parent.isConnected;
     var parentIsShadowRoot = isShadowRoot(parent);
-    var parentIsSlot = parent.localName === TAG_SLOT;
-    for (var _i12 = 0; _i12 < count; _i12++) {
-        var _node = nodes[_i12];
+    var parentTree = root(parent);
+    for (var _i5 = 0; _i5 < count; _i5++) {
+        var _node = nodes[_i5];
         // 1. Insert node into parent before child or at the end of parent if child is null.
         if (parentStateChildNodes) {
             if (child) {
@@ -2156,40 +2122,27 @@ function insert(node, parent, child, suppressObservers) {
         }
 
         // 2. If parent is a shadow host and node is a slotable, then assign a slot for node.
-        if (parentState && parentState.shadowRoot && PROP_ASSIGNED_SLOT in _node) {
-            assignASlot(_node);
+        if (parentState && parentState.shadowRoot && isSlotable(_node)) {
+            var slot = findASlot(_node);
+            if (slot) {
+                assignSlotableToSlot(_node, slot);
+            }
         }
 
         // 3. If parent is a slot whose assigned nodes is the empty list, 
         // then run signal a slot change for parent.
-        if (parentIsSlot && (!parentState || !parentState.assignedNodes || parentState.assignedNodes.length === 0)) {
-            // 3a. Physically append the child into the slot.
-            if (parentState) {
-                var _nodeState = _utils2.default.getShadowState(_node) || _utils2.default.setShadowState(_node, {});
-                _nodeState.physicalParent = parent;
-            }
-            nodeInsertBeforeDescriptor.value.call(parent, _node, child);
-            // 3b. Do what the spec said
+        if (isSlot(parent) && parent.assignedNodes().length === 0) {
             signalASlotChange(parent);
         }
 
         // 4. Run assign slotables for a tree with node’s tree and a set containing 
         // each inclusive descendant of node that is a slot.
-        // TODO: Can this be skipped if parent's root is not a shadow root?
-        // If parent's root is not a shadow root then neither this node nor any
-        // of its descendant slots will need to have slotables assigned to them,
-        // and this node and any descendant slots should also have already been 
-        // removed or be a new node (the only place calling this right now is 
-        // Text.splitText with a new text node.)
-        {
-            var inclusiveSlotDescendants = [];
-            if (_node.localName === TAG_SLOT) {
-                inclusiveSlotDescendants[0] = _node;
+        if (isShadowRoot(parentTree)) {
+            var inclusiveSlotDescendants = isSlot(_node) ? [_node] : [];
+            treeOrderRecursiveSelectAll(_node, inclusiveSlotDescendants, isSlot);
+            if (inclusiveSlotDescendants.length) {
+                assignSlotablesForATree(parentTree, inclusiveSlotDescendants);
             }
-            treeOrderRecursiveSelectAll(_node, inclusiveSlotDescendants, function (descendant) {
-                return descendant.localName === TAG_SLOT;
-            });
-            assignSlotablesForATree(_node, inclusiveSlotDescendants);
         }
 
         if (parentIsConnected && _customElements2.default.isInstalled()) {
@@ -2330,16 +2283,16 @@ function replaceAll(node, parent) {
         var nodeChildNodes = node.childNodes;
         var nodeChildNodesLength = nodeChildNodes.length;
         addedNodes = new Array(nodeChildNodesLength);
-        for (var _i13 = 0; _i13 < nodeChildNodesLength; _i13++) {
-            addedNodes[_i13] = nodeChildNodes[_i13];
+        for (var _i6 = 0; _i6 < nodeChildNodesLength; _i6++) {
+            addedNodes[_i6] = nodeChildNodes[_i6];
         }
     } else {
         addedNodes = [node];
     }
 
     // 4. Remove all parent’s children, in tree order, with the suppress observers flag set.
-    for (var _i14 = 0; _i14 < removedNodesCount; _i14++) {
-        remove(removedNodes[_i14], parent, true);
+    for (var _i7 = 0; _i7 < removedNodesCount; _i7++) {
+        remove(removedNodes[_i7], parent, true);
     }
 
     // 5. If node is not null, insert node into parent before null with the suppress observers flag set.
@@ -2407,34 +2360,27 @@ function remove(node, parent, suppressObservers) {
 
     // 10. If node is assigned, then run assign slotables for node’s assigned slot.
     if (nodeState && nodeState.assignedSlot) {
-        assignSlotables(nodeState.assignedSlot);
-        nodeState.assignedSlot = null;
+        // NOTE: Using our own algorithm here instead
+        unassignSlotableFromSlot(node, nodeState.assignedSlot);
     }
 
-    // 11. If parent is a slot whose assigned nodes is the empty list,
-    // then run signal a slot change for parent.
-    if (parent.localName === TAG_SLOT && (!parentState || !parentState.assignedNodes || parentState.assignedNodes.length === 0)) {
-        signalASlotChange(parent);
-    }
+    var parentTree = root(parent);
+    if (isShadowRoot(parentTree)) {
+        // 11. If parent is a slot whose assigned nodes is the empty list,
+        // then run signal a slot change for parent.
+        // SKIP: This is already taken care of by our algorithm in step 10.
 
-    // 12. If node has an inclusive descendant that is a slot, then:
-    // TODO: Can this be skipped when node's root was not a shadow root?
-    // If node's root was not a shadow root, then neither it nor any of
-    // its descendant slots should have any assigned nodes.
-    {
-        var inclusiveSlotDescendants = [];
-        if (node.localName === TAG_SLOT) {
-            inclusiveSlotDescendants[0] = node;
-        }
-        treeOrderRecursiveSelectAll(node, inclusiveSlotDescendants, function (descendant) {
-            return descendant.localName === TAG_SLOT;
-        });
+        // 12. If node has an inclusive descendant that is a slot, then:
+        // 1. Run assign slotables for a tree with parent’s tree.
+        // 2. Run assign slotables for a tree with node’s tree and a 
+        // set containing each inclusive descendant of node that is a slot.
+        var inclusiveSlotDescendants = isSlot(node) ? [node] : [];
+        treeOrderRecursiveSelectAll(node, inclusiveSlotDescendants, isSlot);
         if (inclusiveSlotDescendants.length) {
-            // 1. Run assign slotables for a tree with parent’s tree.
-            assignSlotablesForATree(parent);
-            // 2. Run assign slotables for a tree with node’s tree and a 
-            // set containing each inclusive descendant of node that is a slot.
-            assignSlotablesForATree(node, inclusiveSlotDescendants);
+            // NOTE: Using our own algorithm here instead
+            // TODO: Test to make sure that our algorithm takes care of clearing
+            // the assigned nodes of any of these descendants.
+            assignSlotablesForATree(parentTree);
         }
     }
 
@@ -2646,8 +2592,8 @@ function queueMutationRecord(type, target, name, nameSpace, oldValue, addedNodes
     }
 
     // 4. Then, for each observer in interested observers, run these substeps:
-    for (var _i15 = 0; _i15 < interestedObservers.length; _i15++) {
-        var _observer = interestedObservers[_i15];
+    for (var _i8 = 0; _i8 < interestedObservers.length; _i8++) {
+        var _observer = interestedObservers[_i8];
         // 1. Let record be a new MutationRecord object with its type set to type and target set to target.
         var record = {
             type: type,
@@ -2682,7 +2628,7 @@ function queueMutationRecord(type, target, name, nameSpace, oldValue, addedNodes
             record.nextSibling = nextSibling;
         }
         // 7. If observer has a paired string, set record’s oldValue to observer’s paired string.
-        record.oldValue = pairedStrings[_i15];
+        record.oldValue = pairedStrings[_i8];
         // 8. Append record to observer’s record queue.
         _observer.queue.push(record);
     }
@@ -2707,8 +2653,8 @@ function notifyMutationObservers() {
         notifyList[i] = mutationObservers[i];
     }
     var signalList = signalSlotList.splice(0, signalSlotList.length);
-    for (var _i16 = 0; _i16 < notifyList.length; _i16++) {
-        var observer = notifyList[_i16];
+    for (var _i9 = 0; _i9 < notifyList.length; _i9++) {
+        var observer = notifyList[_i9];
         var queue = observer.queue.splice(0, observer.queue.length);
         for (var j = mutationObservers.length - 1; j >= 0; j--) {
             var transientObserver = mutationObservers[j];
@@ -2725,8 +2671,8 @@ function notifyMutationObservers() {
             }
         }
     }
-    for (var _i17 = 0; _i17 < signalList.length; _i17++) {
-        var slot = signalList[_i17];
+    for (var _i10 = 0; _i10 < signalList.length; _i10++) {
+        var slot = signalList[_i10];
         var event = slot.ownerDocument.createEvent(EVENT);
         event.initEvent(EVT_SLOT_CHANGE, true, false);
         try {

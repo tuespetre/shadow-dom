@@ -81,7 +81,6 @@ const NS_SVG = 'http://www.w3.org/2000/svg';
 const NS_XML = 'http://www.w3.org/XML/1998/namespace';
 const NS_XMLNS = 'http://www.w3.org/2000/xmlns/';
 const NS_XLINK = 'http://www.w3.org/1999/xlink';
-const PROP_ASSIGNED_SLOT = 'assignedSlot';
 const SHADOW_MODE_OPEN = 'open';
 const SHADOW_MODE_CLOSED = 'closed';
 const SHADOW_NODE_NAME = '#shadow-root';
@@ -157,6 +156,14 @@ function treeOrderRecursiveSelectFirst(node, match) {
 
 function isShadowRoot(node) {
     return node.nodeName === SHADOW_NODE_NAME;
+}
+
+function isSlot(node) {
+    return node.localName === TAG_SLOT;
+}
+
+function isSlotable(node) {
+    return node instanceof Element || node instanceof Text;
 }
 
 // https://www.w3.org/TR/DOM-Parsing/
@@ -544,7 +551,7 @@ function retarget(nodeA, nodeB) {
 
 function updateSlotName(element, localName, oldValue, value, nameSpace) {
     // https://dom.spec.whatwg.org/#slot-name
-    if (element.localName === TAG_SLOT) {
+    if (isSlot(element)) {
         if (localName === ATTR_NAME && nameSpace == null) {
             if (value === oldValue) {
                 return;
@@ -561,7 +568,10 @@ function updateSlotName(element, localName, oldValue, value, nameSpace) {
             else {
                 elementSetAttributeDescriptor.value.call(element, ATTR_NAME, value);
             }
-            assignSlotablesForATree(element);
+            const elementTree = root(element);
+            if (isShadowRoot(elementTree)) {
+                assignSlotablesForATree(elementTree);
+            }
         }
     }
 }
@@ -584,11 +594,15 @@ function updateSlotableName(element, localName, oldValue, value, nameSpace) {
         else {
             elementSetAttributeDescriptor.value.call(element, TAG_SLOT, value);
         }
-        const elementState = $utils.getShadowState(element);
-        if (elementState && elementState.assignedSlot) {
-            assignSlotables(elementState.assignedSlot);
+        const parentNode = element.parentNode;
+        if (!parentNode) {
+            return;
         }
-        assignASlot(element);
+        const parentState = $utils.getShadowState(parentNode);
+        if (!parentState || !parentState.shadowRoot) {
+            return;
+        }
+        assignSlotablesForATree(parentState.shadowRoot);
     }
 }
 
@@ -947,9 +961,7 @@ function findASlot(slotable, open) {
 
     const name = slotable instanceof Element ? slotable.slot : EMPTY_STRING;
 
-    return treeOrderRecursiveSelectFirst(parentState.shadowRoot.firstChild, function (node) {
-        return node.localName === TAG_SLOT && node.name === name;
-    });
+    return treeOrderRecursiveSelectFirst(parentState.shadowRoot.firstChild, node => isSlot(node) && node.name === name);
 }
 
 function findSlotables(slot) {
@@ -1024,7 +1036,7 @@ function findFlattenedSlotables(slot) {
     for (let i = 0; i < slotables.length; i++) {
         const node = slotables[i];
         // 1. If node is a slot, run these subsubsteps:
-        if (node.localName === TAG_SLOT) {
+        if (isSlot(node)) {
             const temporaryResult = findFlattenedSlotables(node);
             const resultLength = resultLength;
             result.length += temporaryResult.length;
@@ -1043,160 +1055,110 @@ function findFlattenedSlotables(slot) {
 
 // https://dom.spec.whatwg.org/#assigning-slotables-and-slots
 
-function assignSlotables(slot, suppressSignaling) {
-    // https://dom.spec.whatwg.org/#assign-slotables
-    // To assign slotables, for a slot slot with an optional suppress 
-    // signaling flag (unset unless stated otherwise), run these steps:
+// Using custom algorithms instead.
 
-    // 1. Let slotables be the result of finding slotables for slot.
-    const slotables = findSlotables(slot);
+function assignSlotableToSlot(slotable, slot, suppressSignaling) {
+    const slotableState = $utils.getShadowState(slotable);
+    slotableState.assignedSlot = slot;
 
-    // 2. If suppress signaling flag is unset, and slotables and slot’s assigned 
-    // nodes are not identical, then run signal a slot change for slot.
-    let identical = true;
     const slotState = $utils.getShadowState(slot) || $utils.setShadowState(slot, {});
-    const oldAssignedNodes = slotState.assignedNodes || [];
-    for (let i = 0; i < slotables.length; i++) {
-        if (slotables[i] !== oldAssignedNodes[i]) {
-            identical = false;
-            break;
-        }
-    }
-
-    if (identical) {
-        return;
-    }
+    const assignedNodes = slotState.assignedNodes = (slotState.assignedNodes || []);
+    const assignedNodesCount = assignedNodes.length;
 
     if (!suppressSignaling) {
         signalASlotChange(slot);
     }
 
-    // If we haven't tracked them yet, track the slot's logical children
-    if (!slotState.childNodes) {
-        const slotChildNodes = slot.childNodes;
-        const slotChildNodesLength = slotChildNodes.length;
-        slotState.childNodes = new Array(slotChildNodesLength);
-        for (let i = 0; i < slotChildNodesLength; i++) {
-            const slotChildNode = slotChildNodes[i];
-            const slotChildNodeState = $utils.getShadowState(slotChildNode) || $utils.setShadowState(slotChildNode, {});
-            slotChildNodeState.parentNode = slot;
-            slotState.childNodes[i] = slotChildNodes[i];
-        }
-    }
+    if (assignedNodesCount === 0) {
+        assignedNodes.push(slotable);
 
-    // 3. Set slot’s assigned nodes to slotables.
-    slotState.assignedNodes = slotables;
-
-    // 4. For each slotable in slotables, set slotable’s assigned slot to slot.
-    for (let i = 0; i < slotables.length; i++) {
-        const slotable = slotables[i];
-        const slotableState = $utils.getShadowState(slotable);
-        slotableState.assignedSlot = slot;
-    }
-
-    const slotablesCount = slotables.length;
-    const oldAssignedNodesCount = oldAssignedNodes.length;
-
-    if (slotablesCount !== 0 && oldAssignedNodesCount !== 0) {
-        // Clean out the slot of any formerly assigned nodes
-        let physicalNodesCount = oldAssignedNodesCount;
-        for (let i = 0; i < oldAssignedNodesCount; i++) {
-            const assignedNode = oldAssignedNodes[i];
-            const assignedNodeState = $utils.getShadowState(assignedNode);
-            if (assignedNodeState.assignedSlot !== slot) {
-                assignedNodeState.physicalParent = null;
-                nodeRemoveChildDescriptor.value.call(slot, assignedNode);
-                oldAssignedNodes.splice(i, 1);
-                physicalNodesCount--;
-            }
+        // rendering
+        if (!slotState.childNodes) {
+            slotState.childNodes = Array.prototype.slice.call(slot.childNodes);
         }
-        // Place any new slotables where they belong.
-        if (slotableCount > physicalNodesCount) {
-            let i = 0;
-            let j = 0;
-            while (i < slotableCount) {
-                const slotable = slotables[i];
-                const physical = oldAssignedNodes[j];
-                if (slotable === physical) {
-                    i++;
-                    j++;
-                    continue;
-                }
-                else {
-                    nodeInsertBeforeDescriptor.value.call(slot, slotable, physical);
-                    i++;
-                    continue;
-                }
-            }
+        const fallbackNodes = slotState.childNodes;
+        const fallbackNodesCount = fallbackNodes.length;
+        for (let i = 0; i < fallbackNodesCount; i++) {
+            nodeRemoveChildDescriptor.value.call(slot, fallbackNodes[i]);
         }
-    }
-    else if (slotablesCount !== 0) {
-        // Clean out the slot of fallback content
-        const childNodes = slotState.childNodes;
-        for (let i = 0; i < childNodes.length; i++) {
-            const fallbackNode = childNodes[i];
-            const fallbackNodeState = $utils.getShadowState(fallbackNode);
-            fallbackNodeState.physicalParent = null;
-            nodeRemoveChildDescriptor.value.call(slot, fallbackNode);
-        }
-        // Append the slotables
-        for (let i = 0; i < slotablesCount; i++) {
-            const slotableNode = slotables[i];
-            const slotableNodeState = $utils.getShadowState(slotableNode);
-            slotableNodeState.physicalParent = slot;
-            nodeAppendChildDescriptor.value.call(slot, slotables[i]);
-        }
+        nodeAppendChildDescriptor.value.call(slot, slotable);
     }
     else {
-        // Clean out the slot of assigned nodes
-        for (let i = 0; i < oldAssignedNodes.length; i++) {
-            const assignedNode = oldAssignedNodes[i];
-            const assignedNodeState = $utils.getShadowState(assignedNode);
-            assignedNodeState.physicalParent = null;
-            nodeRemoveChildDescriptor.value.call(slot, assignedNode);
+        let referenceNode = null;
+        let referenceNodeIndex = 0;
+        for (let i = 0; i < assignedNodesCount; i++) {
+            const assignedNode = assignedNodes[i];
+            if (assignedNode.compareDocumentPosition(slotable) === Node.DOCUMENT_POSITION_FOLLOWING) {
+                break;
+            }
+            referenceNodeIndex++;
         }
-        // Append the fallback content
-        const childNodes = slotState.childNodes;
-        const childNodesCount = childNodes.length;
-        for (let i = 0; i < childNodesCount; i++) {
-            const fallbackNode = childNodes[i];
-            const fallbackNodeState = $utils.getShadowState(fallbackNode);
-            fallbackNodeState.physicalParent = slot;
-            nodeAppendChildDescriptor.value.call(slot, childNodes[i]);
+        assignedNodes.splice(referenceNodeIndex, 0, slotable);
+
+        // rendering
+        nodeInsertBeforeDescriptor.value.call(slot, slotable, referenceNode);
+    }
+}
+
+function unassignSlotableFromSlot(slotable, slot, suppressSignaling) {
+    const slotableState = $utils.getShadowState(slotable);
+    slotableState.assignedSlot = null;
+
+    const slotState = $utils.getShadowState(slot);
+    const slotAssignedNodes = slotState.assignedNodes;
+    slotAssignedNodes.splice(slotAssignedNodes.indexOf(slotable), 1);
+
+    if (!suppressSignaling) {
+        signalASlotChange(slot);
+    }
+    
+    // rendering
+    slotableState.physicalParent = null;
+    nodeRemoveChildDescriptor.value.call(slot, slotable);
+    if (slotAssignedNodes.length === 0) {
+        const fallbackNodes = slotState.childNodes;
+        const fallbackNodesCount = fallbackNodes.length;
+        for (let i = 0; i < fallbackNodesCount; i++) {
+            nodeAppendChildDescriptor.value.call(slot, fallbackNodes[i]);
         }
     }
 }
 
 function assignSlotablesForATree(tree, noSignalSlots) {
-    // https://dom.spec.whatwg.org/#assign-slotables-for-a-tree
-    // To assign slotables for a tree, given a tree tree and an optional set of slots noSignalSlots
-    // (empty unless stated otherwise), run these steps for each slot slot in tree, in tree order:
+    // Gather slots
     const slots = [];
+    treeOrderRecursiveSelectAll(tree, slots, isSlot);
+    const slotCount = slots.length;
 
-    if (tree.localName === TAG_SLOT) {
-        slots[0] = tree;
-    }
-
-    treeOrderRecursiveSelectAll(tree, slots, function (descendant) {
-        return descendant.localName === TAG_SLOT;
-    });
-
-    for (let i = 0; i < slots.length; i++) {
-        const slot = slots[i];
-
-        // 1. Let suppress signaling flag be set, if slot is in noSignalSlots, and unset otherwise.
-        const suppressSignaling = noSignalSlots && noSignalSlots.indexOf(slot) !== -1;
-
-        // 2. Run assign slotables for slot with suppress signaling flag.
-        assignSlotables(slot, suppressSignaling);
-    }
-}
-
-function assignASlot(slotable) {
-    const slot = findASlot(slotable);
-
-    if (slot != null) {
-        assignSlotables(slot);
+    // Gather slotables and set their assigned slots
+    const hostChildNodes = tree.host.childNodes;
+    const hostChildNodesCount = hostChildNodes.length;
+    for (let i = 0; i < hostChildNodesCount; i++) {
+        const slotable = hostChildNodes[i];
+        if (!isSlotable(slotable)) {
+            continue;
+        }
+        const slotableState = $utils.getShadowState(slotable);
+        const oldAssignedSlot = slotableState.assignedSlot;
+        let newAssignedSlot = null;
+        const name = slotable instanceof Element ? slotable.slot : EMPTY_STRING;
+        for (let j = 0; j < slots.length; j++) {
+            const slot = slots[j];
+            if (slot.name === name) {
+                newAssignedSlot = slot;
+                break;
+            }
+        }
+        if (newAssignedSlot !== oldAssignedSlot) {
+            if (oldAssignedSlot) {
+                const suppress = !noSignalSlots || noSignalSlots.indexOf(oldAssignedSlot) === -1;
+                unassignSlotableFromSlot(slotable, oldAssignedSlot, suppress);
+            }
+            if (newAssignedSlot) {
+                const suppress = !noSignalSlots || noSignalSlots.indexOf(newAssignedSlot) === -1;
+                assignSlotableToSlot(slotable, newAssignedSlot, suppress);
+            }
+        }
     }
 }
 
@@ -1313,7 +1275,7 @@ function insert(node, parent, child, suppressObservers) {
     const parentStateChildNodes = parentState ? parentState.childNodes : null;
     const parentIsConnected = parent.isConnected;
     const parentIsShadowRoot = isShadowRoot(parent);
-    const parentIsSlot = parent.localName === TAG_SLOT;
+    const parentTree = root(parent);
     for (let i = 0; i < count; i++) {
         const node = nodes[i];
         // 1. Insert node into parent before child or at the end of parent if child is null.
@@ -1339,40 +1301,28 @@ function insert(node, parent, child, suppressObservers) {
         }
 
         // 2. If parent is a shadow host and node is a slotable, then assign a slot for node.
-        if (parentState && parentState.shadowRoot && PROP_ASSIGNED_SLOT in node) {
-            assignASlot(node);
+        if (parentState && parentState.shadowRoot && isSlotable(node)) {
+            const slot = findASlot(node);
+            if (slot) {
+                assignSlotableToSlot(node, slot);
+            }
         }
 
         // 3. If parent is a slot whose assigned nodes is the empty list, 
         // then run signal a slot change for parent.
-        if (parentIsSlot && (!parentState || !parentState.assignedNodes || parentState.assignedNodes.length === 0)) {
-            // 3a. Physically append the child into the slot.
-            if (parentState) {
-                const nodeState = $utils.getShadowState(node) || $utils.setShadowState(node, {});
-                nodeState.physicalParent = parent;
-            }
-            nodeInsertBeforeDescriptor.value.call(parent, node, child);
-            // 3b. Do what the spec said
+        if (isSlot(parent) && parent.assignedNodes().length === 0) {
             signalASlotChange(parent);
         }
 
         // 4. Run assign slotables for a tree with node’s tree and a set containing 
         // each inclusive descendant of node that is a slot.
-        // TODO: Can this be skipped if parent's root is not a shadow root?
-        // If parent's root is not a shadow root then neither this node nor any
-        // of its descendant slots will need to have slotables assigned to them,
-        // and this node and any descendant slots should also have already been 
-        // removed or be a new node (the only place calling this right now is 
-        // Text.splitText with a new text node.)
+        if (isShadowRoot(parentTree))
         {
-            const inclusiveSlotDescendants = [];
-            if (node.localName === TAG_SLOT) {
-                inclusiveSlotDescendants[0] = node;
+            const inclusiveSlotDescendants = isSlot(node) ? [node] : [];
+            treeOrderRecursiveSelectAll(node, inclusiveSlotDescendants, isSlot);
+            if (inclusiveSlotDescendants.length) {
+                assignSlotablesForATree(parentTree, inclusiveSlotDescendants);
             }
-            treeOrderRecursiveSelectAll(node, inclusiveSlotDescendants, function (descendant) {
-                return descendant.localName === TAG_SLOT;
-            });
-            assignSlotablesForATree(node, inclusiveSlotDescendants);
         }
 
         if (parentIsConnected && $ce.isInstalled()) {
@@ -1594,35 +1544,27 @@ function remove(node, parent, suppressObservers) {
 
     // 10. If node is assigned, then run assign slotables for node’s assigned slot.
     if (nodeState && nodeState.assignedSlot) {
-        assignSlotables(nodeState.assignedSlot);
-        nodeState.assignedSlot = null;
+        // NOTE: Using our own algorithm here instead
+        unassignSlotableFromSlot(node, nodeState.assignedSlot);
     }
 
-    // 11. If parent is a slot whose assigned nodes is the empty list,
-    // then run signal a slot change for parent.
-    if (parent.localName === TAG_SLOT &&
-        (!parentState || !parentState.assignedNodes || parentState.assignedNodes.length === 0)) {
-        signalASlotChange(parent);
-    }
+    const parentTree = root(parent);
+    if (isShadowRoot(parentTree)) {
+        // 11. If parent is a slot whose assigned nodes is the empty list,
+        // then run signal a slot change for parent.
+        // SKIP: This is already taken care of by our algorithm in step 10.
 
-    // 12. If node has an inclusive descendant that is a slot, then:
-    // TODO: Can this be skipped when node's root was not a shadow root?
-    // If node's root was not a shadow root, then neither it nor any of
-    // its descendant slots should have any assigned nodes.
-    {
-        const inclusiveSlotDescendants = [];
-        if (node.localName === TAG_SLOT) {
-            inclusiveSlotDescendants[0] = node;
-        }
-        treeOrderRecursiveSelectAll(node, inclusiveSlotDescendants, function (descendant) {
-            return descendant.localName === TAG_SLOT;
-        });
-        if (inclusiveSlotDescendants.length) {
+        // 12. If node has an inclusive descendant that is a slot, then:
             // 1. Run assign slotables for a tree with parent’s tree.
-            assignSlotablesForATree(parent);
             // 2. Run assign slotables for a tree with node’s tree and a 
             // set containing each inclusive descendant of node that is a slot.
-            assignSlotablesForATree(node, inclusiveSlotDescendants);
+        const inclusiveSlotDescendants = isSlot(node) ? [node] : [];
+        treeOrderRecursiveSelectAll(node, inclusiveSlotDescendants, isSlot);
+        if (inclusiveSlotDescendants.length) {
+            // NOTE: Using our own algorithm here instead
+            // TODO: Test to make sure that our algorithm takes care of clearing
+            // the assigned nodes of any of these descendants.
+            assignSlotablesForATree(parentTree);
         }
     }
 
