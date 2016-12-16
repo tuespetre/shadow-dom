@@ -172,16 +172,13 @@ const elementMixin = {
             childNodes: []
         });
 
-        const originalChildNodes = this.childNodes;
-        const removeChild = nodeRemoveChildDescriptor.value;
-        const savedChildNodes = new Array(originalChildNodes.length);
-        let firstChild;
-        let i = 0;
-        while (firstChild = originalChildNodes[0]) {
-            const childState = $utils.getShadowState(firstChild) || $utils.setShadowState(firstChild, {});
+        const savedChildNodes = Array.prototype.slice.call(this.childNodes);
+        const savedChildNodesCount = savedChildNodes.length;
+        for (let i = 0; i < savedChildNodesCount; i++) {
+            const savedChildNode = savedChildNodes[i];
+            const childState = $utils.getShadowState(savedChildNode) || $utils.setShadowState(savedChildNode, {});
             childState.parentNode = this;
-            savedChildNodes[i++] = firstChild;
-            removeChild.call(this, firstChild);
+            nodeRemoveChildDescriptor.value.call(this, savedChildNode);
         }
 
         let hostState = $utils.getShadowState(this);

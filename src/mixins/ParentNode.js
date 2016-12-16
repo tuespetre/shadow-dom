@@ -4,6 +4,8 @@ import $dom from '../dom.js';
 import $ce from '../custom-elements.js';
 import $utils from '../utils.js';
 
+const elementWalker = document.createTreeWalker(document, NodeFilter.SHOW_ELEMENT, null, false);
+
 export default function (base) {
 
     return {
@@ -35,47 +37,39 @@ export default function (base) {
         },
 
         get firstElementChild() {
-            let childNodes;
-
             const shadowState = $utils.getShadowState(this);
             if (shadowState) {
-                childNodes = shadowState.childNodes
-            }
-
-            if (!childNodes) {
-                childNodes = this.childNodes;
-            }
-
-            for (let i = 0; i < childNodes.length; i++) {
-                const node = childNodes[i];
-                if (node.nodeType == Node.ELEMENT_NODE) {
-                    return node;
+                const childNodes = shadowState.childNodes;
+                if (childNodes) {
+                    for (let i = 0; i < childNodes.length; i++) {
+                        const node = childNodes[i];
+                        if (node.nodeType == Node.ELEMENT_NODE) {
+                            return node;
+                        }
+                    }
+                    return null;
                 }
             }
-
-            return null;
+            elementWalker.currentNode = this;
+            return elementWalker.firstChild();
         },
 
         get lastElementChild() {
-            let childNodes;
-
             const shadowState = $utils.getShadowState(this);
             if (shadowState) {
-                childNodes = shadowState.childNodes
-            }
-
-            if (!childNodes) {
-                childNodes = this.childNodes;
-            }
-
-            for (let i = childNodes.length - 1; i >= 0; i--) {
-                const node = childNodes[i];
-                if (node.nodeType == Node.ELEMENT_NODE) {
-                    return node;
+                const childNodes = shadowState.childNodes;
+                if (childNodes) {
+                    for (let i = childNodes.length - 1; i >= 0; i--) {
+                        const node = childNodes[i];
+                        if (node.nodeType == Node.ELEMENT_NODE) {
+                            return node;
+                        }
+                    }
+                    return null;
                 }
             }
-
-            return null;
+            elementWalker.currentNode = this;
+            return elementWalker.lastChild();
         },
 
         get childElementCount() {
@@ -136,11 +130,11 @@ export default function (base) {
         // TODO: tests
         querySelector(selectors) {
             let firstChild = this.firstChild;
-            
+
             if (!firstChild) {
                 return null;
             }
-            
+
             return $dom.treeOrderRecursiveSelectFirst(firstChild, function (node) {
                 return node.nodeType === Node.ELEMENT_NODE && node.matches(selectors);
             });

@@ -8,9 +8,23 @@ export default {
     install
 };
 
+const nodeWalker = document.createTreeWalker(document, NodeFilter.SHOW_ALL, null, false);
 const nodeHasChildNodesDescriptor = $utils.descriptor(Node, 'hasChildNodes');
+const nodeChildNodesDescriptor = $utils.descriptor(Node, 'childNodes');
 
-const propertyDescriptors = {
+const accessorDescriptors = {
+
+    get parentNode() {
+        const nodeState = $utils.getShadowState(this);
+        if (nodeState) {
+            const parentNode = nodeState.parentNode;
+            if (parentNode) {
+                return parentNode;
+            }
+        }
+        nodeWalker.currentNode = this;
+        return nodeWalker.parentNode();
+    },
 
     get parentElement() {
         const parentNode = this.parentNode;
@@ -18,6 +32,99 @@ const propertyDescriptors = {
             return parentNode;
         }
         return null;
+    },
+
+    // TODO: tests
+    get childNodes() {
+        const nodeState = $utils.getShadowState(this);
+        if (nodeState) {
+            const childNodes = nodeState.childNodes;
+            if (childNodes) {
+                const childNodesLength = childNodes.length;
+                const result = new Array(childNodesLength);
+                for (let i = 0; i < childNodesLength; i++) {
+                    result[i] = childNodes[i];
+                }
+                return result;
+            }
+        }
+        if ($utils.brokenAccessors) {
+            const childNodes = new Array();
+            nodeWalker.currentNode = this;
+            const firstChild = nodeWalker.firstChild();
+            if (!firstChild) {
+                return childNodes;
+            }
+            childNodes.push(firstChild);
+            let nextSibling;
+            while (nextSibling = nodeWalker.nextSibling()) {
+                childNodes.push(nextSibling);
+            }
+            return childNodes;
+        }
+        return nodeChildNodesDescriptor.get.call(this);
+    },
+
+    // TODO: tests
+    get firstChild() {
+        const nodeState = $utils.getShadowState(this);
+        if (nodeState) {
+            const childNodes = nodeState.childNodes;
+            if (childNodes) {
+                if (childNodes.length) {
+                    return childNodes[0];
+                }
+                return null;
+            }
+        }
+        nodeWalker.currentNode = this;
+        return nodeWalker.firstChild();
+    },
+
+    // TODO: tests
+    get lastChild() {
+        const nodeState = $utils.getShadowState(this);
+        if (nodeState) {
+            const childNodes = nodeState.childNodes;
+            if (childNodes) {
+                if (childNodes.length) {
+                    return childNodes[childNodes.length - 1];
+                }
+                return null;
+            }
+        }
+        nodeWalker.currentNode = this;
+        return nodeWalker.lastChild();
+    },
+
+    // TODO: tests
+    get previousSibling() {
+        const nodeState = $utils.getShadowState(this);
+        if (nodeState) {
+            const parentNode = nodeState.parentNode;
+            if (parentNode) {
+                const childNodes = $utils.getShadowState(parentNode).childNodes;
+                const siblingIndex = childNodes.indexOf(this) - 1;
+                return siblingIndex < 0 ? null : childNodes[siblingIndex];
+            }
+        }
+        nodeWalker.currentNode = this;
+        return nodeWalker.previousSibling();
+    },
+
+    // TODO: tests
+    get nextSibling() {
+        const nodeState = $utils.getShadowState(this);
+        if (nodeState) {
+            const parentNode = nodeState.parentNode;
+            if (parentNode) {
+                const childNodes = $utils.getShadowState(parentNode).childNodes;
+                const siblingIndex = childNodes.indexOf(this) + 1;
+                return siblingIndex === childNodes.length ? null : childNodes[siblingIndex];
+            }
+        }
+        nodeWalker.currentNode = this;
+        return nodeWalker.nextSibling();
     },
 
     // TODO: consider creating a raw property descriptor
@@ -373,59 +480,19 @@ const methodDescriptors = {
 
 function install() {
     if ($utils.brokenAccessors) {
-        [Document, DocumentFragment, Element, Attr, CharacterData].forEach(type => {
-            const parentNodeDescriptor = {};
-            parentNodeDescriptor.get = makeGetterForParentNode(makeGhostGetter(type, 'parentNode', parentNodeDescriptor));
-            $utils.defineProperty(type.prototype, 'parentNode', parentNodeDescriptor);
+        const subtypes = [
+            Document,
+            DocumentFragment,
+            Element,
+            Attr,
+            CharacterData
+        ];
 
-            const childNodesDescriptor = {};
-            childNodesDescriptor.get = makeGetterForChildNodes(makeGhostGetter(type, 'childNodes', childNodesDescriptor));
-            $utils.defineProperty(type.prototype, 'childNodes', childNodesDescriptor);
-
-            const firstChildDescriptor = {};
-            firstChildDescriptor.get = makeGetterForFirstChild(makeGhostGetter(type, 'firstChild', firstChildDescriptor));
-            $utils.defineProperty(type.prototype, 'firstChild', firstChildDescriptor);
-
-            const lastChildDescriptor = {};
-            lastChildDescriptor.get = makeGetterForLastChild(makeGhostGetter(type, 'lastChild', lastChildDescriptor));
-            $utils.defineProperty(type.prototype, 'lastChild', lastChildDescriptor);
-
-            const previousSiblingDescriptor = {};
-            previousSiblingDescriptor.get = makeGetterForPreviousSibling(makeGhostGetter(type, 'previousSibling', previousSiblingDescriptor));
-            $utils.defineProperty(type.prototype, 'previousSibling', previousSiblingDescriptor);
-
-            const nextSiblingDescriptor = {};
-            nextSiblingDescriptor.get = makeGetterForNextSibling(makeGhostGetter(type, 'nextSibling', nextSiblingDescriptor));
-            $utils.defineProperty(type.prototype, 'nextSibling', nextSiblingDescriptor);
-
-            $utils.extend(type, propertyDescriptors);            
-            $utils.extend(type, methodDescriptors);
-        });
+        subtypes.forEach(type => $utils.extend(type, accessorDescriptors));
+        $utils.extend(Node, methodDescriptors);
     }
     else {
-        const accessorDescriptors = {
-            parentNode: {
-                get: makeGetterForParentNode($utils.descriptor(Node, 'parentNode').get)
-            },
-            childNodes: {
-                get: makeGetterForChildNodes($utils.descriptor(Node, 'childNodes').get)
-            },
-            firstChild: {
-                get: makeGetterForFirstChild($utils.descriptor(Node, 'firstChild').get)
-            },
-            lastChild: {
-                get: makeGetterForLastChild($utils.descriptor(Node, 'lastChild').get)
-            },
-            previousSibling: {
-                get: makeGetterForPreviousSibling($utils.descriptor(Node, 'previousSibling').get)
-            },
-            nextSibling: {
-                get: makeGetterForNextSibling($utils.descriptor(Node, 'nextSibling').get)
-            },
-        };
-
-        $utils.extend(Node, Object.create(null, accessorDescriptors));
-        $utils.extend(Node, propertyDescriptors);
+        $utils.extend(Node, accessorDescriptors);
         $utils.extend(Node, methodDescriptors);
 
         // Cleanup for IE, Edge
@@ -509,111 +576,4 @@ function elementTextContent(element) {
         }
     }
     return result;
-}
-
-function makeGetterForParentNode(getter) {
-    return function () {
-        const nodeState = $utils.getShadowState(this);
-        if (nodeState) {
-            const parentNode = nodeState.parentNode;
-            if (parentNode) {
-                return parentNode;
-            }
-        }
-        return getter.call(this);
-    };
-}
-
-// TODO: tests
-function makeGetterForChildNodes(getter) {
-    return function () {
-        const nodeState = $utils.getShadowState(this);
-        if (nodeState) {
-            const childNodes = nodeState.childNodes;
-            if (childNodes) {
-                const childNodesLength = childNodes.length;
-                const result = new Array(childNodesLength);
-                for (let i = 0; i < childNodesLength; i++) {
-                    result[i] = childNodes[i];
-                }
-                return result;
-            }
-        }
-        return getter.call(this);
-    };
-}
-
-// TODO: tests
-function makeGetterForFirstChild(getter) {
-    return function () {
-        const nodeState = $utils.getShadowState(this);
-        if (nodeState) {
-            const childNodes = nodeState.childNodes;
-            if (childNodes) {
-                if (childNodes.length) {
-                    return childNodes[0];
-                }
-                return null;
-            }
-        }
-        return getter.call(this);
-    };
-}
-
-// TODO: tests
-function makeGetterForLastChild(getter) {
-    return function () {
-        const nodeState = $utils.getShadowState(this);
-        if (nodeState) {
-            const childNodes = nodeState.childNodes;
-            if (childNodes) {
-                if (childNodes.length) {
-                    return childNodes[childNodes.length - 1];
-                }
-                return null;
-            }
-        }
-        return getter.call(this);
-    };
-}
-
-// TODO: tests
-function makeGetterForPreviousSibling(getter) {
-    return function () {
-        const nodeState = $utils.getShadowState(this);
-        if (nodeState) {
-            const parentNode = nodeState.parentNode;
-            if (parentNode) {
-                const childNodes = $utils.getShadowState(parentNode).childNodes;
-                const siblingIndex = childNodes.indexOf(this) - 1;
-                return siblingIndex < 0 ? null : childNodes[siblingIndex];
-            }
-        }
-        return getter.call(this);
-    };
-}
-
-// TODO: tests
-function makeGetterForNextSibling(getter) {
-    return function () {
-        const nodeState = $utils.getShadowState(this);
-        if (nodeState) {
-            const parentNode = nodeState.parentNode;
-            if (parentNode) {
-                const childNodes = $utils.getShadowState(parentNode).childNodes;
-                const siblingIndex = childNodes.indexOf(this) + 1;
-                return siblingIndex === childNodes.length ? null : childNodes[siblingIndex];
-            }
-        }
-        return getter.call(this);
-    };
-}
-
-function makeGhostGetter(type, name, descriptor) {
-    return function () {
-        delete type.prototype[name];
-        const value = this[name];
-        Object.defineProperty(type.prototype, name, descriptor);
-        return value;
-    };
 }

@@ -3299,16 +3299,13 @@ var elementMixin = {
             childNodes: []
         });
 
-        var originalChildNodes = this.childNodes;
-        var removeChild = nodeRemoveChildDescriptor.value;
-        var savedChildNodes = new Array(originalChildNodes.length);
-        var firstChild = void 0;
-        var i = 0;
-        while (firstChild = originalChildNodes[0]) {
-            var childState = _utils2.default.getShadowState(firstChild) || _utils2.default.setShadowState(firstChild, {});
+        var savedChildNodes = Array.prototype.slice.call(this.childNodes);
+        var savedChildNodesCount = savedChildNodes.length;
+        for (var i = 0; i < savedChildNodesCount; i++) {
+            var savedChildNode = savedChildNodes[i];
+            var childState = _utils2.default.getShadowState(savedChildNode) || _utils2.default.setShadowState(savedChildNode, {});
             childState.parentNode = this;
-            savedChildNodes[i++] = firstChild;
-            removeChild.call(this, firstChild);
+            nodeRemoveChildDescriptor.value.call(this, savedChildNode);
         }
 
         var hostState = _utils2.default.getShadowState(this);
@@ -4473,9 +4470,23 @@ exports.default = {
     install: install
 }; // https://dom.spec.whatwg.org/#interface-node
 
+var nodeWalker = document.createTreeWalker(document, NodeFilter.SHOW_ALL, null, false);
 var nodeHasChildNodesDescriptor = _utils2.default.descriptor(Node, 'hasChildNodes');
+var nodeChildNodesDescriptor = _utils2.default.descriptor(Node, 'childNodes');
 
-var propertyDescriptors = {
+var accessorDescriptors = {
+
+    get parentNode() {
+        var nodeState = _utils2.default.getShadowState(this);
+        if (nodeState) {
+            var parentNode = nodeState.parentNode;
+            if (parentNode) {
+                return parentNode;
+            }
+        }
+        nodeWalker.currentNode = this;
+        return nodeWalker.parentNode();
+    },
 
     get parentElement() {
         var parentNode = this.parentNode;
@@ -4483,6 +4494,99 @@ var propertyDescriptors = {
             return parentNode;
         }
         return null;
+    },
+
+    // TODO: tests
+    get childNodes() {
+        var nodeState = _utils2.default.getShadowState(this);
+        if (nodeState) {
+            var childNodes = nodeState.childNodes;
+            if (childNodes) {
+                var childNodesLength = childNodes.length;
+                var result = new Array(childNodesLength);
+                for (var i = 0; i < childNodesLength; i++) {
+                    result[i] = childNodes[i];
+                }
+                return result;
+            }
+        }
+        if (_utils2.default.brokenAccessors) {
+            var _childNodes = new Array();
+            nodeWalker.currentNode = this;
+            var firstChild = nodeWalker.firstChild();
+            if (!firstChild) {
+                return _childNodes;
+            }
+            _childNodes.push(firstChild);
+            var nextSibling = void 0;
+            while (nextSibling = nodeWalker.nextSibling()) {
+                _childNodes.push(nextSibling);
+            }
+            return _childNodes;
+        }
+        return nodeChildNodesDescriptor.get.call(this);
+    },
+
+    // TODO: tests
+    get firstChild() {
+        var nodeState = _utils2.default.getShadowState(this);
+        if (nodeState) {
+            var childNodes = nodeState.childNodes;
+            if (childNodes) {
+                if (childNodes.length) {
+                    return childNodes[0];
+                }
+                return null;
+            }
+        }
+        nodeWalker.currentNode = this;
+        return nodeWalker.firstChild();
+    },
+
+    // TODO: tests
+    get lastChild() {
+        var nodeState = _utils2.default.getShadowState(this);
+        if (nodeState) {
+            var childNodes = nodeState.childNodes;
+            if (childNodes) {
+                if (childNodes.length) {
+                    return childNodes[childNodes.length - 1];
+                }
+                return null;
+            }
+        }
+        nodeWalker.currentNode = this;
+        return nodeWalker.lastChild();
+    },
+
+    // TODO: tests
+    get previousSibling() {
+        var nodeState = _utils2.default.getShadowState(this);
+        if (nodeState) {
+            var parentNode = nodeState.parentNode;
+            if (parentNode) {
+                var childNodes = _utils2.default.getShadowState(parentNode).childNodes;
+                var siblingIndex = childNodes.indexOf(this) - 1;
+                return siblingIndex < 0 ? null : childNodes[siblingIndex];
+            }
+        }
+        nodeWalker.currentNode = this;
+        return nodeWalker.previousSibling();
+    },
+
+    // TODO: tests
+    get nextSibling() {
+        var nodeState = _utils2.default.getShadowState(this);
+        if (nodeState) {
+            var parentNode = nodeState.parentNode;
+            if (parentNode) {
+                var childNodes = _utils2.default.getShadowState(parentNode).childNodes;
+                var siblingIndex = childNodes.indexOf(this) + 1;
+                return siblingIndex === childNodes.length ? null : childNodes[siblingIndex];
+            }
+        }
+        nodeWalker.currentNode = this;
+        return nodeWalker.nextSibling();
     },
 
     // TODO: consider creating a raw property descriptor
@@ -4847,58 +4951,14 @@ var methodDescriptors = {
 
 function install() {
     if (_utils2.default.brokenAccessors) {
-        [Document, DocumentFragment, Element, Attr, CharacterData].forEach(function (type) {
-            var parentNodeDescriptor = {};
-            parentNodeDescriptor.get = makeGetterForParentNode(makeGhostGetter(type, 'parentNode', parentNodeDescriptor));
-            _utils2.default.defineProperty(type.prototype, 'parentNode', parentNodeDescriptor);
+        var subtypes = [Document, DocumentFragment, Element, Attr, CharacterData];
 
-            var childNodesDescriptor = {};
-            childNodesDescriptor.get = makeGetterForChildNodes(makeGhostGetter(type, 'childNodes', childNodesDescriptor));
-            _utils2.default.defineProperty(type.prototype, 'childNodes', childNodesDescriptor);
-
-            var firstChildDescriptor = {};
-            firstChildDescriptor.get = makeGetterForFirstChild(makeGhostGetter(type, 'firstChild', firstChildDescriptor));
-            _utils2.default.defineProperty(type.prototype, 'firstChild', firstChildDescriptor);
-
-            var lastChildDescriptor = {};
-            lastChildDescriptor.get = makeGetterForLastChild(makeGhostGetter(type, 'lastChild', lastChildDescriptor));
-            _utils2.default.defineProperty(type.prototype, 'lastChild', lastChildDescriptor);
-
-            var previousSiblingDescriptor = {};
-            previousSiblingDescriptor.get = makeGetterForPreviousSibling(makeGhostGetter(type, 'previousSibling', previousSiblingDescriptor));
-            _utils2.default.defineProperty(type.prototype, 'previousSibling', previousSiblingDescriptor);
-
-            var nextSiblingDescriptor = {};
-            nextSiblingDescriptor.get = makeGetterForNextSibling(makeGhostGetter(type, 'nextSibling', nextSiblingDescriptor));
-            _utils2.default.defineProperty(type.prototype, 'nextSibling', nextSiblingDescriptor);
-
-            _utils2.default.extend(type, propertyDescriptors);
-            _utils2.default.extend(type, methodDescriptors);
+        subtypes.forEach(function (type) {
+            return _utils2.default.extend(type, accessorDescriptors);
         });
+        _utils2.default.extend(Node, methodDescriptors);
     } else {
-        var accessorDescriptors = {
-            parentNode: {
-                get: makeGetterForParentNode(_utils2.default.descriptor(Node, 'parentNode').get)
-            },
-            childNodes: {
-                get: makeGetterForChildNodes(_utils2.default.descriptor(Node, 'childNodes').get)
-            },
-            firstChild: {
-                get: makeGetterForFirstChild(_utils2.default.descriptor(Node, 'firstChild').get)
-            },
-            lastChild: {
-                get: makeGetterForLastChild(_utils2.default.descriptor(Node, 'lastChild').get)
-            },
-            previousSibling: {
-                get: makeGetterForPreviousSibling(_utils2.default.descriptor(Node, 'previousSibling').get)
-            },
-            nextSibling: {
-                get: makeGetterForNextSibling(_utils2.default.descriptor(Node, 'nextSibling').get)
-            }
-        };
-
-        _utils2.default.extend(Node, Object.create(null, accessorDescriptors));
-        _utils2.default.extend(Node, propertyDescriptors);
+        _utils2.default.extend(Node, accessorDescriptors);
         _utils2.default.extend(Node, methodDescriptors);
 
         // Cleanup for IE, Edge
@@ -4980,113 +5040,6 @@ function elementTextContent(element) {
         }
     }
     return result;
-}
-
-function makeGetterForParentNode(getter) {
-    return function () {
-        var nodeState = _utils2.default.getShadowState(this);
-        if (nodeState) {
-            var parentNode = nodeState.parentNode;
-            if (parentNode) {
-                return parentNode;
-            }
-        }
-        return getter.call(this);
-    };
-}
-
-// TODO: tests
-function makeGetterForChildNodes(getter) {
-    return function () {
-        var nodeState = _utils2.default.getShadowState(this);
-        if (nodeState) {
-            var childNodes = nodeState.childNodes;
-            if (childNodes) {
-                var childNodesLength = childNodes.length;
-                var result = new Array(childNodesLength);
-                for (var i = 0; i < childNodesLength; i++) {
-                    result[i] = childNodes[i];
-                }
-                return result;
-            }
-        }
-        return getter.call(this);
-    };
-}
-
-// TODO: tests
-function makeGetterForFirstChild(getter) {
-    return function () {
-        var nodeState = _utils2.default.getShadowState(this);
-        if (nodeState) {
-            var childNodes = nodeState.childNodes;
-            if (childNodes) {
-                if (childNodes.length) {
-                    return childNodes[0];
-                }
-                return null;
-            }
-        }
-        return getter.call(this);
-    };
-}
-
-// TODO: tests
-function makeGetterForLastChild(getter) {
-    return function () {
-        var nodeState = _utils2.default.getShadowState(this);
-        if (nodeState) {
-            var childNodes = nodeState.childNodes;
-            if (childNodes) {
-                if (childNodes.length) {
-                    return childNodes[childNodes.length - 1];
-                }
-                return null;
-            }
-        }
-        return getter.call(this);
-    };
-}
-
-// TODO: tests
-function makeGetterForPreviousSibling(getter) {
-    return function () {
-        var nodeState = _utils2.default.getShadowState(this);
-        if (nodeState) {
-            var parentNode = nodeState.parentNode;
-            if (parentNode) {
-                var childNodes = _utils2.default.getShadowState(parentNode).childNodes;
-                var siblingIndex = childNodes.indexOf(this) - 1;
-                return siblingIndex < 0 ? null : childNodes[siblingIndex];
-            }
-        }
-        return getter.call(this);
-    };
-}
-
-// TODO: tests
-function makeGetterForNextSibling(getter) {
-    return function () {
-        var nodeState = _utils2.default.getShadowState(this);
-        if (nodeState) {
-            var parentNode = nodeState.parentNode;
-            if (parentNode) {
-                var childNodes = _utils2.default.getShadowState(parentNode).childNodes;
-                var siblingIndex = childNodes.indexOf(this) + 1;
-                return siblingIndex === childNodes.length ? null : childNodes[siblingIndex];
-            }
-        }
-        return getter.call(this);
-    };
-}
-
-function makeGhostGetter(type, name, descriptor) {
-    return function () {
-        delete type.prototype[name];
-        var value = this[name];
-        Object.defineProperty(type.prototype, name, descriptor);
-        return value;
-    };
 }
 
 },{"../custom-elements.js":1,"../dom.js":2,"../utils.js":29}],18:[function(require,module,exports){
@@ -5452,49 +5405,43 @@ exports.default = function (base) {
         // TODO: tests
         get previousElementSibling() {
             var nodeState = _utils2.default.getShadowState(this);
-            if (nodeState && nodeState.parentNode) {
-                var childNodes = _utils2.default.getShadowState(nodeState.parentNode).childNodes;
-                var index = childNodes.indexOf(this);
-                while (index > 0) {
-                    var previous = childNodes[--index];
-                    if (previous.nodeType === Node.ELEMENT_NODE) {
-                        return previous;
-                    }
-                };
-                return null;
-            } else {
-                var previousSibling = this;
-                while (previousSibling = previousSibling.previousSibling) {
-                    if (previousSibling.nodeType === Node.ELEMENT_NODE) {
-                        return previousSibling;
-                    }
+            if (nodeState) {
+                var parentNode = nodeState.parentNode;
+                if (parentNode) {
+                    var childNodes = _utils2.default.getShadowState(parentNode).childNodes;
+                    var index = childNodes.indexOf(this);
+                    while (index > 0) {
+                        var previous = childNodes[--index];
+                        if (previous.nodeType === Node.ELEMENT_NODE) {
+                            return previous;
+                        }
+                    };
+                    return null;
                 }
-                return null;
             }
+            elementWalker.currentNode = this;
+            return elementWalker.previousSibling();
         },
 
         // TODO: tests
         get nextElementSibling() {
             var nodeState = _utils2.default.getShadowState(this);
-            if (nodeState && nodeState.parentNode) {
-                var childNodes = _utils2.default.getShadowState(nodeState.parentNode).childNodes;
-                var index = childNodes.indexOf(this);
-                while (index < childNodes.length - 1) {
-                    var next = childNodes[++index];
-                    if (next.nodeType === Node.ELEMENT_NODE) {
-                        return next;
-                    }
-                };
-                return null;
-            } else {
-                var nextSibling = this;
-                while (nextSibling = nextSibling.nextSibling) {
-                    if (nextSibling.nodeType === Node.ELEMENT_NODE) {
-                        return nextSibling;
-                    }
+            if (nodeState) {
+                var parentNode = nodeState.parentNode;
+                if (parentNode) {
+                    var childNodes = _utils2.default.getShadowState(parentNode).childNodes;
+                    var index = childNodes.indexOf(this);
+                    while (index < childNodes.length - 1) {
+                        var next = childNodes[++index];
+                        if (next.nodeType === Node.ELEMENT_NODE) {
+                            return next;
+                        }
+                    };
+                    return null;
                 }
-                return null;
             }
+            elementWalker.currentNode = this;
+            return elementWalker.nextSibling();
         }
 
     };
@@ -5505,6 +5452,8 @@ var _utils = require('../utils.js');
 var _utils2 = _interopRequireDefault(_utils);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var elementWalker = document.createTreeWalker(document, NodeFilter.SHOW_ELEMENT, null, false); // https://dom.spec.whatwg.org/#interface-nondocumenttypechildnode
 
 },{"../utils.js":29}],24:[function(require,module,exports){
 'use strict';
@@ -5580,47 +5529,39 @@ exports.default = function (base) {
         },
 
         get firstElementChild() {
-            var childNodes = void 0;
-
             var shadowState = _utils2.default.getShadowState(this);
             if (shadowState) {
-                childNodes = shadowState.childNodes;
-            }
-
-            if (!childNodes) {
-                childNodes = this.childNodes;
-            }
-
-            for (var i = 0; i < childNodes.length; i++) {
-                var node = childNodes[i];
-                if (node.nodeType == Node.ELEMENT_NODE) {
-                    return node;
+                var childNodes = shadowState.childNodes;
+                if (childNodes) {
+                    for (var i = 0; i < childNodes.length; i++) {
+                        var node = childNodes[i];
+                        if (node.nodeType == Node.ELEMENT_NODE) {
+                            return node;
+                        }
+                    }
+                    return null;
                 }
             }
-
-            return null;
+            elementWalker.currentNode = this;
+            return elementWalker.firstChild();
         },
 
         get lastElementChild() {
-            var childNodes = void 0;
-
             var shadowState = _utils2.default.getShadowState(this);
             if (shadowState) {
-                childNodes = shadowState.childNodes;
-            }
-
-            if (!childNodes) {
-                childNodes = this.childNodes;
-            }
-
-            for (var i = childNodes.length - 1; i >= 0; i--) {
-                var node = childNodes[i];
-                if (node.nodeType == Node.ELEMENT_NODE) {
-                    return node;
+                var childNodes = shadowState.childNodes;
+                if (childNodes) {
+                    for (var i = childNodes.length - 1; i >= 0; i--) {
+                        var node = childNodes[i];
+                        if (node.nodeType == Node.ELEMENT_NODE) {
+                            return node;
+                        }
+                    }
+                    return null;
                 }
             }
-
-            return null;
+            elementWalker.currentNode = this;
+            return elementWalker.lastChild();
         },
 
         get childElementCount() {
@@ -5739,6 +5680,8 @@ var _utils = require('../utils.js');
 var _utils2 = _interopRequireDefault(_utils);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var elementWalker = document.createTreeWalker(document, NodeFilter.SHOW_ELEMENT, null, false); // https://dom.spec.whatwg.org/#interface-parentnode
 
 },{"../custom-elements.js":1,"../dom.js":2,"../utils.js":29}],26:[function(require,module,exports){
 'use strict';
