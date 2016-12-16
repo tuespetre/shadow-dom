@@ -2838,7 +2838,13 @@ function $CustomEvent(type, init) {
     }
     var event = document.createEvent('CustomEvent');
     event.initCustomEvent(type, bubbles, cancelable, detail);
-    _utils2.default.setShadowState(event, { composed: composed });
+    Object.defineProperty(event, 'composed', {
+        enumerable: true,
+        configurable: true,
+        get: function get() {
+            return composed;
+        }
+    });
     return event;
 } // https://dom.spec.whatwg.org/#interface-customevent
 
@@ -3480,7 +3486,13 @@ function eventConstructor(type, init) {
     }
     var event = document.createEvent('Event'); // Capitalized to work with older WebKit
     event.initEvent(type, bubbles, cancelable);
-    _utils2.default.setShadowState(event, { composed: composed });
+    Object.defineProperty(event, 'composed', {
+        enumerable: true,
+        configurable: true,
+        get: function get() {
+            return composed;
+        }
+    });
     return event;
 };
 
@@ -3580,7 +3592,7 @@ var eventMixin = {
 
     get composed() {
         // TODO: Compare against the actual prototype instead of just the type strings
-        return _utils2.default.getShadowState(this).composed || builtInComposedEvents.indexOf(this.type) !== -1;
+        return builtInComposedEvents.indexOf(this.type) !== -1;
     }
 
 };

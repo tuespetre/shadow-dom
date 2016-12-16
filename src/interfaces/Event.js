@@ -24,7 +24,13 @@ function eventConstructor(type, init) {
     }
     const event = document.createEvent('Event'); // Capitalized to work with older WebKit
     event.initEvent(type, bubbles, cancelable);
-    $utils.setShadowState(event, { composed });
+    Object.defineProperty(event, 'composed', {
+        enumerable: true,
+        configurable: true,
+        get: function () {
+            return composed;
+        }
+    });
     return event;
 };
 
@@ -127,7 +133,7 @@ const eventMixin = {
 
     get composed() {
         // TODO: Compare against the actual prototype instead of just the type strings
-        return $utils.getShadowState(this).composed || builtInComposedEvents.indexOf(this.type) !== -1;
+        return builtInComposedEvents.indexOf(this.type) !== -1;
     },
 
 };

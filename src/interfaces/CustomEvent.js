@@ -15,7 +15,13 @@ export default function $CustomEvent(type, init) {
     }
     const event = document.createEvent('CustomEvent');
     event.initCustomEvent(type, bubbles, cancelable, detail);
-    $utils.setShadowState(event, { composed });
+    Object.defineProperty(event, 'composed', {
+        enumerable: true,
+        configurable: true,
+        get: function () {
+            return composed;
+        }
+    });
     return event;
 }
 
