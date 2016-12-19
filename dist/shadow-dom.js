@@ -2692,7 +2692,6 @@ exports.default = {
             _utils2.default.defineProperty(Element.prototype, 'attributes', _attributesDescriptor);
 
             // Cleanup for IE, Edge
-            _utils2.default.deleteProperty(HTMLElement, 'classList');
             _utils2.default.deleteProperty(HTMLElement, 'children');
             _utils2.default.deleteProperty(HTMLElement, 'parentElement');
             _utils2.default.deleteProperty(HTMLElement, 'innerHTML');

@@ -55,7 +55,6 @@ export default {
             $utils.defineProperty(Element.prototype, 'attributes', attributesDescriptor);
 
             // Cleanup for IE, Edge
-            $utils.deleteProperty(HTMLElement, 'classList');
             $utils.deleteProperty(HTMLElement, 'children');
             $utils.deleteProperty(HTMLElement, 'parentElement');
             $utils.deleteProperty(HTMLElement, 'innerHTML');
