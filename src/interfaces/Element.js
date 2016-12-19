@@ -3,10 +3,23 @@
 import $dom from '../dom.js';
 import $ce from '../custom-elements.js';
 import $utils from '../utils.js';
+import $Attr from '../interfaces/Attr.js';
 import $ShadowRoot from '../interfaces/ShadowRoot.js';
 
 export default {
     install() {
+        // Element.matches(selectors) polyfill from MDN
+        // https://developer.mozilla.org/en-US/docs/Web/API/Element/matches#Polyfill
+        // Purposefully chop out the polyfill function that uses querySelectorAll.
+        if (!Element.prototype.matches) {
+            Element.prototype.matches =
+                Element.prototype.matchesSelector ||
+                Element.prototype.mozMatchesSelector ||
+                Element.prototype.msMatchesSelector ||
+                Element.prototype.oMatchesSelector ||
+                Element.prototype.webkitMatchesSelector;
+        }
+
         if ($utils.brokenAccessors) {
             const attributesDescriptor = {
                 get: function () {
@@ -112,6 +125,7 @@ const elementMixin = {
 
     // TODO: tests
     setAttributeNode(attr) {
+        $Attr.patchAttributeNodeIfNeeded(attr);
         return $ce.executeCEReactions(() => {
             return $dom.setAttribute(attr, this);
         });
@@ -119,6 +133,7 @@ const elementMixin = {
 
     // TODO: tests
     setAttributeNodeNS(attr) {
+        $Attr.patchAttributeNodeIfNeeded(attr);
         return $ce.executeCEReactions(() => {
             return $dom.setAttribute(attr, this);
         });

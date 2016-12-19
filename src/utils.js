@@ -1,16 +1,10 @@
-const setImmediate = 'setImmediate' in window ? window.setImmediate.bind(window) : function (callback, ...args) {
-    return setTimeout(callback, 0, ...args);
-};
-
 const brokenAccessors = typeof descriptor(Node, 'childNodes').get === 'undefined';
-
 const nodeAppendChildDescriptor = descriptor(Node, 'appendChild');
 const documentCreateElementDescriptor = descriptor(Document, 'createElement');
 
 export default {
     brokenAccessors,
     descriptor,
-    setImmediate,
     makeDOMException,
     reportError,
     extend,
@@ -168,7 +162,7 @@ function hasAll(desiredItems, itemsInQuestion) {
     return d > dLength;
 }
 
-function getUniqueSortedTokens(tokens) {        
+function getUniqueSortedTokens(tokens) {
     if (tokens === null || tokens === undefined || tokens === '') {
         return null;
     }

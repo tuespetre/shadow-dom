@@ -1,10 +1,11 @@
 // https://dom.spec.whatwg.org/#interface-mutationobserver
 
 import $dom from '../dom.js';
+import $mo from '../mutation-observers.js';
 import $utils from '../utils.js';
 
 export default function $MutationObserver(callback) {
-    const observer = $dom.createMutationObserver(callback);
+    const observer = $mo.createMutationObserver(callback);
     $utils.setShadowState(this, { observer });
     observer.interface = this;
 }

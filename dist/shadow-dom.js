@@ -5,23 +5,30 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
+var _dom = require('./dom.js');
+
+var _dom2 = _interopRequireDefault(_dom);
+
+var _microtask = require('./microtask.js');
+
+var _microtask2 = _interopRequireDefault(_microtask);
+
 var _utils = require('./utils.js');
 
 var _utils2 = _interopRequireDefault(_utils);
 
+var _Attr = require('./interfaces/Attr.js');
+
+var _Attr2 = _interopRequireDefault(_Attr);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-// TODO: CEReactions annotations for Range in the DOM spec
-// TODO: CEReactions for interfaces in the HTML spec
+// https://html.spec.whatwg.org/multipage/scripting.html#custom-elements
 
-// TODO: Document in the README that a Promise polyfill 
-// should be brought in to support whenDefined
+var nativeHTMLElement = window.HTMLElement;
 
-var nativeHTMLElement = window.HTMLElement; // https://html.spec.whatwg.org/multipage/scripting.html#custom-elements
+// TODO: Remove this circular dependency by introducing a 'creating steps' hook
 
-var nativeCreateElement = Document.prototype.createElement;
-var nativeCreateElementNS = Document.prototype.createElementNS;
-var nativeMutationObserver = window.MutationObserver;
 
 var htmlNamespace = 'http://www.w3.org/1999/xhtml';
 var alreadyConstructedMarker = 1;
@@ -63,6 +70,8 @@ exports.default = {
 function install() {
     var installation = {};
 
+    installation.originalCreateElement = Document.prototype.createElement;
+    installation.originalCreateElementNS = Document.prototype.createElementNS;
     installation.builtInElementInterfaces = installHtmlConstructors();
     installation.registry = new CustomElementRegistry();
 
@@ -86,28 +95,28 @@ function install() {
     installation.backupElementQueue = [];
     installation.processingBackupElementQueue = false;
 
-    setInstallation(window, installation);
+    setPrivateState(window, installation);
 }
 
 function uninstall() {
-    var windowState = getPrivateState(window);
+    var installation = getPrivateState(window);
 
-    if (!windowState) {
+    if (!installation) {
         return;
     }
 
-    uninstallHtmlConstructors(windowState.builtInElementInterfaces);
+    uninstallHtmlConstructors(installation.builtInElementInterfaces);
 
     delete window[CE_PROP_NAME];
 
-    Document.prototype.createElement = nativeCreateElement;
-    Document.prototype.createElementNS = nativeCreateElementNS;
+    Document.prototype.createElement = installation.originalCreateElement;
+    Document.prototype.createElementNS = installation.originalCreateElementNS;
 
     setPrivateState(window, undefined);
 }
 
 function isInstalled() {
-    return getInstallation(window) != null;
+    return getPrivateState(window) != null;
 }
 
 function gatherBuiltInElementInterfaces() {
@@ -231,7 +240,8 @@ function makeHtmlConstructor() {
         // 8. If construction stack is empty...
         var constructionStack = definition.constructionStack;
         if (constructionStack.length === 0) {
-            var _element = nativeCreateElement.call(window.document, definition.localName);
+            var originalCreateElement = getPrivateState(window).originalCreateElement;
+            var _element = originalCreateElement.call(window.document, definition.localName);
             Object.setPrototypeOf(_element, prototype);
             setPrivateState(_element, {
                 customElementState: CE_STATE_CUSTOM,
@@ -259,9 +269,7 @@ function makeHtmlConstructor() {
 function performInitialUpgrades() {
     // Upgrading elements initially present in the document
     var elements = [];
-    treeOrderShadowInclusiveForEach(window.document, function (element) {
-        elements.push(element);
-    });
+    _dom2.default.forEachShadowIncludingInclusiveDescendant(window.document, elements.push.bind(elements));
     elements.forEach(tryToUpgradeElementSync);
 }
 
@@ -272,7 +280,7 @@ function createAnElement(document, qualifiedOrLocalName, nameSpace, prefix, is, 
     var result = null;
     var definition = lookupCustomElementDefinition(document, nameSpace, qualifiedOrLocalName, is);
     if (definition && definition.name != definition.localName) {
-        result = nativeCreateElement.call(document, qualifiedOrLocalName);
+        result = getPrivateState(window).originalCreateElement.call(document, qualifiedOrLocalName);
         setPrivateState(result, {
             customElementState: CE_STATE_UNDEFINED,
             customElementDefinition: null,
@@ -297,19 +305,19 @@ function createAnElement(document, qualifiedOrLocalName, nameSpace, prefix, is, 
                 }
             } catch (error) {
                 _utils2.default.reportError(error);
-                result = nativeCreateElement.call(document, qualifiedOrLocalName);
+                result = getPrivateState(window).originalCreateElement.call(document, qualifiedOrLocalName);
                 // should be HTMLUnknownElement already
                 setPrivateState(result, {
                     customElementState: CE_STATE_FAILED
                 });
             }
         } else {
-            result = nativeCreateElement.call(document, qualifiedOrLocalName);
+            result = getPrivateState(window).originalCreateElement.call(document, qualifiedOrLocalName);
             Object.setPrototypeOf(result, HTMLElement.prototype);
             enqueueUpgradeReaction(result, definition);
         }
     } else {
-        result = nameSpace ? nativeCreateElementNS.call(document, nameSpace, qualifiedOrLocalName) : nativeCreateElement.call(document, qualifiedOrLocalName);
+        result = nameSpace ? getPrivateState(window).originalCreateElementNS.call(document, nameSpace, qualifiedOrLocalName) : getPrivateState(window).originalCreateElement.call(document, qualifiedOrLocalName);
         // PERF: forgo setting the custom element state to CE_STATE_UNDEFINED in order
         // to avoid unnecessary allocation.
     }
@@ -488,10 +496,7 @@ CustomElementRegistry.prototype = {
                 if (isValidCustomElementName(extensionOf)) {
                     throw _utils2.default.makeDOMException('NotSupportedError');
                 }
-                var testElement = nativeCreateElement.call(window.document, extensionOf);
-                if (testElement instanceof HTMLUnknownElement) {
-                    // TODO: check for HTMLUnknownElement
-                }
+                // TODO: check for HTMLUnknownElement
                 localName = extensionOf;
                 htmlConstructor = Object.getPrototypeOf(testElement).constructor;
             }
@@ -544,10 +549,11 @@ CustomElementRegistry.prototype = {
             // due to the parser not yet having processed all
             // of the child nodes.
             if (document.readyState !== 'loading') {
-                treeOrderShadowInclusiveForEach(document, function (node) {
+                _dom2.default.forEachShadowIncludingInclusiveDescendant(document, function (node) {
                     if (node.nodeType === Node.ELEMENT_NODE && node.namespaceURI === htmlNamespace && node.localName === localName) {
                         if (extensionOf) {
                             var nodeState = getPrivateState(node);
+                            // TODO: test upgrades to existing extended built-in custom elements
                             if (nodeState.isValue !== extensionOf) {
                                 return;
                             }
@@ -558,7 +564,7 @@ CustomElementRegistry.prototype = {
             }
             var entry = privateState.whenDefinedPromiseMap[name];
             if (entry) {
-                _utils2.default.setImmediate(function () {
+                _microtask2.default.enqueue(function () {
                     entry.resolve();
                     privateState.whenDefinedPromiseMap[name] = null;
                 });
@@ -617,6 +623,7 @@ function upgradeElement(element, definition) {
         var attribute = attributes[i];
         var args = [attribute.localName, null, attribute.value, attribute.namespaceURI];
         enqueueCallbackReaction(element, CE_CALLBACK_ATTRIBUTE_CHANGED, args);
+        _Attr2.default.patchAttributeNodeIfNeeded(attribute);
     }
     if (element.isConnected) {
         enqueueCallbackReaction(element, CE_CALLBACK_CONNECTED, []);
@@ -673,7 +680,7 @@ function tryToUpgradeElement(element) {
 }
 
 function enqueueElementOnAppropriateElementQueue(element) {
-    var installation = getInstallation(window);
+    var installation = getPrivateState(window);
     if (!installation) {
         return;
     }
@@ -690,7 +697,7 @@ function enqueueElementOnAppropriateElementQueue(element) {
         // 3. Set the processing the backup element queue flag.
         installation.processingBackupElementQueue = true;
         // 4. Queue a microtask to perform the following steps:
-        _utils2.default.setImmediate(function () {
+        _microtask2.default.enqueue(function () {
             // 1. Invoke custom element reactions in the backup element queue.
             invokeReactions(installation.backupElementQueue);
             // 2. Unset the processing the backup element queue flag.
@@ -773,7 +780,7 @@ function invokeReactions(queue) {
 }
 
 function executeCEReactions(callback) {
-    var installation = getInstallation(window);
+    var installation = getPrivateState(window);
     if (installation) {
         var stack = installation.customElementsReactionStack;
         stack.push([]);
@@ -806,27 +813,7 @@ function setPrivateState(object, state) {
     return object._custom = state;
 }
 
-function getInstallation(window) {
-    return window._custom;
-}
-
-function setInstallation(window, installation) {
-    window._custom = installation;
-}
-
-function treeOrderShadowInclusiveForEach(node, callback) {
-    callback(node);
-    var shadowRoot = node.shadowRoot;
-    if (shadowRoot) {
-        treeOrderShadowInclusiveForEach(shadowRoot, callback);
-    }
-    var childNodes = node.childNodes;
-    for (var i = 0; i < childNodes.length; i++) {
-        treeOrderShadowInclusiveForEach(childNodes[i], callback);
-    }
-}
-
-},{"./utils.js":29}],2:[function(require,module,exports){
+},{"./dom.js":2,"./interfaces/Attr.js":3,"./microtask.js":20,"./utils.js":30}],2:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -837,6 +824,10 @@ var _utils = require('./utils.js');
 
 var _utils2 = _interopRequireDefault(_utils);
 
+var _mutationObservers = require('./mutation-observers.js');
+
+var _mutationObservers2 = _interopRequireDefault(_mutationObservers);
+
 var _customElements = require('./custom-elements.js');
 
 var _customElements2 = _interopRequireDefault(_customElements);
@@ -845,6 +836,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 exports.default = {
 
+    forEachShadowIncludingInclusiveDescendant: forEachShadowIncludingInclusiveDescendant,
     treeOrderRecursiveSelectAll: treeOrderRecursiveSelectAll,
     treeOrderRecursiveSelectFirst: treeOrderRecursiveSelectFirst,
     isShadowRoot: isShadowRoot,
@@ -880,8 +872,6 @@ exports.default = {
 
     setExistingAttributeValue: setExistingAttributeValue,
 
-    replaceData: replaceData,
-
     findFlattenedSlotables: findFlattenedSlotables,
 
     preInsert: preInsert,
@@ -890,14 +880,19 @@ exports.default = {
     replace: replace,
     replaceAll: replaceAll,
     preRemove: preRemove,
-    remove: remove,
+    remove: remove
 
-    createMutationObserver: createMutationObserver
 };
 
+// TODO: Remove this circular dependency by introducing hooks:
+// - inserting steps
+// - removing steps
+// - adopting steps
+// - cloning steps
 
 var elementRemoveAttributeNSDescriptor = _utils2.default.descriptor(Element, 'removeAttributeNS');
 var elementSetAttributeDescriptor = _utils2.default.descriptor(Element, 'setAttribute');
+var elementSetAttributeNSDescriptor = _utils2.default.descriptor(Element, 'setAttributeNS');
 var namedNodeMapSetNamedItemNSDescriptor = _utils2.default.descriptor(NamedNodeMap, 'setNamedItemNS');
 var nodeAppendChildDescriptor = _utils2.default.descriptor(Node, 'appendChild');
 var nodeCloneNodeDescriptor = _utils2.default.descriptor(Node, 'cloneNode');
@@ -913,11 +908,7 @@ var ERROR_HIERARCHY_REQUEST = 'HierarchyRequestError';
 var ERROR_INDEX_SIZE = 'IndexSizeError';
 var ERROR_NOT_FOUND = 'NotFoundError';
 var ERROR_SYNTAX = 'SyntaxError';
-var EVENT = 'Event'; // Capitalized to work with older WebKit
-var EVT_SLOT_CHANGE = 'slotchange';
-var MO_TYPE_ATTRIBUTES = 'attributes';
 var MO_TYPE_CHILD_LIST = 'childList';
-var MO_TYPE_CHARACTER_DATA = 'characterData';
 var NS_HTML = 'http://www.w3.org/1999/xhtml';
 var NS_MATHML = 'http://www.w3.org/1998/Math/MathML';
 var NS_SVG = 'http://www.w3.org/2000/svg';
@@ -1011,17 +1002,11 @@ function isSlotable(node) {
 
 // https://www.w3.org/TR/DOM-Parsing/
 
-// PERF: This function uses a recycled document fragment stored 
-// in the passed element's owner document so it can avoid allocation.
-// Callers must empty the returned fragment.
+// PERF: This function uses a recycled document fragment 
+// to avoid allocation. Callers must empty the returned fragment.
 var parser = new DOMParser();
+var parsingFragment = document.createDocumentFragment();
 function parseHTMLFragment(markup, context) {
-    var document = context.ownerDocument;
-    var documentState = _utils2.default.getShadowState(document) || _utils2.default.setShadowState(document, {});
-    var parsingFragment = documentState.parsingFragment;
-    if (!documentState.parsingFragment) {
-        parsingFragment = documentState.parsingFragment = document.createDocumentFragment();
-    }
     // The surrounding body tags are required to preserve all of the original markup (comments, etc.)
     var parsingResult = parser.parseFromString('<body>' + markup + '</body>', 'text/html').body;
     var firstChild = void 0;
@@ -1455,7 +1440,7 @@ function changeAttribute(attribute, element, value) {
     var newValue = value;
 
     // 1. Queue a mutation record...
-    queueMutationRecord(MO_TYPE_ATTRIBUTES, element, name, nameSpace, oldValue);
+    // SKIP
 
     // 2. If element is custom...
     if (_customElements2.default.isInstalled() && _customElements2.default.isCustom(element)) {
@@ -1467,7 +1452,11 @@ function changeAttribute(attribute, element, value) {
     attributeChangeSteps(element, name, oldValue, newValue, nameSpace);
 
     // 4. Set attribute's value...
-    attrValueDescriptor.set.call(attribute, newValue);
+    if (nameSpace) {
+        elementSetAttributeNSDescriptor.value.call(element, nameSpace, attribute.prefix + ':' + name, newValue);
+    } else {
+        elementSetAttributeDescriptor.value.call(element, name, newValue);
+    }
 }
 
 function appendAttribute(attribute, element) {
@@ -1479,7 +1468,7 @@ function appendAttribute(attribute, element) {
     var newValue = attribute.value;
 
     // 1. Queue a mutation record...
-    queueMutationRecord(MO_TYPE_ATTRIBUTES, element, name, nameSpace, oldValue);
+    // SKIP
 
     // 2. If element is custom...
     if (_customElements2.default.isInstalled() && _customElements2.default.isCustom(element)) {
@@ -1506,7 +1495,7 @@ function removeAttribute(attribute, element) {
     var newValue = null;
 
     // 1. Queue a mutation record...
-    queueMutationRecord(MO_TYPE_ATTRIBUTES, element, name, nameSpace, oldValue);
+    // SKIP
 
     // 2. If element is custom...
     if (_customElements2.default.isInstalled() && _customElements2.default.isCustom(element)) {
@@ -1534,7 +1523,7 @@ function replaceAttribute(oldAttr, newAttr, element) {
     var newValue = newAttr.value;
 
     // 1. Queue a mutation record...
-    queueMutationRecord(MO_TYPE_ATTRIBUTES, element, name, nameSpace, oldValue);
+    // SKIP
 
     // 2. If element is custom...
     if (_customElements2.default.isInstalled() && _customElements2.default.isCustom(element)) {
@@ -1733,27 +1722,6 @@ function setExistingAttributeValue(attribute, value) {
     }
 }
 
-// https://dom.spec.whatwg.org/#interface-characterdata
-
-function replaceData(node, offset, count, data, setter) {
-    // https://dom.spec.whatwg.org/#concept-cd-replace
-    if (data == null) {
-        data = EMPTY_STRING;
-    }
-    var oldValue = node.data;
-    var length = oldValue.length;
-    if (offset > length) {
-        throw _utils2.default.makeDOMException(ERROR_INDEX_SIZE);
-    }
-    if (offset + count > length) {
-        count = length - offset;
-    }
-    queueMutationRecord(MO_TYPE_CHARACTER_DATA, node, null, null, oldValue);
-    var newValue = oldValue.slice(0, offset) + data + oldValue.slice(offset + count);
-    setter.call(node, newValue);
-    // TODO: (Range)
-}
-
 // https://dom.spec.whatwg.org/#finding-slots-and-slotables
 
 function findASlot(slotable, open) {
@@ -1891,7 +1859,7 @@ function assignSlotableToSlot(slotable, slot, suppressSignaling) {
     var assignedNodesCount = assignedNodes.length;
 
     if (!suppressSignaling) {
-        signalASlotChange(slot);
+        _mutationObservers2.default.signalASlotChange(slot);
     }
 
     if (assignedNodesCount === 0) {
@@ -1940,7 +1908,7 @@ function unassignSlotableFromSlot(slotable, slot, suppressSignaling) {
     slotAssignedNodes.splice(slotAssignedNodes.indexOf(slotable), 1);
 
     if (!suppressSignaling) {
-        signalASlotChange(slot);
+        _mutationObservers2.default.signalASlotChange(slot);
     }
 
     // rendering
@@ -1990,23 +1958,6 @@ function assignSlotablesForATree(tree, noSignalSlots) {
             }
         }
     }
-}
-
-// https://dom.spec.whatwg.org/#signaling-slot-change
-
-function signalASlotChange(slot) {
-    // https://dom.spec.whatwg.org/#signal-a-slot-change
-    // To signal a slot change, for a slot slot, run these steps:
-
-    // 1. If slot is not in unit of related similar-origin browsing contexts' 
-    // signal slot list, append slot to unit of related similar-origin browsing 
-    // contexts' signal slot list.
-    if (signalSlotList.indexOf(slot) === -1) {
-        signalSlotList.push(slot);
-    }
-
-    // 2. Queue a mutation observer compound microtask.
-    queueMutationObserverCompoundMicrotask();
 }
 
 // https://dom.spec.whatwg.org/#mutation-algorithms
@@ -2067,6 +2018,7 @@ function preInsert(node, parent, child) {
 }
 
 function insert(node, parent, child, suppressObservers) {
+    _mutationObservers2.default.requeueNativeRecords();
     // https://dom.spec.whatwg.org/#concept-node-insert
     // To insert a node into a parent before a child, with an optional suppress observers flag, run these steps:
 
@@ -2090,11 +2042,18 @@ function insert(node, parent, child, suppressObservers) {
         for (var i = 0; i < count; i++) {
             nodes[i] = nodeChildNodes[i];
         }
-        for (var _i5 = 0; _i5 < count; _i5++) {
-            remove(nodes[_i5], node, true);
+        // If it's the parsing fragment, avoid some overhead.
+        if (node === parsingFragment) {
+            for (var _i5 = 0; _i5 < count; _i5++) {
+                nodeRemoveChildDescriptor.value.call(node, nodes[_i5]);
+            }
+        } else {
+            for (var _i6 = 0; _i6 < count; _i6++) {
+                remove(nodes[_i6], node, true);
+            }
+            // 5. If node is a DocumentFragment node, queue a mutation record of "childList" for node with removedNodes nodes.
+            _mutationObservers2.default.queueMutationRecord(MO_TYPE_CHILD_LIST, node, null, null, null, null, nodes);
         }
-        // 5. If node is a DocumentFragment node, queue a mutation record of "childList" for node with removedNodes nodes.
-        queueMutationRecord(MO_TYPE_CHILD_LIST, node, null, null, null, null, nodes);
     } else {
         nodes[0] = node;
     }
@@ -2105,8 +2064,8 @@ function insert(node, parent, child, suppressObservers) {
     var parentIsConnected = parent.isConnected;
     var parentIsShadowRoot = isShadowRoot(parent);
     var parentTree = root(parent);
-    for (var _i6 = 0; _i6 < count; _i6++) {
-        var _node = nodes[_i6];
+    for (var _i7 = 0; _i7 < count; _i7++) {
+        var _node = nodes[_i7];
         // 1. Insert node into parent before child or at the end of parent if child is null.
         if (parentStateChildNodes) {
             if (child) {
@@ -2136,7 +2095,7 @@ function insert(node, parent, child, suppressObservers) {
         // 3. If parent is a slot whose assigned nodes is the empty list, 
         // then run signal a slot change for parent.
         if (isSlot(parent) && parent.assignedNodes().length === 0) {
-            signalASlotChange(parent);
+            _mutationObservers2.default.signalASlotChange(parent);
         }
 
         // 4. Run assign slotables for a tree with node’s tree and a set containing 
@@ -2178,7 +2137,7 @@ function insert(node, parent, child, suppressObservers) {
     // parent’s last child if child is null.
     if (!suppressObservers) {
         var previousSibling = child ? child.previousSibling : parent.lastChild;
-        queueMutationRecord(MO_TYPE_CHILD_LIST, parent, null, null, null, nodes, null, previousSibling, child);
+        _mutationObservers2.default.queueMutationRecord(MO_TYPE_CHILD_LIST, parent, null, null, null, nodes, null, previousSibling, child);
     }
 }
 
@@ -2258,7 +2217,7 @@ function replace(child, node, parent) {
 
     // 15. Queue a mutation record of "childList" for target parent with addedNodes nodes, 
     // removedNodes removedNodes, nextSibling reference child, and previousSibling previousSibling.
-    queueMutationRecord(MO_TYPE_CHILD_LIST, parent, null, null, null, nodes, removedNodes, previousSibling, referenceChild);
+    _mutationObservers2.default.queueMutationRecord(MO_TYPE_CHILD_LIST, parent, null, null, null, nodes, removedNodes, previousSibling, referenceChild);
 }
 
 function replaceAll(node, parent) {
@@ -2287,16 +2246,16 @@ function replaceAll(node, parent) {
         var nodeChildNodes = node.childNodes;
         var nodeChildNodesLength = nodeChildNodes.length;
         addedNodes = new Array(nodeChildNodesLength);
-        for (var _i7 = 0; _i7 < nodeChildNodesLength; _i7++) {
-            addedNodes[_i7] = nodeChildNodes[_i7];
+        for (var _i8 = 0; _i8 < nodeChildNodesLength; _i8++) {
+            addedNodes[_i8] = nodeChildNodes[_i8];
         }
     } else {
         addedNodes = [node];
     }
 
     // 4. Remove all parent’s children, in tree order, with the suppress observers flag set.
-    for (var _i8 = 0; _i8 < removedNodesCount; _i8++) {
-        remove(removedNodes[_i8], parent, true);
+    for (var _i9 = 0; _i9 < removedNodesCount; _i9++) {
+        remove(removedNodes[_i9], parent, true);
     }
 
     // 5. If node is not null, insert node into parent before null with the suppress observers flag set.
@@ -2305,7 +2264,7 @@ function replaceAll(node, parent) {
     }
 
     // 6. Queue a mutation record of "childList" for parent with addedNodes addedNodes and removedNodes removedNodes.
-    queueMutationRecord(MO_TYPE_CHILD_LIST, parent, null, null, null, addedNodes, removedNodes);
+    _mutationObservers2.default.queueMutationRecord(MO_TYPE_CHILD_LIST, parent, null, null, null, addedNodes, removedNodes);
 }
 
 function preRemove(child, parent) {
@@ -2325,6 +2284,7 @@ function preRemove(child, parent) {
 }
 
 function remove(node, parent, suppressObservers) {
+    _mutationObservers2.default.requeueNativeRecords();
     // https://dom.spec.whatwg.org/#concept-node-remove
     // To remove a node from a parent, with an optional suppress observers flag, run these steps:
 
@@ -2421,7 +2381,8 @@ function remove(node, parent, suppressObservers) {
         var ancestorState = _utils2.default.getShadowState(inclusiveAncestor);
         if (ancestorState && ancestorState.observers) {
             var ancestorObservers = ancestorState.observers;
-            for (var i = 0; i < ancestorObservers.length; i++) {
+            var ancestorObserversCount = ancestorObservers.length;
+            for (var i = 0; i < ancestorObserversCount; i++) {
                 var registeredObserver = ancestorObservers[i];
                 if (registeredObserver.options.subtree) {
                     // ...append a transient registered observer whose observer and options are 
@@ -2429,8 +2390,8 @@ function remove(node, parent, suppressObservers) {
                     // list of registered observers.
                     var observer = registeredObserver.instance;
                     var options = registeredObserver.options;
-                    var transientObserver = createTransientObserver(observer, node, options);
-                    mutationObservers.push(transientObserver);
+                    var transientObserver = _mutationObservers2.default.createTransientObserver(observer, node, options);
+                    ancestorObservers.push({ instance: transientObserver, options: options });
                 }
             }
         }
@@ -2441,251 +2402,11 @@ function remove(node, parent, suppressObservers) {
     // for parent with removedNodes a list solely containing node, nextSibling 
     // oldNextSibling, and previousSibling oldPreviousSibling.
     if (!suppressObservers) {
-        queueMutationRecord(MO_TYPE_CHILD_LIST, parent, null, null, null, null, [node], oldPreviousSibling, oldNextSibling);
+        _mutationObservers2.default.queueMutationRecord(MO_TYPE_CHILD_LIST, parent, null, null, null, null, [node], oldPreviousSibling, oldNextSibling);
     }
 }
 
-// https://dom.spec.whatwg.org/#mutation-observers
-
-// TODO: test everything that queues mutation records
-
-// TODO: move mutation observers into a separately installed feature.
-// It should be installed automatically when ShadowDOM is installed,
-// with an option to opt out if desired for performance
-
-function getOrCreateNodeObservers(node) {
-    var nodeState = _utils2.default.getShadowState(node) || _utils2.default.setShadowState(node, {});
-    var observers = nodeState.observers;
-    return observers ? observers : nodeState.observers = [];
-}
-
-function createMutationObserver(callback) {
-    return {
-        callback: callback,
-        queue: [],
-        nodes: [],
-        observe: function observe(node, options) {
-            if (this.nodes.length === 0) {
-                mutationObservers.push(this);
-            }
-            var nodeObservers = getOrCreateNodeObservers(node);
-            nodeObservers.push({ instance: this, options: options });
-            this.nodes.push(node);
-        },
-        disconnect: function disconnect() {
-            var index = mutationObservers.indexOf(this);
-            mutationObservers.splice(index, 1);
-            for (var i = 0; i < this.nodes.length; i++) {
-                var nodeObservers = getOrCreateNodeObservers(this.nodes[i]);
-                for (var j = 0; j < nodeObservers.length; j++) {
-                    if (nodeObservers[j].instance === this) {
-                        nodeObservers.splice(j, 1);
-                        break;
-                    }
-                }
-            }
-            this.nodes = [];
-        }
-    };
-}
-
-function createTransientObserver(observer, node, options) {
-    var transientObserver = {
-        observer: observer,
-        callback: observer.callback,
-        options: options,
-        queue: [],
-        node: node,
-        disconnect: function disconnect() {
-            var nodeObservers = getOrCreateNodeObservers(this.node);
-            for (var j = 0; j < nodeObservers.length; j++) {
-                if (nodeObservers[j].instance === this) {
-                    nodeObservers.splice(j, 1);
-                    break;
-                }
-            }
-        }
-    };
-
-    var nodeObservers = getOrCreateNodeObservers(node);
-    nodeObservers.push({ instance: transientObserver, options: options });
-
-    return transientObserver;
-}
-
-var mutationObserverCompoundMicrotaskQueuedFlag = false;
-
-var mutationObservers = [];
-var signalSlotList = [];
-var theEmptyList = Object.freeze([]);
-
-function queueMutationRecord(type, target, name, nameSpace, oldValue, addedNodes, removedNodes, previousSibling, nextSibling) {
-    // PERF: This is an out-of-spec optimization
-    if (mutationObservers.length === 0) {
-        return;
-    }
-
-    // https://dom.spec.whatwg.org/#queueing-a-mutation-record
-    // 1. Let interested observers be an initially empty set of 
-    // MutationObserver objects optionally paired with a string.
-    var interestedObservers = [];
-    var pairedStrings = [];
-    // 2. Let nodes be the inclusive ancestors of target.
-    var nodes = [target];
-    var ancestor = target;
-    while (ancestor = ancestor.parentNode) {
-        nodes.push(ancestor);
-    }
-    // 3. Then, for each node in nodes... 
-    for (var i = 0; i < nodes.length; i++) {
-        var node = nodes[i];
-        var nodeState = _utils2.default.getShadowState(node);
-        if (!nodeState || !nodeState.observers) {
-            continue;
-        }
-        // ...and then for each registered observer (with registered 
-        // observer’s options as options) in node’s list of registered 
-        // observers...
-        for (var j = 0; j < nodeState.observers.length; j++) {
-            var registeredObserver = nodeState.observers[j];
-            var options = registeredObserver.options;
-            // ...run these substeps:
-            // 1. If none of the following are true:
-            if (node != target && !options.subtree) {
-                continue;
-            }
-            if (type === MO_TYPE_ATTRIBUTES) {
-                if (!options.attributes) {
-                    continue;
-                }
-                // if options' attributeFilter is present, and options' attributeFilter
-                // does not contain name or namespace is non-null
-                if (options.attributeFilter && (options.attributeFilter.indexOf(name) === -1 || nameSpace != null)) {
-                    continue;
-                }
-            }
-            if (type === MO_TYPE_CHARACTER_DATA && !options.characterData) {
-                continue;
-            }
-            if (type === MO_TYPE_CHILD_LIST && !options.childList) {
-                continue;
-            }
-            // ...then run the subsubsteps:
-            // 1. If registered observer’s observer is not in interested observers, 
-            // append registered observer’s observer to interested observers.
-            var observer = registeredObserver.instance;
-            var index = interestedObservers.indexOf(observer);
-            if (index === -1) {
-                index = interestedObservers.length;
-                interestedObservers[index] = observer;
-            }
-            // 2. If either type is "attributes" and options’ attributeOldValue is true, 
-            // or type is "characterData" and options’ characterDataOldValue is true, 
-            // set the paired string of registered observer’s observer in interested observers to oldValue.
-            if (type === MO_TYPE_ATTRIBUTES && options.attributeOldValue || type === MO_TYPE_CHARACTER_DATA && options.characterDataOldValue) {
-                pairedStrings[index] = oldValue;
-            }
-        }
-    }
-
-    // PERF: This is an out-of-spec optimization
-    if (interestedObservers.length === 0) {
-        return;
-    }
-
-    // 4. Then, for each observer in interested observers, run these substeps:
-    for (var _i9 = 0; _i9 < interestedObservers.length; _i9++) {
-        var _observer = interestedObservers[_i9];
-        // 1. Let record be a new MutationRecord object with its type set to type and target set to target.
-        var record = {
-            type: type,
-            target: target,
-            attributeName: null,
-            attributeNamespace: null,
-            addedNodes: theEmptyList,
-            removedNodes: theEmptyList,
-            previousSibling: null,
-            nextSibling: null,
-            oldValue: null
-        };
-        // 2. If name and namespace are given, set record’s attributeName to name, and record’s attributeNamespace to namespace.
-        if (name) {
-            record.attributeName = name;
-            record.attributeNamespace = nameSpace;
-        }
-        // 3. If addedNodes is given, set record’s addedNodes to addedNodes.
-        if (addedNodes) {
-            record.addedNodes = Object.freeze(addedNodes);
-        }
-        // 4. If removedNodes is given, set record’s removedNodes to removedNodes.
-        if (removedNodes) {
-            record.removedNodes = Object.freeze(removedNodes);
-        }
-        // 5. If previousSibling is given, set record’s previousSibling to previousSibling.
-        if (previousSibling) {
-            record.previousSibling = previousSibling;
-        }
-        // 6. If nextSibling is given, set record’s nextSibling to nextSibling.
-        if (nextSibling) {
-            record.nextSibling = nextSibling;
-        }
-        // 7. If observer has a paired string, set record’s oldValue to observer’s paired string.
-        record.oldValue = pairedStrings[_i9];
-        // 8. Append record to observer’s record queue.
-        _observer.queue.push(record);
-    }
-
-    // 5. Queue a mutation observer compound microtask.
-    queueMutationObserverCompoundMicrotask();
-}
-
-function queueMutationObserverCompoundMicrotask() {
-    if (mutationObserverCompoundMicrotaskQueuedFlag) {
-        return;
-    }
-    mutationObserverCompoundMicrotaskQueuedFlag = true;
-    _utils2.default.setImmediate(notifyMutationObservers);
-}
-
-function notifyMutationObservers() {
-    mutationObserverCompoundMicrotaskQueuedFlag = false;
-    var mutationObserversLength = mutationObservers.length;
-    var notifyList = new Array(mutationObserversLength);
-    for (var i = 0; i < mutationObserversLength; i++) {
-        notifyList[i] = mutationObservers[i];
-    }
-    var signalList = signalSlotList.splice(0, signalSlotList.length);
-    for (var _i10 = 0; _i10 < notifyList.length; _i10++) {
-        var observer = notifyList[_i10];
-        var queue = observer.queue.splice(0, observer.queue.length);
-        for (var j = mutationObservers.length - 1; j >= 0; j--) {
-            var transientObserver = mutationObservers[j];
-            if (transientObserver.observer === observer) {
-                mutationObservers.splice(j, 1);
-                transientObserver.disconnect();
-            }
-        }
-        if (queue.length) {
-            try {
-                observer.callback.call(observer.interface, queue, observer.interface);
-            } catch (error) {
-                _utils2.default.reportError(error);
-            }
-        }
-    }
-    for (var _i11 = 0; _i11 < signalList.length; _i11++) {
-        var slot = signalList[_i11];
-        var event = slot.ownerDocument.createEvent(EVENT);
-        event.initEvent(EVT_SLOT_CHANGE, true, false);
-        try {
-            slot.dispatchEvent(event);
-        } catch (error) {
-            _utils2.default.reportError(error);
-        }
-    }
-}
-
-},{"./custom-elements.js":1,"./utils.js":29}],3:[function(require,module,exports){
+},{"./custom-elements.js":1,"./mutation-observers.js":27,"./utils.js":30}],3:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2707,11 +2428,11 @@ var _utils2 = _interopRequireDefault(_utils);
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 exports.default = {
-    install: install
+    install: install,
+    patchAttributeNodeIfNeeded: patchAttributeNodeIfNeeded
 }; // https://dom.spec.whatwg.org/#interface-attr
 
 function install() {
-    // TODO: Patch attribute instances elsewhere when there are broken accessors.
     if (!_utils2.default.brokenAccessors) {
         var originalValueDescriptor = _utils2.default.descriptor(Attr, 'value');
         var newValueDescriptor = {
@@ -2726,92 +2447,47 @@ function install() {
         };
         _utils2.default.defineProperty(Attr.prototype, 'value', newValueDescriptor);
     }
+
+    // TODO: need to ensure that parser-inserted 'slot[name]' and '*[slot]' elements'
+    // name and slot attribute nodes are patched. Not high priority but worth
+    // keeping track of.
 }
 
-},{"../custom-elements.js":1,"../dom.js":2,"../utils.js":29}],4:[function(require,module,exports){
-'use strict';
+function patchAttributeNode(attribute) {
+    _utils2.default.defineProperty(attribute, 'value', {
+        get: function get() {
+            if (!this.ownerElement) {
+                delete this.value;
+                var result = this.value;
+                return result;
+            }
+            if (this.namespaceURI) {
+                return this.ownerElement.getAttributeNS(this.namespaceURI, this.localName);
+            }
+            return this.ownerElement.getAttribute(this.localName);
+        },
+        set: function set(value) {
+            var _this2 = this;
 
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
+            if (!this.ownerElement) {
+                delete this.value;
+                var result = this.value = value;
+                return result;
+            }
+            return _customElements2.default.executeCEReactions(function () {
+                return _dom2.default.setExistingAttributeValue(_this2, value);
+            });
+        }
+    });
+}
 
-var _dom = require('../dom.js');
-
-var _dom2 = _interopRequireDefault(_dom);
-
-var _utils = require('../utils.js');
-
-var _utils2 = _interopRequireDefault(_utils);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-// https://dom.spec.whatwg.org/#interface-characterdata
-
-exports.default = {
-    install: install
-};
-
-
-function install() {
+function patchAttributeNodeIfNeeded(attribute) {
     if (_utils2.default.brokenAccessors) {
-        [Text, ProcessingInstruction, Comment].forEach(function (type) {
-            var passthroughSetter = function passthroughSetter(value) {
-                this.data = value;
-            };
-            var newDataDescriptor = {
-                get: function get() {
-                    delete type.prototype['data'];
-                    var value = this.data;
-                    _utils2.default.defineProperty(type.prototype, 'data', newDataDescriptor);
-                    return value;
-                },
-                set: function set(value) {
-                    delete type.prototype['data'];
-                    _dom2.default.replaceData(this, 0, this.data.length, value, passthroughSetter);
-                    _utils2.default.defineProperty(type.prototype, 'data', newDataDescriptor);
-                    return void 0;
-                }
-            };
-            _utils2.default.defineProperty(type.prototype, 'data', newDataDescriptor);
-            _utils2.default.extend(type, makeMethodDescriptors(function (value) {
-                delete type.prototype['data'];
-                this.data = value;
-                _utils2.default.defineProperty(type.prototype, 'data', newDataDescriptor);
-            }));
-        });
-    } else {
-        (function () {
-            var originalDataDescriptor = _utils2.default.descriptor(CharacterData, 'data');
-            var newDataDescriptor = {
-                get: originalDataDescriptor.get,
-                set: function set(value) {
-                    _dom2.default.replaceData(this, 0, this.data.length, value, originalDataDescriptor.set);
-                }
-            };
-            _utils2.default.defineProperty(CharacterData.prototype, 'data', newDataDescriptor);
-            _utils2.default.extend(CharacterData, makeMethodDescriptors(originalDataDescriptor.set));
-        })();
+        patchAttributeNode(attribute);
     }
 }
 
-function makeMethodDescriptors(dataSetter) {
-    return {
-        appendData: function appendData(data) {
-            _dom2.default.replaceData(this, this.data.length, 0, data, dataSetter);
-        },
-        insertData: function insertData(offset, data) {
-            _dom2.default.replaceData(this, offset, 0, data, dataSetter);
-        },
-        deleteData: function deleteData(offset, count) {
-            _dom2.default.replaceData(this, offset, count, '', dataSetter);
-        },
-        replaceData: function replaceData(offset, count, data) {
-            _dom2.default.replaceData(this, offset, count, data, dataSetter);
-        }
-    };
-}
-
-},{"../dom.js":2,"../utils.js":29}],5:[function(require,module,exports){
+},{"../custom-elements.js":1,"../dom.js":2,"../utils.js":30}],4:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2850,7 +2526,7 @@ function $CustomEvent(type, init) {
 
 $CustomEvent.prototype = window.CustomEvent.prototype;
 
-},{"../utils.js":29}],6:[function(require,module,exports){
+},{"../utils.js":30}],5:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3029,7 +2705,7 @@ function getOrCreateDOMTokenList(element, localName) {
     return elementState.tokenLists[localName] = createDOMTokenList(element, localName);
 }
 
-},{"../custom-elements.js":1,"../dom.js":2,"../utils.js":29}],7:[function(require,module,exports){
+},{"../custom-elements.js":1,"../dom.js":2,"../utils.js":30}],6:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3044,13 +2720,62 @@ var _customElements = require('../custom-elements.js');
 
 var _customElements2 = _interopRequireDefault(_customElements);
 
+var _mutationObservers = require('../mutation-observers.js');
+
+var _mutationObservers2 = _interopRequireDefault(_mutationObservers);
+
 var _utils = require('../utils.js');
 
 var _utils2 = _interopRequireDefault(_utils);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+// https://dom.spec.whatwg.org/#interface-document
+
+var originalCreateCDATASection = Document.prototype.createCDATASection;
+var originalCreateComment = Document.prototype.createComment;
+var originalCreateDocumentFragment = Document.prototype.createDocumentFragment;
+var originalCreateElement = Document.prototype.createElement;
+var originalCreateElementNS = Document.prototype.createElementNS;
+var originalCreateProcessingInstruction = Document.prototype.createProcessingInstruction;
+var originalCreateTextNode = Document.prototype.createTextNode;
+
 exports.default = {
+    createCDATASection: function createCDATASection(data) {
+        var section = originalCreateCDATASection.call(this, data);
+        _mutationObservers2.default.registerForMutationObservers(section);
+        return section;
+    },
+    createComment: function createComment(data) {
+        var comment = originalCreateComment.call(this, data);
+        _mutationObservers2.default.registerForMutationObservers(comment);
+        return comment;
+    },
+    createDocumentFragment: function createDocumentFragment() {
+        var fragment = originalCreateDocumentFragment.call(this);
+        _mutationObservers2.default.registerForMutationObservers(fragment);
+        return fragment;
+    },
+    createElement: function createElement(name, options) {
+        var element = originalCreateElement.call(this, name, options);
+        _mutationObservers2.default.registerForMutationObservers(element);
+        return element;
+    },
+    createElementNS: function createElementNS(namespaceURI, qualifiedName, options) {
+        var element = originalCreateElementNS.call(this, namespaceURI, qualifiedName, options);
+        _mutationObservers2.default.registerForMutationObservers(element);
+        return element;
+    },
+    createProcessingInstruction: function createProcessingInstruction(target, data) {
+        var instruction = originalCreateProcessingInstruction.call(this, target, data);
+        _mutationObservers2.default.registerForMutationObservers(instruction);
+        return instruction;
+    },
+    createTextNode: function createTextNode(data) {
+        var text = originalCreateTextNode.call(this, data);
+        _mutationObservers2.default.registerForMutationObservers(text);
+        return text;
+    },
     getElementsByTagName: function getElementsByTagName(qualifiedName) {
         return _dom2.default.listOfElementsWithQualifiedName(this, qualifiedName);
     },
@@ -3084,9 +2809,9 @@ exports.default = {
             return _dom2.default.adopt(node, _this2);
         });
     }
-}; // https://dom.spec.whatwg.org/#interface-document
+};
 
-},{"../custom-elements.js":1,"../dom.js":2,"../utils.js":29}],8:[function(require,module,exports){
+},{"../custom-elements.js":1,"../dom.js":2,"../mutation-observers.js":27,"../utils.js":30}],7:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3105,16 +2830,25 @@ var _utils = require('../utils.js');
 
 var _utils2 = _interopRequireDefault(_utils);
 
+var _Attr = require('../interfaces/Attr.js');
+
+var _Attr2 = _interopRequireDefault(_Attr);
+
 var _ShadowRoot = require('../interfaces/ShadowRoot.js');
 
 var _ShadowRoot2 = _interopRequireDefault(_ShadowRoot);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-// https://dom.spec.whatwg.org/#interface-element
-
 exports.default = {
     install: function install() {
+        // Element.matches(selectors) polyfill from MDN
+        // https://developer.mozilla.org/en-US/docs/Web/API/Element/matches#Polyfill
+        // Purposefully chop out the polyfill function that uses querySelectorAll.
+        if (!Element.prototype.matches) {
+            Element.prototype.matches = Element.prototype.matchesSelector || Element.prototype.mozMatchesSelector || Element.prototype.msMatchesSelector || Element.prototype.oMatchesSelector || Element.prototype.webkitMatchesSelector;
+        }
+
         if (_utils2.default.brokenAccessors) {
             (function () {
                 var attributesDescriptor = {
@@ -3162,8 +2896,7 @@ exports.default = {
             _utils2.default.deleteProperty(HTMLElement, 'insertAdjacentHTML');
         }
     }
-};
-
+}; // https://dom.spec.whatwg.org/#interface-element
 
 var elementSetAttributeDescriptor = _utils2.default.descriptor(Element, 'setAttribute');
 var elementSetAttributeNSDescriptor = _utils2.default.descriptor(Element, 'setAttributeNS');
@@ -3234,6 +2967,7 @@ var elementMixin = {
     setAttributeNode: function setAttributeNode(attr) {
         var _this5 = this;
 
+        _Attr2.default.patchAttributeNodeIfNeeded(attr);
         return _customElements2.default.executeCEReactions(function () {
             return _dom2.default.setAttribute(attr, _this5);
         });
@@ -3244,6 +2978,7 @@ var elementMixin = {
     setAttributeNodeNS: function setAttributeNodeNS(attr) {
         var _this6 = this;
 
+        _Attr2.default.patchAttributeNodeIfNeeded(attr);
         return _customElements2.default.executeCEReactions(function () {
             return _dom2.default.setAttribute(attr, _this6);
         });
@@ -3442,7 +3177,7 @@ var htmlElementMixin = {
 
 };
 
-},{"../custom-elements.js":1,"../dom.js":2,"../interfaces/ShadowRoot.js":18,"../utils.js":29}],9:[function(require,module,exports){
+},{"../custom-elements.js":1,"../dom.js":2,"../interfaces/Attr.js":3,"../interfaces/ShadowRoot.js":17,"../utils.js":30}],8:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3617,7 +3352,7 @@ var builtInComposedEvents = [
 // Touch Events
 'touchstart', 'touchend', 'touchmove', 'touchcancel'];
 
-},{"../dom.js":2,"../utils.js":29}],10:[function(require,module,exports){
+},{"../dom.js":2,"../utils.js":30}],9:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4154,7 +3889,7 @@ function wrapEventWithBrokenAccessors(event) {
     return wrapper;
 }
 
-},{"../dom.js":2,"../utils.js":29,"./Event.js":9}],11:[function(require,module,exports){
+},{"../dom.js":2,"../utils.js":30,"./Event.js":8}],10:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4217,7 +3952,7 @@ exports.default = {
     }
 };
 
-},{"../dom.js":2,"../utils.js":29}],12:[function(require,module,exports){
+},{"../dom.js":2,"../utils.js":30}],11:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4278,7 +4013,7 @@ exports.default = {
     }
 };
 
-},{"../dom.js":2,"../utils.js":29}],13:[function(require,module,exports){
+},{"../dom.js":2,"../utils.js":30}],12:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4306,7 +4041,7 @@ exports.default = {
     }
 }; // https://www.w3.org/TR/html5/single-page.html#the-tr-element
 
-},{"../utils.js":29}],14:[function(require,module,exports){
+},{"../utils.js":30}],13:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4331,7 +4066,7 @@ exports.default = {
     }
 }; // https://www.w3.org/TR/html5/single-page.html#the-tbody-element
 
-},{"../utils.js":29}],15:[function(require,module,exports){
+},{"../utils.js":30}],14:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4343,19 +4078,21 @@ var _dom = require('../dom.js');
 
 var _dom2 = _interopRequireDefault(_dom);
 
+var _mutationObservers = require('../mutation-observers.js');
+
+var _mutationObservers2 = _interopRequireDefault(_mutationObservers);
+
 var _utils = require('../utils.js');
 
 var _utils2 = _interopRequireDefault(_utils);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-// https://dom.spec.whatwg.org/#interface-mutationobserver
-
 function $MutationObserver(callback) {
-    var observer = _dom2.default.createMutationObserver(callback);
+    var observer = _mutationObservers2.default.createMutationObserver(callback);
     _utils2.default.setShadowState(this, { observer: observer });
     observer.interface = this;
-}
+} // https://dom.spec.whatwg.org/#interface-mutationobserver
 
 $MutationObserver.prototype = {
     observe: function observe(target, options) {
@@ -4370,7 +4107,7 @@ $MutationObserver.prototype = {
     }
 };
 
-},{"../dom.js":2,"../utils.js":29}],16:[function(require,module,exports){
+},{"../dom.js":2,"../mutation-observers.js":27,"../utils.js":30}],15:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4389,7 +4126,13 @@ var _utils = require('../utils.js');
 
 var _utils2 = _interopRequireDefault(_utils);
 
+var _Attr = require('../interfaces/Attr.js');
+
+var _Attr2 = _interopRequireDefault(_Attr);
+
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+// https://dom.spec.whatwg.org/#interface-namednodemap
 
 exports.default = {
 
@@ -4397,6 +4140,7 @@ exports.default = {
     setNamedItem: function setNamedItem(attr) {
         var _this = this;
 
+        _Attr2.default.patchAttributeNodeIfNeeded(attr);
         return _customElements2.default.executeCEReactions(function () {
             var shadowState = _utils2.default.getShadowState(_this);
             return _dom2.default.setAttribute(attr, shadowState.element);
@@ -4408,6 +4152,7 @@ exports.default = {
     setNamedItemNS: function setNamedItemNS(attr) {
         var _this2 = this;
 
+        _Attr2.default.patchAttributeNodeIfNeeded(attr);
         return _customElements2.default.executeCEReactions(function () {
             var shadowState = _utils2.default.getShadowState(_this2);
             return _dom2.default.setAttribute(attr, shadowState.element);
@@ -4443,9 +4188,9 @@ exports.default = {
             return attr;
         });
     }
-}; // https://dom.spec.whatwg.org/#interface-namednodemap
+};
 
-},{"../custom-elements.js":1,"../dom.js":2,"../utils.js":29}],17:[function(require,module,exports){
+},{"../custom-elements.js":1,"../dom.js":2,"../interfaces/Attr.js":3,"../utils.js":30}],16:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5042,7 +4787,7 @@ function elementTextContent(element) {
     return result;
 }
 
-},{"../custom-elements.js":1,"../dom.js":2,"../utils.js":29}],18:[function(require,module,exports){
+},{"../custom-elements.js":1,"../dom.js":2,"../utils.js":30}],17:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5095,7 +4840,7 @@ exports.default = {
 }; // https://dom.spec.whatwg.org/#interface-shadowroot
 // https://www.w3.org/TR/shadow-dom/#the-shadowroot-interface
 
-},{"../custom-elements.js":1,"../dom.js":2,"../utils.js":29}],19:[function(require,module,exports){
+},{"../custom-elements.js":1,"../dom.js":2,"../utils.js":30}],18:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5137,7 +4882,7 @@ exports.default = {
     }
 };
 
-},{"../dom.js":2,"../utils.js":29}],20:[function(require,module,exports){
+},{"../dom.js":2,"../utils.js":30}],19:[function(require,module,exports){
 'use strict';
 
 var _shadowDom = require('./shadow-dom.js');
@@ -5176,7 +4921,39 @@ if (installCustomElements) {
     _customElements2.default.installTranspiledClassSupport();
 }
 
-},{"./custom-elements.js":1,"./shadow-dom.js":28}],21:[function(require,module,exports){
+},{"./custom-elements.js":1,"./shadow-dom.js":29}],20:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+exports.default = {
+    enqueue: enqueue
+};
+
+
+var triggered = false;
+var queue = new Array();
+var trigger = document.createElement('span');
+var observer = new MutationObserver(process);
+observer.observe(trigger, { attributes: true });
+
+function enqueue(microtask) {
+    queue.push(microtask);
+    if (!triggered) {
+        trigger.hidden = !trigger.hidden;
+        triggered = true;
+    }
+}
+
+function process() {
+    triggered = false;
+    queue.splice(0, queue.length).forEach(function (microtask) {
+        return microtask();
+    });
+}
+
+},{}],21:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5391,61 +5168,12 @@ exports.default = {
 
 };
 
-},{"../dom.js":2,"../utils.js":29}],23:[function(require,module,exports){
+},{"../dom.js":2,"../utils.js":30}],23:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-
-exports.default = function (base) {
-
-    return {
-
-        // TODO: tests
-        get previousElementSibling() {
-            var nodeState = _utils2.default.getShadowState(this);
-            if (nodeState) {
-                var parentNode = nodeState.parentNode;
-                if (parentNode) {
-                    var childNodes = _utils2.default.getShadowState(parentNode).childNodes;
-                    var index = childNodes.indexOf(this);
-                    while (index > 0) {
-                        var previous = childNodes[--index];
-                        if (previous.nodeType === Node.ELEMENT_NODE) {
-                            return previous;
-                        }
-                    };
-                    return null;
-                }
-            }
-            elementWalker.currentNode = this;
-            return elementWalker.previousSibling();
-        },
-
-        // TODO: tests
-        get nextElementSibling() {
-            var nodeState = _utils2.default.getShadowState(this);
-            if (nodeState) {
-                var parentNode = nodeState.parentNode;
-                if (parentNode) {
-                    var childNodes = _utils2.default.getShadowState(parentNode).childNodes;
-                    var index = childNodes.indexOf(this);
-                    while (index < childNodes.length - 1) {
-                        var next = childNodes[++index];
-                        if (next.nodeType === Node.ELEMENT_NODE) {
-                            return next;
-                        }
-                    };
-                    return null;
-                }
-            }
-            elementWalker.currentNode = this;
-            return elementWalker.nextSibling();
-        }
-
-    };
-};
 
 var _utils = require('../utils.js');
 
@@ -5455,7 +5183,53 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 var elementWalker = document.createTreeWalker(document, NodeFilter.SHOW_ELEMENT, null, false); // https://dom.spec.whatwg.org/#interface-nondocumenttypechildnode
 
-},{"../utils.js":29}],24:[function(require,module,exports){
+exports.default = {
+
+    // TODO: tests
+    get previousElementSibling() {
+        var nodeState = _utils2.default.getShadowState(this);
+        if (nodeState) {
+            var parentNode = nodeState.parentNode;
+            if (parentNode) {
+                var childNodes = _utils2.default.getShadowState(parentNode).childNodes;
+                var index = childNodes.indexOf(this);
+                while (index > 0) {
+                    var previous = childNodes[--index];
+                    if (previous.nodeType === Node.ELEMENT_NODE) {
+                        return previous;
+                    }
+                };
+                return null;
+            }
+        }
+        elementWalker.currentNode = this;
+        return elementWalker.previousSibling();
+    },
+
+    // TODO: tests
+    get nextElementSibling() {
+        var nodeState = _utils2.default.getShadowState(this);
+        if (nodeState) {
+            var parentNode = nodeState.parentNode;
+            if (parentNode) {
+                var childNodes = _utils2.default.getShadowState(parentNode).childNodes;
+                var index = childNodes.indexOf(this);
+                while (index < childNodes.length - 1) {
+                    var next = childNodes[++index];
+                    if (next.nodeType === Node.ELEMENT_NODE) {
+                        return next;
+                    }
+                };
+                return null;
+            }
+        }
+        elementWalker.currentNode = this;
+        return elementWalker.nextSibling();
+    }
+
+};
+
+},{"../utils.js":30}],24:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5683,7 +5457,7 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 var elementWalker = document.createTreeWalker(document, NodeFilter.SHOW_ELEMENT, null, false); // https://dom.spec.whatwg.org/#interface-parentnode
 
-},{"../custom-elements.js":1,"../dom.js":2,"../utils.js":29}],26:[function(require,module,exports){
+},{"../custom-elements.js":1,"../dom.js":2,"../utils.js":30}],26:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5721,7 +5495,319 @@ var _utils2 = _interopRequireDefault(_utils);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-},{"../dom.js":2,"../utils.js":29}],27:[function(require,module,exports){
+},{"../dom.js":2,"../utils.js":30}],27:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+    value: true
+});
+
+var _microtask = require('./microtask.js');
+
+var _microtask2 = _interopRequireDefault(_microtask);
+
+var _utils = require('./utils.js');
+
+var _utils2 = _interopRequireDefault(_utils);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+exports.default = {
+    queueMutationRecord: queueMutationRecord,
+    requeueNativeRecords: function requeueNativeRecords() {
+        _requeueNativeRecords(documentObserver.takeRecords());
+    },
+    createMutationObserver: createMutationObserver,
+    createTransientObserver: createTransientObserver,
+    registerForMutationObservers: registerForMutationObservers,
+    signalASlotChange: signalASlotChange
+};
+
+
+var MO_TYPE_ATTRIBUTES = 'attributes';
+var MO_TYPE_CHILD_LIST = 'childList';
+var MO_TYPE_CHARACTER_DATA = 'characterData';
+
+var mutationObservers = [];
+var signalSlotList = [];
+var theEmptyList = Object.freeze([]);
+
+var mutationObserverCompoundMicrotaskQueuedFlag = false;
+
+var documentObserver = new MutationObserver(function (records) {
+    _requeueNativeRecords(records);
+    notifyMutationObservers();
+});
+
+registerForMutationObservers(document);
+
+function queueMutationObserverCompoundMicrotask() {
+    if (mutationObserverCompoundMicrotaskQueuedFlag) {
+        return;
+    }
+    mutationObserverCompoundMicrotaskQueuedFlag = true;
+    _microtask2.default.enqueue(notifyMutationObservers);
+}
+
+function getOrCreateNodeObservers(node) {
+    var nodeState = _utils2.default.getShadowState(node) || _utils2.default.setShadowState(node, {});
+    var observers = nodeState.observers;
+    return observers ? observers : nodeState.observers = [];
+}
+
+function createMutationObserver(callback) {
+    return {
+        callback: callback,
+        queue: [],
+        nodes: [],
+        observe: function observe(node, options) {
+            _requeueNativeRecords(documentObserver.takeRecords());
+            if (this.nodes.length === 0) {
+                mutationObservers.push(this);
+            }
+            var nodeObservers = getOrCreateNodeObservers(node);
+            nodeObservers.push({ instance: this, options: options });
+            this.nodes.push(node);
+        },
+        disconnect: function disconnect() {
+            var index = mutationObservers.indexOf(this);
+            mutationObservers.splice(index, 1);
+            for (var i = 0; i < this.nodes.length; i++) {
+                var nodeObservers = getOrCreateNodeObservers(this.nodes[i]);
+                for (var j = 0; j < nodeObservers.length; j++) {
+                    if (nodeObservers[j].instance === this) {
+                        nodeObservers.splice(j, 1);
+                        break;
+                    }
+                }
+            }
+            this.nodes = [];
+        }
+    };
+}
+
+function createTransientObserver(observer, node, options) {
+    var transientObserver = {
+        observer: observer,
+        callback: observer.callback,
+        options: options,
+        queue: [],
+        node: node,
+        disconnect: function disconnect() {
+            var nodeObservers = getOrCreateNodeObservers(this.node);
+            for (var j = 0; j < nodeObservers.length; j++) {
+                if (nodeObservers[j].instance === this) {
+                    nodeObservers.splice(j, 1);
+                    break;
+                }
+            }
+        }
+    };
+
+    var nodeObservers = getOrCreateNodeObservers(node);
+    nodeObservers.push({ instance: transientObserver, options: options });
+
+    return transientObserver;
+}
+
+function queueMutationRecord(type, target, name, nameSpace, oldValue, addedNodes, removedNodes, previousSibling, nextSibling) {
+    // PERF: This is an out-of-spec optimization
+    if (mutationObservers.length === 0) {
+        return;
+    }
+
+    // https://dom.spec.whatwg.org/#queueing-a-mutation-record
+    // 1. Let interested observers be an initially empty set of 
+    // MutationObserver objects optionally paired with a string.
+    var interestedObservers = [];
+    var pairedStrings = [];
+    // 2. Let nodes be the inclusive ancestors of target.
+    var nodes = [target];
+    var ancestor = target;
+    while (ancestor = ancestor.parentNode) {
+        nodes.push(ancestor);
+    }
+    // 3. Then, for each node in nodes... 
+    for (var i = 0; i < nodes.length; i++) {
+        var node = nodes[i];
+        var nodeState = _utils2.default.getShadowState(node);
+        if (!nodeState || !nodeState.observers) {
+            continue;
+        }
+        // ...and then for each registered observer (with registered 
+        // observer’s options as options) in node’s list of registered 
+        // observers...
+        for (var j = 0; j < nodeState.observers.length; j++) {
+            var registeredObserver = nodeState.observers[j];
+            var options = registeredObserver.options;
+            // ...run these substeps:
+            // 1. If none of the following are true:
+            if (node != target && !options.subtree) {
+                continue;
+            }
+            if (type === MO_TYPE_ATTRIBUTES) {
+                if (!options.attributes) {
+                    continue;
+                }
+                // if options' attributeFilter is present, and options' attributeFilter
+                // does not contain name or namespace is non-null
+                if (options.attributeFilter && (options.attributeFilter.indexOf(name) === -1 || nameSpace != null)) {
+                    continue;
+                }
+            }
+            if (type === MO_TYPE_CHARACTER_DATA && !options.characterData) {
+                continue;
+            }
+            if (type === MO_TYPE_CHILD_LIST && !options.childList) {
+                continue;
+            }
+            // ...then run the subsubsteps:
+            // 1. If registered observer’s observer is not in interested observers, 
+            // append registered observer’s observer to interested observers.
+            var observer = registeredObserver.instance;
+            var index = interestedObservers.indexOf(observer);
+            if (index === -1) {
+                index = interestedObservers.length;
+                interestedObservers[index] = observer;
+            }
+            // 2. If either type is "attributes" and options’ attributeOldValue is true, 
+            // or type is "characterData" and options’ characterDataOldValue is true, 
+            // set the paired string of registered observer’s observer in interested observers to oldValue.
+            if (type === MO_TYPE_ATTRIBUTES && options.attributeOldValue || type === MO_TYPE_CHARACTER_DATA && options.characterDataOldValue) {
+                pairedStrings[index] = oldValue;
+            }
+        }
+    }
+
+    // PERF: This is an out-of-spec optimization
+    if (interestedObservers.length === 0) {
+        return;
+    }
+
+    // 4. Then, for each observer in interested observers, run these substeps:
+    for (var _i = 0; _i < interestedObservers.length; _i++) {
+        var _observer = interestedObservers[_i];
+        // 1. Let record be a new MutationRecord object with its type set to type and target set to target.
+        var record = {
+            type: type,
+            target: target,
+            attributeName: null,
+            attributeNamespace: null,
+            addedNodes: theEmptyList,
+            removedNodes: theEmptyList,
+            previousSibling: null,
+            nextSibling: null,
+            oldValue: null
+        };
+        // 2. If name and namespace are given, set record’s attributeName to name, and record’s attributeNamespace to namespace.
+        if (name) {
+            record.attributeName = name;
+            record.attributeNamespace = nameSpace;
+        }
+        // 3. If addedNodes is given, set record’s addedNodes to addedNodes.
+        if (addedNodes) {
+            record.addedNodes = addedNodes;
+            if (addedNodes instanceof Array) {
+                record.addedNodes = addedNodes.slice();
+            }
+        }
+        // 4. If removedNodes is given, set record’s removedNodes to removedNodes.
+        if (removedNodes) {
+            record.removedNodes = removedNodes;
+            if (removedNodes instanceof Array) {
+                record.removedNodes = removedNodes.slice();
+            }
+        }
+        // 5. If previousSibling is given, set record’s previousSibling to previousSibling.
+        if (previousSibling) {
+            record.previousSibling = previousSibling;
+        }
+        // 6. If nextSibling is given, set record’s nextSibling to nextSibling.
+        if (nextSibling) {
+            record.nextSibling = nextSibling;
+        }
+        // 7. If observer has a paired string, set record’s oldValue to observer’s paired string.
+        record.oldValue = pairedStrings[_i];
+        // 8. Append record to observer’s record queue.
+        _observer.queue.push(record);
+    }
+
+    // 5. Queue a mutation observer compound microtask.
+    queueMutationObserverCompoundMicrotask();
+}
+
+function _requeueNativeRecords(records) {
+    var recordsCount = records.length;
+    for (var i = 0; i < recordsCount; i++) {
+        var record = records[i];
+        queueMutationRecord(record.type, record.target, record.attributeName, record.attributeNamespace, record.oldValue, record.addedNodes, record.removedNodes, record.previousSibling, record.nextSibling);
+    }
+}
+
+function registerForMutationObservers(node) {
+    documentObserver.observe(node, {
+        attributes: true,
+        characterData: true,
+        attributeOldValue: true,
+        characterDataOldValue: true,
+        subtree: true
+    });
+}
+
+function notifyMutationObservers() {
+    mutationObserverCompoundMicrotaskQueuedFlag = false;
+    var notifyList = mutationObservers.slice();
+    var signalList = signalSlotList.splice(0, signalSlotList.length);
+    for (var i = 0; i < notifyList.length; i++) {
+        var observer = notifyList[i];
+        var queue = observer.queue.splice(0, observer.queue.length);
+        for (var j = mutationObservers.length - 1; j >= 0; j--) {
+            var transientObserver = mutationObservers[j];
+            if (transientObserver.observer === observer) {
+                mutationObservers.splice(j, 1);
+                transientObserver.disconnect();
+            }
+        }
+        if (queue.length) {
+            try {
+                observer.callback.call(observer.interface, queue, observer.interface);
+            } catch (error) {
+                _utils2.default.reportError(error);
+            }
+        }
+    }
+    // TODO: verify that observers fire after slot change
+    for (var _i2 = 0; _i2 < signalList.length; _i2++) {
+        var slot = signalList[_i2];
+        // 'Event' is capitalized for Webkit.
+        var event = slot.ownerDocument.createEvent('Event');
+        event.initEvent('slotchange', true, false);
+        try {
+            slot.dispatchEvent(event);
+        } catch (error) {
+            _utils2.default.reportError(error);
+        }
+    }
+}
+
+// https://dom.spec.whatwg.org/#signaling-slot-change
+
+function signalASlotChange(slot) {
+    // https://dom.spec.whatwg.org/#signal-a-slot-change
+    // To signal a slot change, for a slot slot, run these steps:
+
+    // 1. If slot is not in unit of related similar-origin browsing contexts' 
+    // signal slot list, append slot to unit of related similar-origin browsing 
+    // contexts' signal slot list.
+    if (signalSlotList.indexOf(slot) === -1) {
+        signalSlotList.push(slot);
+    }
+
+    // 2. Queue a mutation observer compound microtask.
+    queueMutationObserverCompoundMicrotask();
+}
+
+},{"./microtask.js":20,"./utils.js":30}],28:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -6295,7 +6381,7 @@ function patchAll() {
     }
 }
 
-},{"./dom.js":2,"./interfaces/DOMTokenList.js":6,"./utils.js":29}],28:[function(require,module,exports){
+},{"./dom.js":2,"./interfaces/DOMTokenList.js":5,"./utils.js":30}],29:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -6317,10 +6403,6 @@ var reflect = _interopRequireWildcard(_reflect);
 var _Attr = require('./interfaces/Attr.js');
 
 var _Attr2 = _interopRequireDefault(_Attr);
-
-var _CharacterData = require('./interfaces/CharacterData.js');
-
-var _CharacterData2 = _interopRequireDefault(_CharacterData);
 
 var _CustomEvent = require('./interfaces/CustomEvent.js');
 
@@ -6424,30 +6506,17 @@ function install() {
     window['ShadyDOM'] = { 'inUse': true };
 
     // Reflected attributes
+    // TODO: patch reflected attributes at custom element upgrade time
     reflect.patchAll();
-
-    // Element.matches(selectors) polyfill from MDN
-    // https://developer.mozilla.org/en-US/docs/Web/API/Element/matches#Polyfill
-    // Purposefully chop out the polyfill function that uses querySelectorAll.
-    if (!Element.prototype.matches) {
-        Element.prototype.matches = Element.prototype.matchesSelector || Element.prototype.mozMatchesSelector || Element.prototype.msMatchesSelector || Element.prototype.oMatchesSelector || Element.prototype.webkitMatchesSelector;
-    }
 
     // Attr interface
     _Attr2.default.install();
-
-    // CharacterData interface
-    _CharacterData2.default.install();
 
     // CustomEvent interface
     window.CustomEvent = _CustomEvent2.default;
 
     // Document interface
-    if (!_utils2.default.brokenAccessors) {
-        _utils2.default.extend(Document, _Document2.default);
-    } else {
-        _utils2.default.extend(HTMLDocument, _Document2.default);
-    }
+    _utils2.default.extend(Document, _Document2.default);
 
     // DOMTokenList interface
     _utils2.default.extend(DOMTokenList, _DOMTokenList2.default);
@@ -6482,8 +6551,6 @@ function install() {
     // Node interface
     _Node2.default.install();
 
-    // TODO: implement Range interface
-
     // Text interface
     _utils2.default.extend(Text, _Text2.default);
 
@@ -6497,16 +6564,14 @@ function install() {
     _utils2.default.extend(_ShadowRoot2.default, _DocumentOrShadowRoot2.default);
 
     // NonDocumentTypeChildNode mixin
-    _utils2.default.extend(Element, (0, _NonDocumentTypeChildNode2.default)(Element));
-    _utils2.default.extend(CharacterData, (0, _NonDocumentTypeChildNode2.default)(CharacterData));
+    _utils2.default.extend(Element, _NonDocumentTypeChildNode2.default);
+    _utils2.default.extend(CharacterData, _NonDocumentTypeChildNode2.default);
 
     // NonElementParentNode mixin
     _utils2.default.extend(Document, (0, _NonElementParentNode2.default)(Document));
     _utils2.default.extend(DocumentFragment, (0, _NonElementParentNode2.default)(DocumentFragment));
 
     // ParentNode mixin
-    // There doesn't seem to be a need to implement this directly 
-    // on Document or DocumentFragment.
     _utils2.default.extend(Document, (0, _ParentNode2.default)(Document));
     _utils2.default.extend(DocumentFragment, (0, _ParentNode2.default)(DocumentFragment));
     _utils2.default.extend(_ShadowRoot2.default, (0, _ParentNode2.default)(_ShadowRoot2.default));
@@ -6521,29 +6586,19 @@ function install() {
     _utils2.default.extend(Text, (0, _Slotable2.default)(Text));
 }
 
-},{"./dom.js":2,"./interfaces/Attr.js":3,"./interfaces/CharacterData.js":4,"./interfaces/CustomEvent.js":5,"./interfaces/DOMTokenList.js":6,"./interfaces/Document.js":7,"./interfaces/Element.js":8,"./interfaces/Event.js":9,"./interfaces/EventTarget.js":10,"./interfaces/HTMLSlotElement.js":11,"./interfaces/HTMLTableElement.js":12,"./interfaces/HTMLTableRowElement.js":13,"./interfaces/HTMLTableSectionElement.js":14,"./interfaces/MutationObserver.js":15,"./interfaces/NamedNodeMap.js":16,"./interfaces/Node.js":17,"./interfaces/ShadowRoot.js":18,"./interfaces/Text.js":19,"./mixins/ChildNode.js":21,"./mixins/DocumentOrShadowRoot.js":22,"./mixins/NonDocumentTypeChildNode.js":23,"./mixins/NonElementParentNode.js":24,"./mixins/ParentNode.js":25,"./mixins/Slotable.js":26,"./reflect.js":27,"./utils.js":29}],29:[function(require,module,exports){
+},{"./dom.js":2,"./interfaces/Attr.js":3,"./interfaces/CustomEvent.js":4,"./interfaces/DOMTokenList.js":5,"./interfaces/Document.js":6,"./interfaces/Element.js":7,"./interfaces/Event.js":8,"./interfaces/EventTarget.js":9,"./interfaces/HTMLSlotElement.js":10,"./interfaces/HTMLTableElement.js":11,"./interfaces/HTMLTableRowElement.js":12,"./interfaces/HTMLTableSectionElement.js":13,"./interfaces/MutationObserver.js":14,"./interfaces/NamedNodeMap.js":15,"./interfaces/Node.js":16,"./interfaces/ShadowRoot.js":17,"./interfaces/Text.js":18,"./mixins/ChildNode.js":21,"./mixins/DocumentOrShadowRoot.js":22,"./mixins/NonDocumentTypeChildNode.js":23,"./mixins/NonElementParentNode.js":24,"./mixins/ParentNode.js":25,"./mixins/Slotable.js":26,"./reflect.js":28,"./utils.js":30}],30:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-var setImmediate = 'setImmediate' in window ? window.setImmediate.bind(window) : function (callback) {
-    for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
-        args[_key - 1] = arguments[_key];
-    }
-
-    return setTimeout.apply(undefined, [callback, 0].concat(args));
-};
-
 var brokenAccessors = typeof descriptor(Node, 'childNodes').get === 'undefined';
-
 var nodeAppendChildDescriptor = descriptor(Node, 'appendChild');
 var documentCreateElementDescriptor = descriptor(Document, 'createElement');
 
 exports.default = {
     brokenAccessors: brokenAccessors,
     descriptor: descriptor,
-    setImmediate: setImmediate,
     makeDOMException: makeDOMException,
     reportError: reportError,
     extend: extend,
@@ -6723,4 +6778,4 @@ function getUniqueSortedTokens(tokens) {
     return tokens;
 }
 
-},{}]},{},[20]);
+},{}]},{},[19]);

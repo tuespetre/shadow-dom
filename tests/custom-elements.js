@@ -256,6 +256,181 @@ suite('Custom Elements', function () {
             });
     });
 
+    suite('attributeChangedCallback', function () {
+
+        var attributeChangedCallbackElement = function () {
+            var self = HTMLElement.call(this);
+            self.invokedCount = 0;
+            return self;
+        };
+        attributeChangedCallbackElement.observedAttributes = ['test'];
+        attributeChangedCallbackElement.prototype = Object.create(HTMLElement.prototype, {
+           'constructor': {
+               value: attributeChangedCallbackElement,
+               writable: true,
+               configurable: true
+           },
+           'attributeChangedCallback': {
+               value: function () {
+                   this.invokedCount++;
+               }
+           }
+        });
+        window.customElements.define('attrchange-element', attributeChangedCallbackElement);
+
+        suite('invoked upon setting Attr.prototype.value', function () {
+
+            test('when attribute existed at upgrade time', function () {
+                var div = document.createElement('div');
+                document.body.append(div);
+                div.innerHTML = '<attrchange-element test="what"></attrchange-element>';
+                div.remove();
+                assert.equal(div.firstChild.invokedCount, 1);
+                div.firstChild.attributes.test.value = 'ok';
+                assert.equal(div.firstChild.invokedCount, 2);
+            });
+
+            test('when attribute was added via Element.prototype.setAttributeNode', function () {
+                var elem = document.createElement('attrchange-element');
+                var attr = document.createAttribute('test');
+                elem.setAttributeNode(attr);
+                attr.value = 'ok';
+                assert.equal(elem.invokedCount, 2);
+            });
+
+            test('when attribute was added via Element.prototype.setAttributeNodeNS', function () {
+                var elem = document.createElement('attrchange-element');
+                var attr = document.createAttributeNS('http://shadow-dom-test', 'shadow:test');
+                elem.setAttributeNodeNS(attr);
+                attr.value = 'ok';
+                assert.equal(elem.invokedCount, 2);
+            });
+
+            test('when attribute was added via NamedNodeMap.prototype.setNamedItem', function () {
+                var elem = document.createElement('attrchange-element');
+                var attr = document.createAttribute('test');
+                elem.attributes.setNamedItem(attr);
+                attr.value = 'ok';
+                assert.equal(elem.invokedCount, 2);
+            });
+
+            test('when attribute was added via NamedNodeMap.prototype.setNamedItemNS', function () {
+                var elem = document.createElement('attrchange-element');
+                var attr = document.createAttributeNS('http://shadow-dom-test', 'shadow:test');
+                elem.attributes.setNamedItemNS(attr);
+                attr.value = 'ok';
+                assert.equal(elem.invokedCount, 2);
+            });
+
+        });
+
+        test('invoked upon calling Element.prototype.setAttribute', function () {
+            var elem = document.createElement('attrchange-element');
+            elem.setAttribute('test', '');
+            assert.equal(elem.invokedCount, 1);
+        });
+
+        test('invoked upon calling Element.prototype.setAttributeNS', function () {
+            var elem = document.createElement('attrchange-element');
+            elem.setAttributeNS('http://shadow-dom-test', 'shadow:test', '');
+            assert.equal(elem.invokedCount, 1);
+        });
+
+        test('invoked upon calling Element.prototype.setAttributeNode', function () {
+            var elem = document.createElement('attrchange-element');
+            var attr = document.createAttribute('test');
+            elem.setAttributeNode(attr);
+            assert.equal(elem.invokedCount, 1);
+        });
+
+        test('invoked upon calling Element.prototype.setAttributeNodeNS', function () {
+            var elem = document.createElement('attrchange-element');
+            var attr = document.createAttributeNS('http://shadow-dom-test', 'shadow:test');
+            elem.setAttributeNodeNS(attr);
+            assert.equal(elem.invokedCount, 1);
+        });
+
+        test('invoked upon calling Element.prototype.removeAttribute', function () {
+            var elem = document.createElement('attrchange-element');
+            var attr = document.createAttribute('test');
+            elem.setAttributeNode(attr);
+            elem.removeAttribute('test');
+            // One invocation for the addition, another for the removal
+            assert.equal(elem.invokedCount, 2);
+            // Ensure that the attribute value can still be set without issue
+            // due to the patching done in WebKit
+            assert.doesNotThrow(function () { attr.value = 'ok'; });
+            assert.equal(attr.value, 'ok');
+        });
+
+        test('invoked upon calling Element.prototype.removeAttributeNS', function () {
+            var elem = document.createElement('attrchange-element');
+            var attr = document.createAttributeNS('http://shadow-dom-test', 'shadow:test');
+            elem.setAttributeNode(attr);
+            elem.removeAttributeNS('http://shadow-dom-test', 'test');
+            // One invocation for the addition, another for the removal
+            assert.equal(elem.invokedCount, 2);
+            // Ensure that the attribute value can still be set without issue
+            // due to the patching done in WebKit
+            assert.doesNotThrow(function () { attr.value = 'ok'; });
+            assert.equal(attr.value, 'ok');
+        });
+
+        test('invoked upon calling Element.prototype.removeAttributeNode', function () {
+            var elem = document.createElement('attrchange-element');
+            var attr = document.createAttribute('test');
+            elem.setAttributeNode(attr);
+            elem.removeAttributeNode(attr);
+            // One invocation for the addition, another for the removal
+            assert.equal(elem.invokedCount, 2);
+            // Ensure that the attribute value can still be set without issue
+            // due to the patching done in WebKit
+            assert.doesNotThrow(function () { attr.value = 'ok'; });
+            assert.equal(attr.value, 'ok');
+        });
+
+        test('invoked upon calling NamedNodeMap.prototype.setNamedItem', function () {
+            var elem = document.createElement('attrchange-element');
+            var attr = document.createAttribute('test');
+            elem.attributes.setNamedItem(attr);
+            assert.equal(elem.invokedCount, 1);
+        });
+
+        test('invoked upon calling NamedNodeMap.prototype.setNamedItemNS', function () {
+            var elem = document.createElement('attrchange-element');
+            var attr = document.createAttributeNS('http://shadow-dom-test', 'shadow:test');
+            elem.attributes.setNamedItemNS(attr);
+            assert.equal(elem.invokedCount, 1);
+        });
+
+        test('invoked upon calling NamedNodeMap.prototype.removeNamedItem', function () {
+            var elem = document.createElement('attrchange-element');
+            var attr = document.createAttribute('test');
+            elem.setAttributeNode(attr);
+            elem.attributes.removeNamedItem('test');
+            // One invocation for the addition, another for the removal
+            assert.equal(elem.invokedCount, 2);
+            // Ensure that the attribute value can still be set without issue
+            // due to the patching done in WebKit
+            assert.doesNotThrow(function () { attr.value = 'ok'; });
+            assert.equal(attr.value, 'ok');
+        });
+
+        test('invoked upon calling NamedNodeMap.prototype.removeNamedItemNS', function () {
+            var elem = document.createElement('attrchange-element');
+            var attr = document.createAttributeNS('http://shadow-dom-test', 'shadow:test');
+            elem.setAttributeNodeNS(attr);
+            elem.attributes.removeNamedItemNS('http://shadow-dom-test', 'test');
+            // One invocation for the addition, another for the removal
+            assert.equal(elem.invokedCount, 2);
+            // Ensure that the attribute value can still be set without issue
+            // due to the patching done in WebKit
+            assert.doesNotThrow(function () { attr.value = 'ok'; });
+            assert.equal(attr.value, 'ok');
+        });
+
+    });
+
 });
 
 /*

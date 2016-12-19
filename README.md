@@ -5,13 +5,16 @@ This repo aims to provide a polyfill for Shadow DOM v1 that is as spec-complete 
 What you will get if you use it right now:
 
 - **Shadow DOM** polyfill
-  - MutationObserver support
-  - Currently lacking `Range` and `HTMLElement.style` support
+  - Polyfills Shadow DOM APIs like `Element.prototype.attachShadow` and `Event.prototype.composedPath()`
+  - Polyfills Event and CustomEvent constructors to allow for `composed` events
+  - Augments DOM querying/traversal/manipulation APIs to account for Shadow DOM
+  - Augments `MutationObserver` to account for Shadow DOM
 - **Custom Elements** polyfill
   - Built in/around the Shadow DOM polyfill
-  - Shims HTMLElement and kin for browsers that have native support 
-    so transpiled and ES5-style classes can work 
-    (i.e. via `var self = HTMLElement.call(this)`)
+  - Shims HTMLElement and kin for browsers that have native support so transpiled and ES5-style classes 
+    can work (i.e. via `var self = HTMLElement.call(this)`)
+
+Please see the **Caveats** section below for details about certain APIs that are *not* polyfilled.
 
 ## Browser Compatibility
 
@@ -45,7 +48,11 @@ To help with testing for cross-browser support, this project is receiving tremen
       <td>
         <ul>
           <li>Safari natively supports Shadow DOM since version 10.</li>
-          <li>Safari 9 is supported except for some things that cannot easily be polyfilled without huge complexity and performance implications, namely `[CEReactions]` support for reflected attributes and `DOMTokenList`/`Element.classList`.</li>
+          <li>
+            Safari 9 is supported except for some things that cannot easily be polyfilled without 
+            considerable complexity and performance implications, namely `[CEReactions]` support 
+            for reflected attributes and `DOMTokenList`/`Element.classList`.
+          </li>
         </ul>
       </td>
     </tr>
@@ -68,8 +75,14 @@ To help with testing for cross-browser support, this project is receiving tremen
       <td>11</td>
       <td>
         <ul>
-          <li>IE 11 requires you to bring your own Promise polyfill if you want to use `customElements.whenDefined('my-element')`.</li>
-          <li>IE 10 is not officially supported as it has some issues with transpiled ES6 custom element classes and requires you to bring your own Object.setPrototypeOf polyfill.</li>
+          <li>
+            IE 11 requires you to bring your own Promise polyfill if you want to 
+            use `customElements.whenDefined('my-element')`.
+          </li>
+          <li>
+            IE 10 is not officially supported as it has some issues with transpiled ES6 
+            custom element classes and requires you to bring your own Object.setPrototypeOf polyfill.
+          </li>
         </ul>
       </td>
     </tr>
@@ -86,9 +99,6 @@ set `window.forceShadowDomPolyfill = true` before the script is included.
 - If you want to **force the Custom Elements polyfill** to be used in browsers with native support for some reason,
 set `window.forceCustomElementsPolyfill = true` before the script is included.
 
-> **Note:** For a performance boost in browsers that don't natively support `setImmediate`, it is recommended 
-> to include [YuzuJS/setImmediate](https://github.com/YuzuJS/setImmediate) before you include this polyfill.
-
 ## Caveats
 
 - There are no benchmarks yet. Correctness comes first, which means
@@ -101,6 +111,15 @@ set `window.forceCustomElementsPolyfill = true` before the script is included.
   *by default* which simply cannot be properly polyfilled (think `display: flex`, 
   `display: table`, etc.) With that in mind, you may want to adopt a practice
   of explicitly specifying `display` properties for `<slot>` elements.
+
+### APIs that are not polyfilled
+
+There are a handful of APIs that are not polyfilled due to their relative
+obscurity or lack of priority. They may be investigated later. These APIs are:
+
+- `Range`
+- `NodeIterator`
+- `TreeWalker`
 
 ## License
 

@@ -44,8 +44,6 @@
     mocha.setup('tdd');
   </script>
   <script src="./custom-elements.js"></script>
-  <script src="./interfaces/Attr.js"></script>
-  <script src="./interfaces/CharacterData.js"></script>
   <script src="./interfaces/CustomEvent.js"></script>
   <script src="./interfaces/Document.js"></script>
   <script src="./interfaces/DOMTokenList.js"></script>
@@ -75,13 +73,14 @@
       div.shadowRoot.append(inner);
       document.body.append(div);
 
-      mocha.checkLeaks();
+      // Really not worried about globals right now.
+      /*mocha.checkLeaks();
       mocha.globals([
         'failedTests',
         '_shadow',
         '_custom',
         '$0', '$1', '$2', '$3', '$4', '$_', '__BROWSERTOOLS_DOMEXPLORER_ADDED' // IE/Edge developer tools
-      ]);
+      ]);*/
       mocha.run().on('fail', function (test, error) {
         window.failedTests.push({ test: test.title, error: error });
       });

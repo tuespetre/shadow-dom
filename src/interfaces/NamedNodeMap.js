@@ -3,11 +3,13 @@
 import $dom from '../dom.js';
 import $ce from '../custom-elements.js';
 import $utils from '../utils.js';
+import $Attr from '../interfaces/Attr.js';
 
 export default {
 
     // TODO: tests
     setNamedItem(attr) {
+        $Attr.patchAttributeNodeIfNeeded(attr);
         return $ce.executeCEReactions(() => {
             const shadowState = $utils.getShadowState(this);
             return $dom.setAttribute(attr, shadowState.element);
@@ -16,6 +18,7 @@ export default {
 
     // TODO: tests
     setNamedItemNS(attr) {
+        $Attr.patchAttributeNodeIfNeeded(attr);
         return $ce.executeCEReactions(() => {
             const shadowState = $utils.getShadowState(this);
             return $dom.setAttribute(attr, shadowState.element);
@@ -46,4 +49,4 @@ export default {
         });
     },
 
-}
+};

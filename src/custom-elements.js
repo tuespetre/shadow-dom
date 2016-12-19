@@ -1,17 +1,13 @@
 // https://html.spec.whatwg.org/multipage/scripting.html#custom-elements
 
+import $dom from './dom.js';
+import $microtask from './microtask.js';
 import $utils from './utils.js';
 
-// TODO: CEReactions annotations for Range in the DOM spec
-// TODO: CEReactions for interfaces in the HTML spec
-
-// TODO: Document in the README that a Promise polyfill 
-// should be brought in to support whenDefined
+// TODO: Remove this circular dependency by introducing a 'creating steps' hook
+import $Attr from './interfaces/Attr.js';
 
 const nativeHTMLElement = window.HTMLElement;
-const nativeCreateElement = Document.prototype.createElement;
-const nativeCreateElementNS = Document.prototype.createElementNS;
-const nativeMutationObserver = window.MutationObserver;
 
 const htmlNamespace = 'http://www.w3.org/1999/xhtml';
 const alreadyConstructedMarker = 1;
@@ -53,6 +49,8 @@ export default {
 function install() {
     const installation = {};
 
+    installation.originalCreateElement = Document.prototype.createElement;
+    installation.originalCreateElementNS = Document.prototype.createElementNS;
     installation.builtInElementInterfaces = installHtmlConstructors();
     installation.registry = new CustomElementRegistry();
 
@@ -77,28 +75,28 @@ function install() {
     installation.backupElementQueue = [];
     installation.processingBackupElementQueue = false;
 
-    setInstallation(window, installation);
+    setPrivateState(window, installation);
 }
 
 function uninstall() {
-    const windowState = getPrivateState(window);
+    const installation = getPrivateState(window);
 
-    if (!windowState) {
+    if (!installation) {
         return;
     }
 
-    uninstallHtmlConstructors(windowState.builtInElementInterfaces);
+    uninstallHtmlConstructors(installation.builtInElementInterfaces);
 
     delete window[CE_PROP_NAME];
 
-    Document.prototype.createElement = nativeCreateElement;
-    Document.prototype.createElementNS = nativeCreateElementNS;
+    Document.prototype.createElement = installation.originalCreateElement;
+    Document.prototype.createElementNS = installation.originalCreateElementNS;
 
     setPrivateState(window, undefined);
 }
 
 function isInstalled() {
-    return getInstallation(window) != null;
+    return getPrivateState(window) != null;
 }
 
 function gatherBuiltInElementInterfaces() {
@@ -215,7 +213,8 @@ function makeHtmlConstructor() {
         // 8. If construction stack is empty...
         const constructionStack = definition.constructionStack;
         if (constructionStack.length === 0) {
-            const element = nativeCreateElement.call(window.document, definition.localName);
+            const originalCreateElement = getPrivateState(window).originalCreateElement;
+            const element = originalCreateElement.call(window.document, definition.localName);
             Object.setPrototypeOf(element, prototype);
             setPrivateState(element, {
                 customElementState: CE_STATE_CUSTOM,
@@ -243,7 +242,7 @@ function makeHtmlConstructor() {
 function performInitialUpgrades() {
     // Upgrading elements initially present in the document
     const elements = [];
-    treeOrderShadowInclusiveForEach(window.document, function (element) { elements.push(element); });
+    $dom.forEachShadowIncludingInclusiveDescendant(window.document, elements.push.bind(elements));
     elements.forEach(tryToUpgradeElementSync);
 }
 
@@ -254,7 +253,7 @@ function createAnElement(document, qualifiedOrLocalName, nameSpace, prefix, is, 
     let result = null;
     let definition = lookupCustomElementDefinition(document, nameSpace, qualifiedOrLocalName, is);
     if (definition && definition.name != definition.localName) {
-        result = nativeCreateElement.call(document, qualifiedOrLocalName);
+        result = getPrivateState(window).originalCreateElement.call(document, qualifiedOrLocalName);
         setPrivateState(result, {
             customElementState: CE_STATE_UNDEFINED,
             customElementDefinition: null,
@@ -287,7 +286,7 @@ function createAnElement(document, qualifiedOrLocalName, nameSpace, prefix, is, 
             }
             catch (error) {
                 $utils.reportError(error);
-                result = nativeCreateElement.call(document, qualifiedOrLocalName);
+                result = getPrivateState(window).originalCreateElement.call(document, qualifiedOrLocalName);
                 // should be HTMLUnknownElement already
                 setPrivateState(result, {
                     customElementState: CE_STATE_FAILED
@@ -295,15 +294,15 @@ function createAnElement(document, qualifiedOrLocalName, nameSpace, prefix, is, 
             }
         }
         else {
-            result = nativeCreateElement.call(document, qualifiedOrLocalName);
+            result = getPrivateState(window).originalCreateElement.call(document, qualifiedOrLocalName);
             Object.setPrototypeOf(result, HTMLElement.prototype);
             enqueueUpgradeReaction(result, definition);
         }
     }
     else {
         result = nameSpace
-            ? nativeCreateElementNS.call(document, nameSpace, qualifiedOrLocalName)
-            : nativeCreateElement.call(document, qualifiedOrLocalName);
+            ? getPrivateState(window).originalCreateElementNS.call(document, nameSpace, qualifiedOrLocalName)
+            : getPrivateState(window).originalCreateElement.call(document, qualifiedOrLocalName);
         // PERF: forgo setting the custom element state to CE_STATE_UNDEFINED in order
         // to avoid unnecessary allocation.
     }
@@ -486,10 +485,7 @@ CustomElementRegistry.prototype = {
                 if (isValidCustomElementName(extensionOf)) {
                     throw $utils.makeDOMException('NotSupportedError');
                 }
-                const testElement = nativeCreateElement.call(window.document, extensionOf);
-                if (testElement instanceof HTMLUnknownElement) {
-                    // TODO: check for HTMLUnknownElement
-                }
+                // TODO: check for HTMLUnknownElement
                 localName = extensionOf;
                 htmlConstructor = Object.getPrototypeOf(testElement).constructor;
             }
@@ -543,12 +539,13 @@ CustomElementRegistry.prototype = {
             // due to the parser not yet having processed all
             // of the child nodes.
             if (document.readyState !== 'loading') {
-                treeOrderShadowInclusiveForEach(document, function (node) {
+                $dom.forEachShadowIncludingInclusiveDescendant(document, function (node) {
                     if (node.nodeType === Node.ELEMENT_NODE &&
                         node.namespaceURI === htmlNamespace &&
                         node.localName === localName) {
                         if (extensionOf) {
                             const nodeState = getPrivateState(node);
+                            // TODO: test upgrades to existing extended built-in custom elements
                             if (nodeState.isValue !== extensionOf) {
                                 return;
                             }
@@ -559,7 +556,7 @@ CustomElementRegistry.prototype = {
             }
             const entry = privateState.whenDefinedPromiseMap[name];
             if (entry) {
-                $utils.setImmediate(function () {
+                $microtask.enqueue(function () {
                     entry.resolve();
                     privateState.whenDefinedPromiseMap[name] = null;
                 });
@@ -621,7 +618,8 @@ function upgradeElement(element, definition) {
     for (var i = 0; i < attributes.length; i++) {
         const attribute = attributes[i];
         const args = [attribute.localName, null, attribute.value, attribute.namespaceURI];
-        enqueueCallbackReaction(element, CE_CALLBACK_ATTRIBUTE_CHANGED, args)
+        enqueueCallbackReaction(element, CE_CALLBACK_ATTRIBUTE_CHANGED, args);
+        $Attr.patchAttributeNodeIfNeeded(attribute);
     }
     if (element.isConnected) {
         enqueueCallbackReaction(element, CE_CALLBACK_CONNECTED, []);
@@ -679,7 +677,7 @@ function tryToUpgradeElement(element) {
 }
 
 function enqueueElementOnAppropriateElementQueue(element) {
-    const installation = getInstallation(window);
+    const installation = getPrivateState(window);
     if (!installation) {
         return;
     }
@@ -696,7 +694,7 @@ function enqueueElementOnAppropriateElementQueue(element) {
         // 3. Set the processing the backup element queue flag.
         installation.processingBackupElementQueue = true;
         // 4. Queue a microtask to perform the following steps:
-        $utils.setImmediate(function () {
+        $microtask.enqueue(function () {
             // 1. Invoke custom element reactions in the backup element queue.
             invokeReactions(installation.backupElementQueue);
             // 2. Unset the processing the backup element queue flag.
@@ -780,7 +778,7 @@ function invokeReactions(queue) {
 }
 
 function executeCEReactions(callback) {
-    const installation = getInstallation(window);
+    const installation = getPrivateState(window);
     if (installation) {
         const stack = installation.customElementsReactionStack;
         stack.push([]);
@@ -813,24 +811,4 @@ function getPrivateState(object) {
 
 function setPrivateState(object, state) {
     return object._custom = state;
-}
-
-function getInstallation(window) {
-    return window._custom;
-}
-
-function setInstallation(window, installation) {
-    window._custom = installation;
-}
-
-function treeOrderShadowInclusiveForEach(node, callback) {
-    callback(node);
-    const shadowRoot = node.shadowRoot;
-    if (shadowRoot) {
-        treeOrderShadowInclusiveForEach(shadowRoot, callback);
-    }
-    const childNodes = node.childNodes;
-    for (let i = 0; i < childNodes.length; i++) {
-        treeOrderShadowInclusiveForEach(childNodes[i], callback);
-    }
 }

@@ -3,12 +3,11 @@ import $utils from './utils.js';
 import * as reflect from './reflect.js';
 
 import $Attr from './interfaces/Attr.js';
-import $CharacterData from './interfaces/CharacterData.js';
 import $CustomEvent from './interfaces/CustomEvent.js';
 import $Document from './interfaces/Document.js';
 import $DOMTokenList from './interfaces/DOMTokenList.js';
 import $Element from './interfaces/Element.js';
-import { default as $Event, hasRelatedTarget } from './interfaces/Event.js';
+import $Event from './interfaces/Event.js';
 import $EventTarget from './interfaces/EventTarget.js';
 import $HTMLSlotElement from './interfaces/HTMLSlotElement.js';
 import $HTMLTableElement from './interfaces/HTMLTableElement.js';
@@ -40,36 +39,17 @@ function install() {
     window['ShadyDOM'] = { 'inUse': true };
 
     // Reflected attributes
+    // TODO: patch reflected attributes at custom element upgrade time
     reflect.patchAll();
-
-    // Element.matches(selectors) polyfill from MDN
-    // https://developer.mozilla.org/en-US/docs/Web/API/Element/matches#Polyfill
-    // Purposefully chop out the polyfill function that uses querySelectorAll.
-    if (!Element.prototype.matches) {
-        Element.prototype.matches =
-            Element.prototype.matchesSelector ||
-            Element.prototype.mozMatchesSelector ||
-            Element.prototype.msMatchesSelector ||
-            Element.prototype.oMatchesSelector ||
-            Element.prototype.webkitMatchesSelector;
-    }
 
     // Attr interface
     $Attr.install();
-
-    // CharacterData interface
-    $CharacterData.install();
 
     // CustomEvent interface
     window.CustomEvent = $CustomEvent;
 
     // Document interface
-    if (!$utils.brokenAccessors) {
-        $utils.extend(Document, $Document);
-    }
-    else {
-        $utils.extend(HTMLDocument, $Document);
-    }
+    $utils.extend(Document, $Document);
 
     // DOMTokenList interface
     $utils.extend(DOMTokenList, $DOMTokenList);
@@ -104,8 +84,6 @@ function install() {
     // Node interface
     $Node.install();
 
-    // TODO: implement Range interface
-
     // Text interface
     $utils.extend(Text, $Text);
 
@@ -119,16 +97,14 @@ function install() {
     $utils.extend($ShadowRoot, $DocumentOrShadowRoot);
 
     // NonDocumentTypeChildNode mixin
-    $utils.extend(Element, $NonDocumentTypeChildNode(Element));
-    $utils.extend(CharacterData, $NonDocumentTypeChildNode(CharacterData));
+    $utils.extend(Element, $NonDocumentTypeChildNode);
+    $utils.extend(CharacterData, $NonDocumentTypeChildNode);
 
     // NonElementParentNode mixin
     $utils.extend(Document, $NonElementParentNode(Document));
     $utils.extend(DocumentFragment, $NonElementParentNode(DocumentFragment));
 
     // ParentNode mixin
-    // There doesn't seem to be a need to implement this directly 
-    // on Document or DocumentFragment.
     $utils.extend(Document, $ParentNode(Document));
     $utils.extend(DocumentFragment, $ParentNode(DocumentFragment));
     $utils.extend($ShadowRoot, $ParentNode($ShadowRoot));
