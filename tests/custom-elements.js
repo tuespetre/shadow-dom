@@ -290,6 +290,22 @@ suite('Custom Elements', function () {
                 assert.equal(div.firstChild.invokedCount, 2);
             });
 
+            test('when attribute was added via Element.prototype.setAttribute', function () {
+                var elem = document.createElement('attrchange-element');
+                elem.setAttribute('test', 'what');
+                var attr = elem.getAttributeNode('test');
+                attr.value = 'ok';
+                assert.equal(elem.invokedCount, 2);
+            });
+
+            test('when attribute was added via Element.prototype.setAttributeNS', function () {
+                var elem = document.createElement('attrchange-element');
+                elem.setAttributeNS('http://shadow-dom-test', 'shadow:test', 'what');
+                var attr = elem.getAttributeNodeNS('http://shadow-dom-test', 'test');
+                attr.value = 'ok';
+                assert.equal(elem.invokedCount, 2);
+            });
+
             test('when attribute was added via Element.prototype.setAttributeNode', function () {
                 var elem = document.createElement('attrchange-element');
                 var attr = document.createAttribute('test');

@@ -75,6 +75,14 @@ const elementAttributesDescriptor = $utils.descriptor(Element, 'attributes') || 
 
 const elementMixin = {
 
+    get slot() {
+        return this.hasAttribute('slot') ? this.getAttribute('slot') : '';
+    },
+
+    set slot(value) {
+        this.setAttribute('slot', value);
+    },
+
     // TODO: tests
     setAttribute(qualifiedName, value) {
         return $ce.executeCEReactions(() => {
@@ -83,6 +91,7 @@ const elementMixin = {
             if (!attribute) {
                 elementSetAttributeDescriptor.value.call(this, qualifiedName, value);
                 attribute = attributes.getNamedItem(qualifiedName);
+                $Attr.patchAttributeNodeIfNeeded(attribute);
                 $dom.appendAttribute(attribute, this);
             }
             else {
@@ -101,6 +110,7 @@ const elementMixin = {
             if (!attribute) {
                 elementSetAttributeNSDescriptor.value.call(this, nameSpace, qualifiedName, value);
                 attribute = attributes.getNamedItemNS(nameSpace, localName);
+                $Attr.patchAttributeNodeIfNeeded(attribute);
                 $dom.appendAttribute(attribute, this);
             }
             else {

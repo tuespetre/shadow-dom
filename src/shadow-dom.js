@@ -1,11 +1,9 @@
 import $dom from './dom.js';
 import $utils from './utils.js';
-import * as reflect from './reflect.js';
 
 import $Attr from './interfaces/Attr.js';
 import $CustomEvent from './interfaces/CustomEvent.js';
 import $Document from './interfaces/Document.js';
-import $DOMTokenList from './interfaces/DOMTokenList.js';
 import $Element from './interfaces/Element.js';
 import $Event from './interfaces/Event.js';
 import $EventTarget from './interfaces/EventTarget.js';
@@ -38,10 +36,6 @@ function install() {
     // Hacky setting in case you want to use ShadyCSS.
     window['ShadyDOM'] = { 'inUse': true };
 
-    // Reflected attributes
-    // TODO: patch reflected attributes at custom element upgrade time
-    reflect.patchAll();
-
     // Attr interface
     $Attr.install();
 
@@ -50,9 +44,6 @@ function install() {
 
     // Document interface
     $utils.extend(Document, $Document);
-
-    // DOMTokenList interface
-    $utils.extend(DOMTokenList, $DOMTokenList);
 
     // Element interface
     $Element.install();

@@ -127,8 +127,6 @@ const accessorDescriptors = {
         return nodeWalker.nextSibling();
     },
 
-    // TODO: consider creating a raw property descriptor
-    // that uses the native get instead of a pass-through function
     get nodeValue() {
         switch (this.nodeType) {
             case Node.ATTRIBUTE_NODE:
@@ -150,7 +148,7 @@ const accessorDescriptors = {
                 case Node.TEXT_NODE:
                 case Node.PROCESSING_INSTRUCTION_NODE:
                 case Node.COMMENT_NODE:
-                    this.replaceData(0, this.data.length, value);
+                    this.data = value;
                     break;
             }
         });
@@ -190,7 +188,7 @@ const accessorDescriptors = {
                 case Node.TEXT_NODE:
                 case Node.PROCESSING_INSTRUCTION_NODE:
                 case Node.COMMENT_NODE:
-                    this.replaceData(0, this.data.length, value);
+                    this.data = value;
                     break;
             }
         });

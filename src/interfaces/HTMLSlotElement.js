@@ -11,7 +11,7 @@ export default {
             return;
         }
 
-        return this.getAttribute('name') || '';
+        return this.hasAttribute('name') ? this.getAttribute('name') : '';
     },
 
     // TODO: tests

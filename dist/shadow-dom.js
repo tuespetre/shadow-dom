@@ -827,7 +827,7 @@ function setPrivateState(object, state) {
     return object._custom = state;
 }
 
-},{"./dom.js":2,"./interfaces/Attr.js":3,"./microtask.js":20,"./utils.js":30}],2:[function(require,module,exports){
+},{"./dom.js":2,"./interfaces/Attr.js":3,"./microtask.js":19,"./utils.js":28}],2:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2392,7 +2392,7 @@ function remove(node, parent, suppressObservers) {
     }
 }
 
-},{"./mutation-observers.js":27,"./utils.js":30}],3:[function(require,module,exports){
+},{"./mutation-observers.js":26,"./utils.js":28}],3:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2473,7 +2473,7 @@ function patchAttributeNodeIfNeeded(attribute) {
     }
 }
 
-},{"../custom-elements.js":1,"../dom.js":2,"../utils.js":30}],4:[function(require,module,exports){
+},{"../custom-elements.js":1,"../dom.js":2,"../utils.js":28}],4:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2512,186 +2512,7 @@ function $CustomEvent(type, init) {
 
 $CustomEvent.prototype = window.CustomEvent.prototype;
 
-},{"../utils.js":30}],5:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-exports.getOrCreateDOMTokenList = getOrCreateDOMTokenList;
-
-var _dom = require('../dom.js');
-
-var _dom2 = _interopRequireDefault(_dom);
-
-var _customElements = require('../custom-elements.js');
-
-var _customElements2 = _interopRequireDefault(_customElements);
-
-var _utils = require('../utils.js');
-
-var _utils2 = _interopRequireDefault(_utils);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-exports.default = {
-
-    get length() {
-        var state = _utils2.default.getShadowState(this);
-        return state.tokens.length;
-    },
-
-    // TODO: Caveat about indexer expressions?
-    item: function item(index) {
-        var state = _utils2.default.getShadowState(this);
-        return index >= state.tokens.length ? null : state.tokens[index];
-    },
-    contains: function contains(token) {
-        var state = _utils2.default.getShadowState(this);
-        return state.tokens.indexOf(token) !== -1;
-    },
-    add: function add() {
-        var _this = this;
-
-        for (var _len = arguments.length, tokens = Array(_len), _key = 0; _key < _len; _key++) {
-            tokens[_key] = arguments[_key];
-        }
-
-        return _customElements2.default.executeCEReactions(function () {
-            validateTokens(tokens);
-            var state = _utils2.default.getShadowState(_this);
-            for (var i = 0; i < tokens.length; i++) {
-                var token = tokens[i];
-                var index = state.tokens.indexOf(token);
-                if (index === -1) {
-                    state.tokens.push(token);
-                }
-            }
-            state.tokens.sort();
-            _dom2.default.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
-        });
-    },
-    remove: function remove() {
-        var _this2 = this;
-
-        for (var _len2 = arguments.length, tokens = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-            tokens[_key2] = arguments[_key2];
-        }
-
-        return _customElements2.default.executeCEReactions(function () {
-            validateTokens(tokens);
-            var state = _utils2.default.getShadowState(_this2);
-            for (var i = 0; i < tokens.length; i++) {
-                var token = tokens[i];
-                var index = state.tokens.indexOf(token);
-                if (index !== -1) {
-                    state.tokens.splice(index, 1);
-                }
-            }
-            _dom2.default.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
-        });
-    },
-    toggle: function toggle(token, force) {
-        var _this3 = this,
-            _arguments = arguments;
-
-        return _customElements2.default.executeCEReactions(function () {
-            validateToken(token);
-            var state = _utils2.default.getShadowState(_this3);
-            var index = state.tokens.indexOf(token);
-            if (index !== -1) {
-                if (_arguments.length === 1 || force === false) {
-                    state.tokens.splice(index, 1);
-                    _dom2.default.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
-                    return false;
-                } else {
-                    return true;
-                }
-            } else {
-                if (force === false) {
-                    return false;
-                } else {
-                    state.tokens.push(token);
-                    state.tokens.sort();
-                    _dom2.default.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
-                    return true;
-                }
-            }
-        });
-    },
-    replace: function replace(token, newToken) {
-        var _this4 = this;
-
-        return _customElements2.default.executeCEReactions(function () {
-            validateToken(token);
-            validateToken(newToken);
-            var state = _utils2.default.getShadowState(_this4);
-            var index = state.tokens.indexOf(token);
-            if (index === -1) {
-                return;
-            }
-            state.tokens[index] = newToken;
-            state.tokens.sort();
-            _dom2.default.setAttributeValue(state.element, state.localName, state.tokens.join(' '));
-        });
-    },
-
-
-    get value() {
-        var state = _utils2.default.getShadowState(this);
-        return state.element.getAttribute(state.localName) || '';
-    },
-
-    set value(value) {
-        var _this5 = this;
-
-        return _customElements2.default.executeCEReactions(function () {
-            var state = _utils2.default.getShadowState(_this5);
-            _dom2.default.setAttributeValue(state.element, state.localName, value);
-            // TODO: Remove usage of slice in favor of direct parse
-            state.tokens = Array.prototype.slice.call(_this5);
-        });
-    }
-
-}; // https://dom.spec.whatwg.org/#interface-domtokenlist
-
-function validateTokens(tokens) {
-    for (var i = 0; i < tokens.length; i++) {
-        validateToken(tokens[i]);
-    }
-}
-
-function validateToken(token) {
-    if (token == '') {
-        throw _utils2.default.makeDOMException('SyntaxError');
-    }
-    if (/\s/.test(token)) {
-        throw _utils2.default.makeDOMException('InvalidCharacterError');
-    }
-}
-
-function createDOMTokenList(element, localName) {
-    // TODO: run the steps per the DOM spec for 'when a DOMTokenList is created'
-    var originalValue = element.getAttribute(localName);
-    var tokens = originalValue ? originalValue.split(/\s/).sort() : [];
-    var tokenList = Object.create(DOMTokenList.prototype);
-    _utils2.default.setShadowState(tokenList, { element: element, localName: localName, tokens: tokens });
-    return tokenList;
-}
-
-function getOrCreateDOMTokenList(element, localName) {
-    var elementState = _utils2.default.getShadowState(element) || _utils2.default.setShadowState(element, { tokenLists: {} });
-    if (!elementState.tokenLists) {
-        elementState.tokenLists = {};
-    }
-    var tokenList = void 0;
-    if (tokenList = elementState.tokenLists[localName]) {
-        return tokenList;
-    }
-    return elementState.tokenLists[localName] = createDOMTokenList(element, localName);
-}
-
-},{"../custom-elements.js":1,"../dom.js":2,"../utils.js":30}],6:[function(require,module,exports){
+},{"../utils.js":28}],5:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2797,7 +2618,7 @@ exports.default = {
     }
 };
 
-},{"../custom-elements.js":1,"../dom.js":2,"../mutation-observers.js":27,"../utils.js":30}],7:[function(require,module,exports){
+},{"../custom-elements.js":1,"../dom.js":2,"../mutation-observers.js":26,"../utils.js":28}],6:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2891,6 +2712,14 @@ var elementAttributesDescriptor = _utils2.default.descriptor(Element, 'attribute
 
 var elementMixin = {
 
+    get slot() {
+        return this.hasAttribute('slot') ? this.getAttribute('slot') : '';
+    },
+
+    set slot(value) {
+        this.setAttribute('slot', value);
+    },
+
     // TODO: tests
     setAttribute: function setAttribute(qualifiedName, value) {
         var _this = this;
@@ -2901,6 +2730,7 @@ var elementMixin = {
             if (!attribute) {
                 elementSetAttributeDescriptor.value.call(_this, qualifiedName, value);
                 attribute = attributes.getNamedItem(qualifiedName);
+                _Attr2.default.patchAttributeNodeIfNeeded(attribute);
                 _dom2.default.appendAttribute(attribute, _this);
             } else {
                 _dom2.default.changeAttribute(attribute, _this, value);
@@ -2921,6 +2751,7 @@ var elementMixin = {
             if (!attribute) {
                 elementSetAttributeNSDescriptor.value.call(_this2, nameSpace, qualifiedName, value);
                 attribute = attributes.getNamedItemNS(nameSpace, localName);
+                _Attr2.default.patchAttributeNodeIfNeeded(attribute);
                 _dom2.default.appendAttribute(attribute, _this2);
             } else {
                 _dom2.default.changeAttribute(attribute, _this2, value);
@@ -3163,7 +2994,7 @@ var htmlElementMixin = {
 
 };
 
-},{"../custom-elements.js":1,"../dom.js":2,"../interfaces/Attr.js":3,"../interfaces/ShadowRoot.js":17,"../utils.js":30}],8:[function(require,module,exports){
+},{"../custom-elements.js":1,"../dom.js":2,"../interfaces/Attr.js":3,"../interfaces/ShadowRoot.js":16,"../utils.js":28}],7:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3338,7 +3169,7 @@ var builtInComposedEvents = [
 // Touch Events
 'touchstart', 'touchend', 'touchmove', 'touchcancel'];
 
-},{"../dom.js":2,"../utils.js":30}],9:[function(require,module,exports){
+},{"../dom.js":2,"../utils.js":28}],8:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3875,7 +3706,7 @@ function wrapEventWithBrokenAccessors(event) {
     return wrapper;
 }
 
-},{"../dom.js":2,"../utils.js":30,"./Event.js":8}],10:[function(require,module,exports){
+},{"../dom.js":2,"../utils.js":28,"./Event.js":7}],9:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3902,7 +3733,7 @@ exports.default = {
             return;
         }
 
-        return this.getAttribute('name') || '';
+        return this.hasAttribute('name') ? this.getAttribute('name') : '';
     },
 
     // TODO: tests
@@ -3938,7 +3769,7 @@ exports.default = {
     }
 };
 
-},{"../dom.js":2,"../utils.js":30}],11:[function(require,module,exports){
+},{"../dom.js":2,"../utils.js":28}],10:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3999,7 +3830,7 @@ exports.default = {
     }
 };
 
-},{"../dom.js":2,"../utils.js":30}],12:[function(require,module,exports){
+},{"../dom.js":2,"../utils.js":28}],11:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4027,7 +3858,7 @@ exports.default = {
     }
 }; // https://www.w3.org/TR/html5/single-page.html#the-tr-element
 
-},{"../utils.js":30}],13:[function(require,module,exports){
+},{"../utils.js":28}],12:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4052,7 +3883,7 @@ exports.default = {
     }
 }; // https://www.w3.org/TR/html5/single-page.html#the-tbody-element
 
-},{"../utils.js":30}],14:[function(require,module,exports){
+},{"../utils.js":28}],13:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4093,7 +3924,7 @@ $MutationObserver.prototype = {
     }
 };
 
-},{"../dom.js":2,"../mutation-observers.js":27,"../utils.js":30}],15:[function(require,module,exports){
+},{"../dom.js":2,"../mutation-observers.js":26,"../utils.js":28}],14:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4176,7 +4007,7 @@ exports.default = {
     }
 };
 
-},{"../custom-elements.js":1,"../dom.js":2,"../interfaces/Attr.js":3,"../utils.js":30}],16:[function(require,module,exports){
+},{"../custom-elements.js":1,"../dom.js":2,"../interfaces/Attr.js":3,"../utils.js":28}],15:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4320,8 +4151,6 @@ var accessorDescriptors = {
         return nodeWalker.nextSibling();
     },
 
-    // TODO: consider creating a raw property descriptor
-    // that uses the native get instead of a pass-through function
     get nodeValue() {
         switch (this.nodeType) {
             case Node.ATTRIBUTE_NODE:
@@ -4345,7 +4174,7 @@ var accessorDescriptors = {
                 case Node.TEXT_NODE:
                 case Node.PROCESSING_INSTRUCTION_NODE:
                 case Node.COMMENT_NODE:
-                    _this.replaceData(0, _this.data.length, value);
+                    _this.data = value;
                     break;
             }
         });
@@ -4387,7 +4216,7 @@ var accessorDescriptors = {
                 case Node.TEXT_NODE:
                 case Node.PROCESSING_INSTRUCTION_NODE:
                 case Node.COMMENT_NODE:
-                    _this2.replaceData(0, _this2.data.length, value);
+                    _this2.data = value;
                     break;
             }
         });
@@ -4773,7 +4602,7 @@ function elementTextContent(element) {
     return result;
 }
 
-},{"../custom-elements.js":1,"../dom.js":2,"../utils.js":30}],17:[function(require,module,exports){
+},{"../custom-elements.js":1,"../dom.js":2,"../utils.js":28}],16:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4826,7 +4655,7 @@ exports.default = {
 }; // https://dom.spec.whatwg.org/#interface-shadowroot
 // https://www.w3.org/TR/shadow-dom/#the-shadowroot-interface
 
-},{"../custom-elements.js":1,"../dom.js":2,"../utils.js":30}],18:[function(require,module,exports){
+},{"../custom-elements.js":1,"../dom.js":2,"../utils.js":28}],17:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4868,7 +4697,7 @@ exports.default = {
     }
 };
 
-},{"../dom.js":2,"../utils.js":30}],19:[function(require,module,exports){
+},{"../dom.js":2,"../utils.js":28}],18:[function(require,module,exports){
 'use strict';
 
 var _shadowDom = require('./shadow-dom.js');
@@ -4907,7 +4736,7 @@ if (installCustomElements) {
     _customElements2.default.installTranspiledClassSupport();
 }
 
-},{"./custom-elements.js":1,"./shadow-dom.js":29}],20:[function(require,module,exports){
+},{"./custom-elements.js":1,"./shadow-dom.js":27}],19:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4939,7 +4768,7 @@ function process() {
     });
 }
 
-},{}],21:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5110,7 +4939,7 @@ exports.default = {
     }
 };
 
-},{"../custom-elements.js":1,"../dom.js":2}],22:[function(require,module,exports){
+},{"../custom-elements.js":1,"../dom.js":2}],21:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5153,7 +4982,7 @@ exports.default = {
 
 };
 
-},{"../dom.js":2,"../utils.js":30}],23:[function(require,module,exports){
+},{"../dom.js":2,"../utils.js":28}],22:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5214,7 +5043,7 @@ exports.default = {
 
 };
 
-},{"../utils.js":30}],24:[function(require,module,exports){
+},{"../utils.js":28}],23:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5247,7 +5076,7 @@ exports.default = {
     }
 }; // https://dom.spec.whatwg.org/#interface-nonelementparentnode
 
-},{"../dom.js":2}],25:[function(require,module,exports){
+},{"../dom.js":2}],24:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5436,7 +5265,7 @@ exports.default = {
     }
 };
 
-},{"../custom-elements.js":1,"../dom.js":2,"../utils.js":30}],26:[function(require,module,exports){
+},{"../custom-elements.js":1,"../dom.js":2,"../utils.js":28}],25:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5473,7 +5302,7 @@ exports.default = {
 
 };
 
-},{"../dom.js":2,"../utils.js":30}],27:[function(require,module,exports){
+},{"../dom.js":2,"../utils.js":28}],26:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5785,581 +5614,7 @@ function signalASlotChange(slot) {
     queueMutationObserverCompoundMicrotask();
 }
 
-},{"./microtask.js":20,"./utils.js":30}],28:[function(require,module,exports){
-'use strict';
-
-Object.defineProperty(exports, "__esModule", {
-    value: true
-});
-exports.patchAll = patchAll;
-
-var _utils = require('./utils.js');
-
-var _utils2 = _interopRequireDefault(_utils);
-
-var _dom = require('./dom.js');
-
-var _dom2 = _interopRequireDefault(_dom);
-
-var _DOMTokenList = require('./interfaces/DOMTokenList.js');
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-// Fear not the single page
-// https://www.w3.org/TR/html/single-page.html
-
-// TODO: implement on demand
-// These might be a bit much considering we can't do anything about inline script handlers
-// GlobalEventHandlers
-// DocumentAndElementEventHandlers
-
-// TODO: implement on demand
-// This would be useful to polyfill considering most current browsers don't implement it yet
-// HTMLHyperlinkElementUtils (Anchor, Area)
-
-var interfaces = {
-    'Element': {
-        'id': reflectString(),
-        'className': reflectString('class'),
-        'classList': reflectDOMTokenList('class'),
-        'slot': reflectString()
-    },
-    'HTMLElement': {
-        'title': reflectString(),
-        'lang': reflectString(),
-        'translate': reflectString(),
-        'dir': reflectString(),
-        // TODO: implement on demand
-        //'dataset': reflect.DOMStringMap('data'),
-        'hidden': reflectBoolean(),
-        'tabIndex': reflectInteger(null, 0),
-        'accessKey': reflectString(),
-        'draggable': reflectString(),
-        'contextMenu': reflectHTMLElement(window.HTMLMenuElement),
-        'spellcheck': reflectString(),
-        // ElementContentEditable
-        'contentEditable': reflectString()
-    },
-    'HTMLAnchorElement': {
-        'target': reflectString(),
-        'download': reflectString(),
-        'rel': reflectString(),
-        'rev': reflectString(),
-        'relList': reflectDOMTokenList('rel'),
-        'hreflang': reflectString(),
-        'type': reflectString(),
-        'text': reflectTextContent()
-    },
-    'HTMLAreaElement': {
-        'alt': reflectString(),
-        'coords': reflectString(),
-        'shape': reflectString(),
-        'target': reflectString(),
-        'download': reflectString(),
-        'rel': reflectString(),
-        'relList': reflectDOMTokenList('rel'),
-        'hreflang': reflectString(),
-        'type': reflectString()
-    },
-    'HTMLBaseElement': {
-        'href': reflectString(),
-        'target': reflectString()
-    },
-    'HTMLButtonElement': {
-        'autofocus': reflectBoolean(),
-        'disabled': reflectBoolean(),
-        //'form': reflectHTMLElement(HTMLFormElement, true),
-        'formAction': reflectString(),
-        'formEnctype': reflectString(),
-        'formMethod': reflectString(),
-        'formNoValidate': reflectBoolean(),
-        'formTarget': reflectString(),
-        'name': reflectString(),
-        'type': reflectString(),
-        'value': reflectString(),
-        'menu': reflectHTMLElement(window.HTMLMenuElement)
-    },
-    'HTMLCanvasElement': {
-        'width': reflectInteger(null, 0),
-        'height': reflectInteger(null, 0)
-    },
-    'HTMLDataElement': {
-        'value': reflectString()
-    },
-    'HTMLDetailsElement': {
-        'open': reflectBoolean()
-    },
-    'HTMLEmbedElement': {
-        'src': reflectString(),
-        'type': reflectString(),
-        'width': reflectInteger(null, 0),
-        'height': reflectInteger(null, 0)
-    },
-    'HTMLFieldSetElement': {
-        'disabled': reflectBoolean(),
-        //'form': reflectHTMLElement(HTMLFormElement, true),
-        'name': reflectString()
-    },
-    'HTMLFormElement': {
-        'acceptCharset': reflectString('accept-charset'),
-        'action': reflectString(),
-        'autocomplete': reflectString(),
-        'enctype': reflectString(),
-        'encoding': reflectString('enctype'),
-        'method': reflectString(),
-        'name': reflectString(),
-        'noValidate': reflectBoolean(),
-        'target': reflectString()
-    },
-    'HTMLIFrameElement': {
-        'src': reflectString(),
-        'srcdoc': reflectString(),
-        'name': reflectString(),
-        'sandbox': reflectDOMTokenList('sandbox'),
-        'allowFullscreen': reflectBoolean(),
-        'width': reflectInteger(null, 0),
-        'height': reflectInteger(null, 0)
-    },
-    'HTMLImageElement': {
-        'alt': reflectString(),
-        'src': reflectString(),
-        'srcset': reflectString(),
-        'crossOrigin': reflectString(),
-        'useMap': reflectString(),
-        'isMap': reflectBoolean(),
-        'width': reflectInteger(null, 0),
-        'height': reflectInteger(null, 0)
-    },
-    // TODO: caveat about feature testing input elements using anything besides 'type'
-    'HTMLInputElement': {
-        'accept': reflectString(),
-        'alt': reflectString(),
-        'autocomplete': reflectString(),
-        'autofocus': reflectBoolean(),
-        'defaultChecked': reflectBoolean('checked'),
-        'dirName': reflectString(),
-        'disabled': reflectBoolean(),
-        //'form': reflectHTMLElement(HTMLFormElement, true),
-        'formAction': reflectString(),
-        'formEnctype': reflectString(),
-        'formMethod': reflectString(),
-        'formNoValidate': reflectBoolean(),
-        'formTarget': reflectString(),
-        'height': reflectInteger(null, 0),
-        'inputMode': reflectString(),
-        // TODO: investigate whether we should bother with 'list'.
-        // Browsers without native Shadow DOM could end up not
-        // pulling suggestions from the correct list anyways.
-        // Possibly needs to be a caveat about this.
-        //'list': reflectSuggestionSourceElement(),
-        'max': reflectString(),
-        'maxLength': reflectInteger(0, 0),
-        'min': reflectString(),
-        'minLength': reflectInteger(0, 0),
-        'multiple': reflectBoolean(),
-        'name': reflectString(),
-        'pattern': reflectString(),
-        'placeholder': reflectString(),
-        'readOnly': reflectBoolean(),
-        'required': reflectBoolean(),
-        'size': reflectInteger(1, 1),
-        'src': reflectString(),
-        'step': reflectString(),
-        'type': reflectString(),
-        'defaultValue': reflectString('value'),
-        'width': reflectInteger(null, 0)
-    },
-    'HTMLKeygenElement': {
-        'autofocus': reflectBoolean(),
-        'challenge': reflectString(),
-        'disabled': reflectBoolean(),
-        //'form': reflectHTMLElement(HTMLFormElement, true),
-        'keytype': reflectString(),
-        'name': reflectString()
-    },
-    'HTMLLabelElement': {
-        //'form': reflectHTMLElement(HTMLFormElement, true),
-        'htmlFor': reflectString('for')
-    },
-    'HTMLLegendElement': {
-        //'form': reflectHTMLElement(HTMLFormElement, true)
-    },
-    'HTMLLIElement': {
-        'value': reflectString()
-    },
-    'HTMLLinkElement': {
-        'href': reflectString(),
-        'crossOrigin': reflectString(),
-        'rel': reflectString(),
-        'rev': reflectString(),
-        'relList': reflectDOMTokenList('rel'),
-        'media': reflectString(),
-        'hreflang': reflectString(),
-        'type': reflectString(),
-        'sizes': reflectDOMTokenList('sizes')
-    },
-    'HTMLMapElement': {
-        'name': reflectString()
-    },
-    'HTMLMediaElement': {
-        'src': reflectString(),
-        'crossOrigin': reflectString(),
-        'preload': reflectString(),
-        'loop': reflectBoolean(),
-        'autoplay': reflectBoolean(),
-        'mediaGroup': reflectString(),
-        'controls': reflectBoolean(),
-        'defaultMuted': reflectBoolean('muted')
-    },
-    'HTMLMenuElement': {
-        'type': reflectString(),
-        'label': reflectString()
-    },
-    'HTMLMenuItemElement': {
-        'type': reflectString(),
-        'label': reflectString(),
-        'icon': reflectString(),
-        'disabled': reflectBoolean(),
-        'checked': reflectBoolean('checked'),
-        'radiogroup': reflectString(),
-        'default': reflectBoolean()
-    },
-    'HTMLMetaElement': {
-        'name': reflectString(),
-        'httpEquiv': reflectString('http-equiv'),
-        'content': reflectString()
-    },
-    'HTMLMeterElement': {
-        'value': reflectFloat(null, 0),
-        'min': reflectFloat(null, 0),
-        'max': reflectFloat(null, 0),
-        'low': reflectFloat(null, 0),
-        'high': reflectFloat(null, 0),
-        'optimum': reflectFloat(null, 0)
-    },
-    'HTMLModElement': {
-        'cite': reflectString(),
-        'dateTime': reflectString()
-    },
-    'HTMLObjectElement': {
-        'data': reflectString(),
-        'type': reflectString(),
-        'typeMustMatch': reflectBoolean(),
-        'name': reflectString(),
-        //'form': reflectHTMLElement(HTMLFormElement, true),
-        'width': reflectInteger(null, 0),
-        'height': reflectInteger(null, 0)
-    },
-    'HTMLOListElement': {
-        'reversed': reflectBoolean(),
-        'start': reflectInteger(null, 0),
-        'type': reflectString()
-    },
-    'HTMLOptGroupElement': {
-        'disabled': reflectBoolean(),
-        'label': reflectString()
-    },
-    'HTMLOptionElement': {
-        'disabled': reflectBoolean(),
-        //'form': reflectHTMLElement(HTMLFormElement, true),
-        'label': reflectString(),
-        'defaultSelected': reflectBoolean('selected'),
-        'value': reflectString()
-    },
-    'HTMLOutputElement': {
-        'htmlFor': reflectDOMTokenList('for'),
-        //'form': reflectHTMLElement(HTMLFormElement, true),
-        'name': reflectString(),
-        'defaultValue': reflectString('value')
-    },
-    'HTMLParamElement': {
-        'name': reflectString(),
-        'value': reflectString()
-    },
-    'HTMLProgressElement': {
-        'value': reflectFloat(null, 0),
-        'max': reflectFloat(null, 0)
-    },
-    'HTMLQuoteElement': {
-        'cite': reflectString()
-    },
-    'HTMLScriptElement': {
-        'src': reflectString(),
-        'type': reflectString(),
-        'charset': reflectString(),
-        'async': reflectBoolean(),
-        'defer': reflectBoolean(),
-        'crossOrigin': reflectString(),
-        // TODO: implement on demand
-        // 'text': reflectScriptText(),
-        'nonce': reflectString()
-    },
-    'HTMLSelectElement': {
-        'autocomplete': reflectString(),
-        'autofocus': reflectBoolean(),
-        'disabled': reflectBoolean(),
-        //'form': reflectHTMLElement(HTMLFormElement, true),
-        'multiple': reflectBoolean(),
-        'name': reflectString(),
-        'required': reflectBoolean(),
-        'size': reflectInteger(1, 1)
-    },
-    'HTMLSourceElement': {
-        'src': reflectString(),
-        'type': reflectString(),
-        'media': reflectString()
-    },
-    'HTMLStyleElement': {
-        'media': reflectString(),
-        'nonce': reflectString(),
-        'type': reflectString()
-    },
-    'HTMLTableCellElement': {
-        'colSpan': reflectInteger(0, -1),
-        'rowSpan': reflectInteger(0, -1),
-        'headers': reflectDOMTokenList('headers')
-    },
-    'HTMLTableColElement': {
-        'span': reflectInteger(1, 1)
-    },
-    'HTMLTableHeaderCellElement': {
-        'scope': reflectString(),
-        'abbr': reflectString()
-    },
-    'HTMLTextAreaElement': {
-        'autocomplete': reflectString(),
-        'autofocus': reflectBoolean(),
-        'cols': reflectString(),
-        'dirName': reflectString(),
-        'disabled': reflectBoolean(),
-        //'form': reflectHTMLElement(HTMLFormElement, true),
-        'inputMode': reflectString(),
-        'maxLength': reflectInteger(0, 0),
-        'minLength': reflectInteger(0, 0),
-        'name': reflectString(),
-        'placeholder': reflectString(),
-        'readOnly': reflectBoolean(),
-        'required': reflectBoolean(),
-        'rows': reflectInteger(1, 1),
-        'wrap': reflectString(),
-        'defaultValue': reflectTextContent()
-    },
-    'HTMLTimeElement': {
-        'dateTime': reflectString()
-    },
-    'HTMLTrackElement': {
-        'kind': reflectString(),
-        'src': reflectString(),
-        'srclang': reflectString(),
-        'label': reflectString(),
-        'default': reflectBoolean()
-    },
-    'HTMLVideoElement': {
-        'width': reflectInteger(null, 0),
-        'height': reflectInteger(null, 0),
-        'poster': reflectString()
-    }
-};
-
-// https://www.w3.org/TR/html/single-page.html#reflection
-
-// An index of IDL attributes that should reflect a corresponding content attribute.
-
-function reflectString(attributeName) {
-    return function (type, name) {
-        var descriptor = _utils2.default.descriptor(type, name);
-        if (descriptor && !descriptor.configurable) {
-            //console.warn(`Unable to configure property '${name}'`);
-            return;
-        }
-        attributeName = attributeName || name.toLowerCase();
-        Object.defineProperty(type.prototype, name, {
-            configurable: true,
-            enumerable: true,
-            get: descriptor ? descriptor.get : function () {
-                return this.getAttribute(attributeName) || '';
-            },
-            set: function set(value) {
-                _dom2.default.setAttributeValue(this, attributeName, value);
-            }
-        });
-    };
-}
-
-function reflectBoolean(attributeName) {
-    return function (type, name) {
-        var descriptor = _utils2.default.descriptor(type, name);
-        if (descriptor && !descriptor.configurable) {
-            //console.warn(`Unable to configure property '${name}'`);
-            return;
-        }
-        attributeName = attributeName || name.toLowerCase();
-        Object.defineProperty(type.prototype, name, {
-            configurable: true,
-            enumerable: true,
-            get: function get() {
-                return this.hasAttribute(attributeName);
-            },
-            set: function set(value) {
-                if (value === false) {
-                    _dom2.default.removeAttributeByName(attributeName, this);
-                } else {
-                    _dom2.default.setAttributeValue(this, attributeName, value);
-                }
-            }
-        });
-    };
-}
-
-// TODO: minValue, errors
-function reflectInteger(minValue, defaultValue) {
-    return function (type, name) {
-        var descriptor = _utils2.default.descriptor(type, name);
-        if (descriptor && !descriptor.configurable) {
-            //console.warn(`Unable to configure property '${name}'`);
-            return;
-        }
-        var attributeName = name.toLowerCase();
-        defaultValue = defaultValue || 0;
-        Object.defineProperty(type.prototype, name, {
-            configurable: true,
-            enumerable: true,
-            get: function get() {
-                var value = this.getAttribute(attributeName);
-                return parseInt(value) || defaultValue;
-            },
-            set: function set(value) {
-                if (typeof value !== 'number') {
-                    throw _utils2.default.makeDOMException('TypeError');
-                }
-                _dom2.default.setAttributeValue(this, attributeName, value.toString());
-            }
-        });
-    };
-}
-
-// TODO: minValue, errors
-function reflectFloat(minValue, defaultValue) {
-    return function (type, name) {
-        var descriptor = _utils2.default.descriptor(type, name);
-        if (descriptor && !descriptor.configurable) {
-            //console.warn(`Unable to configure property '${name}'`);
-            return;
-        }
-        var attributeName = name.toLowerCase();
-        defaultValue = defaultValue || 0;
-        Object.defineProperty(type.prototype, name, {
-            configurable: true,
-            enumerable: true,
-            get: function get() {
-                var value = this.getAttribute(attributeName);
-                return parseFloat(value) || defaultValue;
-            },
-            set: function set(value) {
-                if (typeof value !== 'number') {
-                    throw _utils2.default.makeDOMException('TypeError');
-                }
-                _dom2.default.setAttributeValue(this, attributeName, value.toString());
-            }
-        });
-    };
-}
-
-function reflectDOMTokenList(localName) {
-    return function (type, name) {
-        var descriptor = _utils2.default.descriptor(type, name);
-        if (descriptor && !descriptor.configurable) {
-            //console.warn(`Unable to configure property '${name}'`);
-            return;
-        }
-        Object.defineProperty(type.prototype, name, {
-            configurable: true,
-            enumerable: true,
-            get: function get() {
-                return (0, _DOMTokenList.getOrCreateDOMTokenList)(this, localName);
-            },
-            set: function set(value) {
-                (0, _DOMTokenList.getOrCreateDOMTokenList)(this, localName).value = value;
-            }
-        });
-    };
-}
-
-function reflectHTMLElement(candidateType, readOnly) {
-    return function (type, name) {
-        var descriptor = _utils2.default.descriptor(type, name);
-        if (descriptor && !descriptor.configurable) {
-            //console.warn(`Unable to configure property '${name}'`);
-            return;
-        }
-        var attributeName = name.toLowerCase();
-        Object.defineProperty(type.prototype, name, {
-            configurable: true,
-            enumerable: true,
-            get: function get() {
-                if (!this.hasAttribute(attributeName)) {
-                    return null;
-                }
-                var id = this.getAttribute(attributeName);
-                var candidate = this.ownerDocument.getElementById(id);
-                if (candidate == null || !(candidate instanceof candidateType)) {
-                    return null;
-                }
-                return candidate;
-            },
-            set: readOnly ? undefined : function (value) {
-                if (!(value instanceof candidateType)) {
-                    throw _utils2.default.makeDOMException('TypeError');
-                }
-                if (value.hasAttribute('id')) {
-                    var found = this.ownerDocument.getElementById(value.id);
-                    if (value === found) {
-                        this.setAttribute(attributeName, value.id);
-                        return;
-                    }
-                }
-                this.setAttribute(attributeName, '');
-            }
-        });
-    };
-}
-
-function reflectTextContent() {
-    return function (type, name) {
-        var descriptor = _utils2.default.descriptor(type, name);
-        if (descriptor && !descriptor.configurable) {
-            //console.warn(`Unable to configure property '${name}'`);
-            return;
-        }
-        Object.defineProperty(type.prototype, name, {
-            configurable: true,
-            enumerable: true,
-            get: function get() {
-                return this.textContent;
-            },
-            set: function set(value) {
-                this.textContent = value;
-            }
-        });
-    };
-}
-
-function patchAll() {
-    var identifiers = Object.getOwnPropertyNames(interfaces);
-    for (var i = 0; i < identifiers.length; i++) {
-        var identifier = identifiers[i];
-        if (identifier in window) {
-            var type = window[identifier];
-            var attributes = Object.getOwnPropertyNames(interfaces[identifier]);
-            for (var j = 0; j < attributes.length; j++) {
-                var attribute = attributes[j];
-                interfaces[identifier][attribute](type, attribute);
-            }
-        }
-    }
-}
-
-},{"./dom.js":2,"./interfaces/DOMTokenList.js":5,"./utils.js":30}],29:[function(require,module,exports){
+},{"./microtask.js":19,"./utils.js":28}],27:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -6373,10 +5628,6 @@ var _dom2 = _interopRequireDefault(_dom);
 var _utils = require('./utils.js');
 
 var _utils2 = _interopRequireDefault(_utils);
-
-var _reflect = require('./reflect.js');
-
-var reflect = _interopRequireWildcard(_reflect);
 
 var _Attr = require('./interfaces/Attr.js');
 
@@ -6389,10 +5640,6 @@ var _CustomEvent2 = _interopRequireDefault(_CustomEvent);
 var _Document = require('./interfaces/Document.js');
 
 var _Document2 = _interopRequireDefault(_Document);
-
-var _DOMTokenList = require('./interfaces/DOMTokenList.js');
-
-var _DOMTokenList2 = _interopRequireDefault(_DOMTokenList);
 
 var _Element = require('./interfaces/Element.js');
 
@@ -6466,8 +5713,6 @@ var _Slotable = require('./mixins/Slotable.js');
 
 var _Slotable2 = _interopRequireDefault(_Slotable);
 
-function _interopRequireWildcard(obj) { if (obj && obj.__esModule) { return obj; } else { var newObj = {}; if (obj != null) { for (var key in obj) { if (Object.prototype.hasOwnProperty.call(obj, key)) newObj[key] = obj[key]; } } newObj.default = obj; return newObj; } }
-
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var nativeSupport = 'attachShadow' in Element.prototype;
@@ -6483,10 +5728,6 @@ function install() {
     // Hacky setting in case you want to use ShadyCSS.
     window['ShadyDOM'] = { 'inUse': true };
 
-    // Reflected attributes
-    // TODO: patch reflected attributes at custom element upgrade time
-    reflect.patchAll();
-
     // Attr interface
     _Attr2.default.install();
 
@@ -6495,9 +5736,6 @@ function install() {
 
     // Document interface
     _utils2.default.extend(Document, _Document2.default);
-
-    // DOMTokenList interface
-    _utils2.default.extend(DOMTokenList, _DOMTokenList2.default);
 
     // Element interface
     _Element2.default.install();
@@ -6564,7 +5802,7 @@ function install() {
     _utils2.default.extend(Text, _Slotable2.default);
 }
 
-},{"./dom.js":2,"./interfaces/Attr.js":3,"./interfaces/CustomEvent.js":4,"./interfaces/DOMTokenList.js":5,"./interfaces/Document.js":6,"./interfaces/Element.js":7,"./interfaces/Event.js":8,"./interfaces/EventTarget.js":9,"./interfaces/HTMLSlotElement.js":10,"./interfaces/HTMLTableElement.js":11,"./interfaces/HTMLTableRowElement.js":12,"./interfaces/HTMLTableSectionElement.js":13,"./interfaces/MutationObserver.js":14,"./interfaces/NamedNodeMap.js":15,"./interfaces/Node.js":16,"./interfaces/ShadowRoot.js":17,"./interfaces/Text.js":18,"./mixins/ChildNode.js":21,"./mixins/DocumentOrShadowRoot.js":22,"./mixins/NonDocumentTypeChildNode.js":23,"./mixins/NonElementParentNode.js":24,"./mixins/ParentNode.js":25,"./mixins/Slotable.js":26,"./reflect.js":28,"./utils.js":30}],30:[function(require,module,exports){
+},{"./dom.js":2,"./interfaces/Attr.js":3,"./interfaces/CustomEvent.js":4,"./interfaces/Document.js":5,"./interfaces/Element.js":6,"./interfaces/Event.js":7,"./interfaces/EventTarget.js":8,"./interfaces/HTMLSlotElement.js":9,"./interfaces/HTMLTableElement.js":10,"./interfaces/HTMLTableRowElement.js":11,"./interfaces/HTMLTableSectionElement.js":12,"./interfaces/MutationObserver.js":13,"./interfaces/NamedNodeMap.js":14,"./interfaces/Node.js":15,"./interfaces/ShadowRoot.js":16,"./interfaces/Text.js":17,"./mixins/ChildNode.js":20,"./mixins/DocumentOrShadowRoot.js":21,"./mixins/NonDocumentTypeChildNode.js":22,"./mixins/NonElementParentNode.js":23,"./mixins/ParentNode.js":24,"./mixins/Slotable.js":25,"./utils.js":28}],28:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -6756,4 +5994,4 @@ function getUniqueSortedTokens(tokens) {
     return tokens;
 }
 
-},{}]},{},[19]);
+},{}]},{},[18]);

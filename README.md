@@ -48,11 +48,6 @@ To help with testing for cross-browser support, this project is receiving tremen
       <td>
         <ul>
           <li>Safari natively supports Shadow DOM since version 10.</li>
-          <li>
-            Safari 9 is supported except for some things that cannot easily be polyfilled without 
-            considerable complexity and performance implications, namely `[CEReactions]` support 
-            for reflected attributes and `DOMTokenList`/`Element.classList`.
-          </li>
         </ul>
       </td>
     </tr>
@@ -101,25 +96,44 @@ set `window.forceCustomElementsPolyfill = true` before the script is included.
 
 ## Caveats
 
-- There are no benchmarks yet. Correctness comes first, which means
+- **Benchmarks**
+
+  There are no benchmarks yet. Correctness comes first, which means
   benchmarks come after test-verified functionality. 
-- MutationObserver is polyfilled to account for shadow boundaries,
-  but Javascript does not provide any sort of weak reference, so take
-  care when using MutationObservers as garbage collection is pretty
-  much a manual operation here.
-- Browsers with native Shadow DOM treat `<slot>` elements as `display: contents` 
+
+- **MutationObserver and garbage collection**
+
+  MutationObserver is polyfilled to account for shadow boundaries,
+  but Javascript does not provide any sort of weak reference, so you
+  must be sure to `disconnect()` your MutationObserver instances 
+  whenever it is appropriate to do so.
+
+- **`<slot>` and the `display` style property**
+
+  Browsers with native Shadow DOM treat `<slot>` elements as `display: contents` 
   *by default* which simply cannot be properly polyfilled (think `display: flex`, 
   `display: table`, etc.) With that in mind, you may want to adopt a practice
   of explicitly specifying `display` properties for `<slot>` elements.
 
-### APIs that are not polyfilled
+- **`[CEReactions]` and reflected content attributes**
 
-There are a handful of APIs that are not polyfilled due to their relative
-obscurity or lack of priority. They may be investigated later. These APIs are:
+  Object properties that are said to reflect a content attribute will not
+  cause `attributeChangedCallback` to be invoked (for example, setting `className`
+  from script will not invoke the `attributeChangedCallback` for the `class` 
+  attribute.) This is because the `[CEReactions]` behavior for setters cannot be 
+  reasonably polyfilled for in Safari 9 and this project aims to provide a 
+  consistent level of support for its supported browsers.
 
-- `Range`
-- `NodeIterator`
-- `TreeWalker`
+- **CSS Selectors**
+
+  No attempt is made to polyfill any selectors in CSS, like `::slotted`, `:host`,
+  or `:host-context`. These are also not polyfilled for APIs like `matches`,
+  `querySelector`, and so forth.
+  
+- **Obscure or low-priority DOM APIs**
+
+  APIs like `Range`, `NodeIterator`, and `TreeWalker` are not addressed. They
+  may be in the future but they are currently very low-priority.
 
 ## License
 
