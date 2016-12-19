@@ -57,13 +57,43 @@ exports.default = {
     installTranspiledClassSupport: installTranspiledClassSupport,
     isCustom: isCustom,
     tryToUpgradeElement: tryToUpgradeElement,
-    enqueueConnectedReaction: enqueueConnectedReaction,
-    enqueueDisconnectedReaction: enqueueDisconnectedReaction,
-    enqueueAdoptedReaction: enqueueAdoptedReaction,
-    enqueueAttributeChangedReaction: enqueueAttributeChangedReaction,
     executeCEReactions: executeCEReactions,
     isValidCustomElementName: isValidCustomElementName
 };
+
+
+_dom2.default.registerInsertingSteps(function (node) {
+    if (node.isConnected) {
+        if (isCustom(node)) {
+            enqueueCallbackReaction(node, CE_CALLBACK_CONNECTED, []);
+        } else {
+            tryToUpgradeElement(node);
+        }
+    }
+});
+
+_dom2.default.registerRemovingSteps(function (node, parent) {
+    if (isCustom(node)) {
+        enqueueCallbackReaction(node, CE_CALLBACK_DISCONNECTED, []);
+    }
+});
+
+_dom2.default.registerAdoptingSteps(function (node, oldDocument, newDocument) {
+    if (isCustom(node)) {
+        enqueueCallbackReaction(node, CE_CALLBACK_ADOPTED, [oldDocument, newDocument]);
+    }
+});
+
+_dom2.default.registerCloningSteps(function (node) {
+    tryToUpgradeElement(node);
+});
+
+_dom2.default.registerAttributeChangeSteps(function (element, localName, oldValue, newValue, nameSpace) {
+    if (isCustom(element)) {
+        var args = [localName, oldValue, newValue, nameSpace];
+        enqueueCallbackReaction(element, CE_CALLBACK_ATTRIBUTE_CHANGED, args);
+    }
+});
 
 // Installation/uninstallation
 
@@ -731,22 +761,6 @@ function enqueueCallbackReaction(element, callbackName, args) {
     enqueueElementOnAppropriateElementQueue(element);
 }
 
-function enqueueConnectedReaction(element, args) {
-    enqueueCallbackReaction(element, CE_CALLBACK_CONNECTED, args);
-}
-
-function enqueueDisconnectedReaction(element, args) {
-    enqueueCallbackReaction(element, CE_CALLBACK_DISCONNECTED, args);
-}
-
-function enqueueAdoptedReaction(element, args) {
-    enqueueCallbackReaction(element, CE_CALLBACK_ADOPTED, args);
-}
-
-function enqueueAttributeChangedReaction(element, args) {
-    enqueueCallbackReaction(element, CE_CALLBACK_ATTRIBUTE_CHANGED, args);
-}
-
 function enqueueUpgradeReaction(element, definition) {
     // https://html.spec.whatwg.org/multipage/scripting.html#enqueue-a-custom-element-upgrade-reaction
     var elementState = getPrivateState(element) || setPrivateState(element, { reactionQueue: [] });
@@ -828,13 +842,15 @@ var _mutationObservers = require('./mutation-observers.js');
 
 var _mutationObservers2 = _interopRequireDefault(_mutationObservers);
 
-var _customElements = require('./custom-elements.js');
-
-var _customElements2 = _interopRequireDefault(_customElements);
-
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 exports.default = {
+
+    registerInsertingSteps: registerInsertingSteps,
+    registerRemovingSteps: registerRemovingSteps,
+    registerAdoptingSteps: registerAdoptingSteps,
+    registerCloningSteps: registerCloningSteps,
+    registerAttributeChangeSteps: registerAttributeChangeSteps,
 
     forEachShadowIncludingInclusiveDescendant: forEachShadowIncludingInclusiveDescendant,
     treeOrderRecursiveSelectAll: treeOrderRecursiveSelectAll,
@@ -884,11 +900,32 @@ exports.default = {
 
 };
 
-// TODO: Remove this circular dependency by introducing hooks:
-// - inserting steps
-// - removing steps
-// - adopting steps
-// - cloning steps
+
+var insertingSteps = [];
+var removingSteps = [];
+var adoptingSteps = [];
+var cloningSteps = [];
+var attributeChangeSteps = [];
+
+function registerInsertingSteps(steps) {
+    insertingSteps.push(steps);
+}
+
+function registerRemovingSteps(steps) {
+    removingSteps.push(steps);
+}
+
+function registerAdoptingSteps(steps) {
+    adoptingSteps.push(steps);
+}
+
+function registerCloningSteps(steps) {
+    cloningSteps.push(steps);
+}
+
+function registerAttributeChangeSteps(steps) {
+    attributeChangeSteps.push(steps);
+}
 
 var elementRemoveAttributeNSDescriptor = _utils2.default.descriptor(Element, 'removeAttributeNS');
 var elementSetAttributeDescriptor = _utils2.default.descriptor(Element, 'setAttribute');
@@ -925,21 +962,6 @@ function forEachInclusiveDescendant(node, callback) {
     var childNodes = node.childNodes;
     for (var i = 0; i < childNodes.length; i++) {
         forEachInclusiveDescendant(childNodes[i], callback);
-    }
-}
-
-function forEachShadowIncludingDescendant(node, action) {
-    var shadowState = null;
-    var shadowRoot = null;
-    if ((shadowState = _utils2.default.getShadowState(node)) && (shadowRoot = shadowState.shadowRoot)) {
-        action(shadowRoot);
-        forEachShadowIncludingDescendant(shadowRoot, action);
-    }
-    var childNodes = node.childNodes;
-    for (var i = 0; i < childNodes.length; i++) {
-        var childNode = childNodes[i];
-        action(childNode);
-        forEachShadowIncludingDescendant(childNode, action);
     }
 }
 
@@ -1231,8 +1253,8 @@ function clone(node, document, cloneChildren) {
     // 4. Set copy’s node document and document to copy, if copy is a document, 
     // and set copy’s node document to document otherwise.
     var copy = nodeCloneNodeDescriptor.value.call(node, false);
-    if (_customElements2.default.isInstalled) {
-        _customElements2.default.tryToUpgradeElement(copy);
+    for (var i = 0; i < cloningSteps.length; i++) {
+        cloningSteps[i](copy);
     }
 
     // 5. Run any cloning steps defined for node in other applicable 
@@ -1249,8 +1271,8 @@ function clone(node, document, cloneChildren) {
     if (cloneChildren) {
         var childNodes = node.childNodes;
         var childNodesCount = childNodes.length;
-        for (var i = 0; i < childNodesCount; i++) {
-            var childCopy = clone(childNodes[i], document, true);
+        for (var _i2 = 0; _i2 < childNodesCount; _i2++) {
+            var childCopy = clone(childNodes[_i2], document, true);
             nodeAppendChildDescriptor.value.call(copy, childCopy);
         }
     }
@@ -1271,10 +1293,10 @@ function adopt(node, document) {
     }
 
     // 3. If document is not the same as oldDocument, run these substeps:
-    if (document != oldDocument && _customElements2.default.isInstalled()) {
+    if (document != oldDocument) {
         forEachShadowIncludingInclusiveDescendant(node, function (inclusiveDescendant) {
-            if (_customElements2.default.isCustom(inclusiveDescendant)) {
-                _customElements2.default.enqueueAdoptedReaction(inclusiveDescendant, [oldDocument, document]);
+            for (var i = 0; i < adoptingSteps.length; i++) {
+                adoptingSteps[i](inclusiveDescendant, oldDocument, document);
             }
         });
     }
@@ -1319,10 +1341,6 @@ function shadowIncludingDescendant(nodeA, nodeB) {
     } while (nodeA != null);
 
     return false;
-}
-
-function shadowIncludingInclusiveDescendant(nodeA, nodeB) {
-    return nodeA === nodeB || shadowIncludingDescendant(nodeA, nodeB);
 }
 
 function shadowIncludingAncestor(nodeA, nodeB) {
@@ -1371,7 +1389,7 @@ function retarget(nodeA, nodeB) {
 
 // https://dom.spec.whatwg.org/#interface-element
 
-function updateSlotName(element, localName, oldValue, value, nameSpace) {
+registerAttributeChangeSteps(function updateSlotName(element, localName, oldValue, value, nameSpace) {
     // https://dom.spec.whatwg.org/#slot-name
     if (isSlot(element)) {
         if (localName === ATTR_NAME && nameSpace == null) {
@@ -1395,9 +1413,9 @@ function updateSlotName(element, localName, oldValue, value, nameSpace) {
             }
         }
     }
-}
+});
 
-function updateSlotableName(element, localName, oldValue, value, nameSpace) {
+registerAttributeChangeSteps(function updateSlotableName(element, localName, oldValue, value, nameSpace) {
     // https://dom.spec.whatwg.org/#slotable-name
     if (localName === TAG_SLOT && nameSpace == null) {
         if (value === oldValue) {
@@ -1424,12 +1442,7 @@ function updateSlotableName(element, localName, oldValue, value, nameSpace) {
         }
         assignSlotablesForATree(parentState.shadowRoot);
     }
-}
-
-function attributeChangeSteps(element, localName, oldValue, value, nameSpace) {
-    updateSlotName(element, localName, oldValue, value, nameSpace);
-    updateSlotableName(element, localName, oldValue, value, nameSpace);
-}
+});
 
 function changeAttribute(attribute, element, value) {
     // https://dom.spec.whatwg.org/#concept-element-attributes-change
@@ -1443,13 +1456,12 @@ function changeAttribute(attribute, element, value) {
     // SKIP
 
     // 2. If element is custom...
-    if (_customElements2.default.isInstalled() && _customElements2.default.isCustom(element)) {
-        var args = [name, oldValue, newValue, nameSpace];
-        _customElements2.default.enqueueAttributeChangedReaction(element, args);
-    }
+    // SKIP: refactored out into attribute change steps
 
     // 3. Run the attribute change steps...
-    attributeChangeSteps(element, name, oldValue, newValue, nameSpace);
+    for (var i = 0; i < attributeChangeSteps.length; i++) {
+        attributeChangeSteps[i](element, name, oldValue, newValue, nameSpace);
+    }
 
     // 4. Set attribute's value...
     if (nameSpace) {
@@ -1471,13 +1483,12 @@ function appendAttribute(attribute, element) {
     // SKIP
 
     // 2. If element is custom...
-    if (_customElements2.default.isInstalled() && _customElements2.default.isCustom(element)) {
-        var args = [name, oldValue, newValue, nameSpace];
-        _customElements2.default.enqueueAttributeChangedReaction(element, args);
-    }
+    // SKIP: refactored out into attribute change steps
 
     // 3. Run the attribute change steps...
-    attributeChangeSteps(element, name, oldValue, newValue, nameSpace);
+    for (var i = 0; i < attributeChangeSteps.length; i++) {
+        attributeChangeSteps[i](element, name, oldValue, newValue, nameSpace);
+    }
 
     // 4. Append the attribute to the element’s attribute list.
     // SKIP: handled by caller
@@ -1498,13 +1509,12 @@ function removeAttribute(attribute, element) {
     // SKIP
 
     // 2. If element is custom...
-    if (_customElements2.default.isInstalled() && _customElements2.default.isCustom(element)) {
-        var args = [name, oldValue, newValue, nameSpace];
-        _customElements2.default.enqueueAttributeChangedReaction(element, args);
-    }
+    // SKIP: refactored out into attribute change steps
 
     // 3. Run the attribute change steps...
-    attributeChangeSteps(element, name, oldValue, null, nameSpace);
+    for (var i = 0; i < attributeChangeSteps.length; i++) {
+        attributeChangeSteps[i](element, name, oldValue, newValue, nameSpace);
+    }
 
     // 4. Remove attribute from the element’s attribute list.
     elementRemoveAttributeNSDescriptor.value.call(element, nameSpace, name);
@@ -1526,16 +1536,15 @@ function replaceAttribute(oldAttr, newAttr, element) {
     // SKIP
 
     // 2. If element is custom...
-    if (_customElements2.default.isInstalled() && _customElements2.default.isCustom(element)) {
-        var args = [name, oldValue, newValue, nameSpace];
-        _customElements2.default.enqueueAttributeChangedReaction(element, args);
-    }
+    // SKIP: refactored out into attribute change steps
 
     // 3. Run the attribute change steps...
-    attributeChangeSteps(element, name, oldValue, newValue, nameSpace);
+    for (var i = 0; i < attributeChangeSteps.length; i++) {
+        attributeChangeSteps[i](element, name, oldValue, newValue, nameSpace);
+    }
 
     // 4. Replace oldAttr by newAttr in the element’s attribute list.
-    // This is handled by callers
+    // SKIP: handled by callers
 
     // 5. Set oldAttr’s element to null.
     // SKIP: native
@@ -1827,8 +1836,8 @@ function findFlattenedSlotables(slot) {
     }
 
     // 4. For each node in slotables, run these substeps:
-    for (var _i2 = 0; _i2 < slotables.length; _i2++) {
-        var node = slotables[_i2];
+    for (var _i3 = 0; _i3 < slotables.length; _i3++) {
+        var node = slotables[_i3];
         // 1. If node is a slot, run these subsubsteps:
         if (isSlot(node)) {
             var temporaryResult = findFlattenedSlotables(node);
@@ -1878,15 +1887,15 @@ function assignSlotableToSlot(slotable, slot, suppressSignaling) {
         }
         var fallbackNodes = slotState.childNodes;
         var fallbackNodesCount = fallbackNodes.length;
-        for (var _i3 = 0; _i3 < fallbackNodesCount; _i3++) {
-            nodeRemoveChildDescriptor.value.call(slot, fallbackNodes[_i3]);
+        for (var _i4 = 0; _i4 < fallbackNodesCount; _i4++) {
+            nodeRemoveChildDescriptor.value.call(slot, fallbackNodes[_i4]);
         }
         nodeAppendChildDescriptor.value.call(slot, slotable);
     } else {
         var referenceNode = null;
         var referenceNodeIndex = 0;
-        for (var _i4 = 0; _i4 < assignedNodesCount; _i4++) {
-            var assignedNode = assignedNodes[_i4];
+        for (var _i5 = 0; _i5 < assignedNodesCount; _i5++) {
+            var assignedNode = assignedNodes[_i5];
             if (assignedNode.compareDocumentPosition(slotable) === Node.DOCUMENT_POSITION_FOLLOWING) {
                 break;
             }
@@ -2044,12 +2053,12 @@ function insert(node, parent, child, suppressObservers) {
         }
         // If it's the parsing fragment, avoid some overhead.
         if (node === parsingFragment) {
-            for (var _i5 = 0; _i5 < count; _i5++) {
-                nodeRemoveChildDescriptor.value.call(node, nodes[_i5]);
+            for (var _i6 = 0; _i6 < count; _i6++) {
+                nodeRemoveChildDescriptor.value.call(node, nodes[_i6]);
             }
         } else {
-            for (var _i6 = 0; _i6 < count; _i6++) {
-                remove(nodes[_i6], node, true);
+            for (var _i7 = 0; _i7 < count; _i7++) {
+                remove(nodes[_i7], node, true);
             }
             // 5. If node is a DocumentFragment node, queue a mutation record of "childList" for node with removedNodes nodes.
             _mutationObservers2.default.queueMutationRecord(MO_TYPE_CHILD_LIST, node, null, null, null, null, nodes);
@@ -2064,8 +2073,8 @@ function insert(node, parent, child, suppressObservers) {
     var parentIsConnected = parent.isConnected;
     var parentIsShadowRoot = isShadowRoot(parent);
     var parentTree = root(parent);
-    for (var _i7 = 0; _i7 < count; _i7++) {
-        var _node = nodes[_i7];
+    for (var _i8 = 0; _i8 < count; _i8++) {
+        var _node = nodes[_i8];
         // 1. Insert node into parent before child or at the end of parent if child is null.
         if (parentStateChildNodes) {
             if (child) {
@@ -2108,28 +2117,17 @@ function insert(node, parent, child, suppressObservers) {
             }
         }
 
-        if (parentIsConnected && _customElements2.default.isInstalled()) {
-            // 5. For each shadow-including inclusive descendant inclusiveDescendant of node, 
-            // in shadow-including tree order, run these subsubsteps:
-            forEachShadowIncludingInclusiveDescendant(_node, function (inclusiveDescendant) {
-                // 1. Run the insertion steps with inclusiveDescendant
-                // SKIP: other
+        // 5. For each shadow-including inclusive descendant inclusiveDescendant of node, 
+        // in shadow-including tree order, run these subsubsteps:
+        forEachShadowIncludingInclusiveDescendant(_node, function (inclusiveDescendant) {
+            // 1. Run the insertion steps with inclusiveDescendant
+            for (var _i9 = 0; _i9 < insertingSteps.length; _i9++) {
+                insertingSteps[_i9](inclusiveDescendant);
+            }
 
-                // 2. If inclusiveDescendant is connected, then...
-                // PERF: moved this check out of the loop.
-
-                // 1. If inclusiveDescendant is custom, then enqueue a custom element 
-                // callback reaction with inclusiveDescendant, callback name 
-                // "connectedCallback", and an empty argument list.
-                if (_customElements2.default.isCustom(inclusiveDescendant)) {
-                    _customElements2.default.enqueueConnectedReaction(inclusiveDescendant, []);
-                }
-                // 2. Otherwise, try to upgrade inclusiveDescendant.
-                else {
-                        _customElements2.default.tryToUpgradeElement(inclusiveDescendant);
-                    }
-            });
-        }
+            // 2. If inclusiveDescendant is connected, then...
+            // SKIP: refactored out into the inserting steps.
+        });
     }
 
     // 7. If suppress observers flag is unset, queue a mutation record of "childList" for parent 
@@ -2246,16 +2244,16 @@ function replaceAll(node, parent) {
         var nodeChildNodes = node.childNodes;
         var nodeChildNodesLength = nodeChildNodes.length;
         addedNodes = new Array(nodeChildNodesLength);
-        for (var _i8 = 0; _i8 < nodeChildNodesLength; _i8++) {
-            addedNodes[_i8] = nodeChildNodes[_i8];
+        for (var _i10 = 0; _i10 < nodeChildNodesLength; _i10++) {
+            addedNodes[_i10] = nodeChildNodes[_i10];
         }
     } else {
         addedNodes = [node];
     }
 
     // 4. Remove all parent’s children, in tree order, with the suppress observers flag set.
-    for (var _i9 = 0; _i9 < removedNodesCount; _i9++) {
-        remove(removedNodes[_i9], parent, true);
+    for (var _i11 = 0; _i11 < removedNodesCount; _i11++) {
+        remove(removedNodes[_i11], parent, true);
     }
 
     // 5. If node is not null, insert node into parent before null with the suppress observers flag set.
@@ -2347,31 +2345,19 @@ function remove(node, parent, suppressObservers) {
     }
 
     // 13. Run the removing steps with node and parent.
-    // SKIP: other
-
-    if (_customElements2.default.isInstalled()) {
-        // 14. If node is custom, then enqueue a custom element callback reaction 
-        // with node, callback name "disconnectedCallback", and an empty argument list.
-        if (_customElements2.default.isCustom(node)) {
-            _customElements2.default.enqueueDisconnectedReaction(node, []);
+    forEachShadowIncludingInclusiveDescendant(node, function (inclusiveDescendant) {
+        for (var i = 0; i < removingSteps.length; i++) {
+            removingSteps[i](inclusiveDescendant, parent);
         }
+    });
 
-        // 15. For each shadow-including descendant descendant of node, in 
-        // shadow-including tree order, run these substeps:
-        forEachShadowIncludingDescendant(node, function (descendant) {
-            // 1. Run the removing steps with descendant.
-            // SKIP: other
-            // NOTE: this step is the only reason we don't just use 
-            // forEachShadowIncludingInclusiveDescendant here
+    // 14. If node is custom, then enqueue a custom element callback reaction 
+    // with node, callback name "disconnectedCallback", and an empty argument list.
+    // SKIP: refactored out into removing steps
 
-            // 2. If descendant is custom, then enqueue a custom element 
-            // callback reaction with descendant, callback name "disconnectedCallback", 
-            // and an empty argument list.
-            if (_customElements2.default.isCustom(descendant)) {
-                _customElements2.default.enqueueDisconnectedReaction(descendant, []);
-            }
-        });
-    }
+    // 15. For each shadow-including descendant descendant of node, in 
+    // shadow-including tree order, run these substeps:
+    // SKIP: refactored out into removing steps
 
     // 16. For each inclusive ancestor inclusiveAncestor of parent...
     var inclusiveAncestor = parent;
@@ -2406,7 +2392,7 @@ function remove(node, parent, suppressObservers) {
     }
 }
 
-},{"./custom-elements.js":1,"./mutation-observers.js":27,"./utils.js":30}],3:[function(require,module,exports){
+},{"./mutation-observers.js":27,"./utils.js":30}],3:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4960,161 +4946,6 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-exports.default = function (base) {
-
-    return {
-
-        // TODO: tests
-        before: function before() {
-            var _this = this;
-
-            for (var _len = arguments.length, nodes = Array(_len), _key = 0; _key < _len; _key++) {
-                nodes[_key] = arguments[_key];
-            }
-
-            return _customElements2.default.executeCEReactions(function () {
-                // https://dom.spec.whatwg.org/#dom-childnode-before
-                // The before(nodes) method, when invoked, must run these steps:
-
-                // 1. Let parent be context object’s parent.
-                var parent = _this.parentNode;
-
-                // 2. If parent is null, terminate these steps.
-                if (!parent) {
-                    return;
-                }
-
-                // 3. Let viablePreviousSibling be context object’s first preceding 
-                // sibling not in nodes, and null otherwise.
-                var viablePreviousSibling = _this.previousSibling;
-                while (viablePreviousSibling && nodes.indexOf(viablePreviousSibling) !== -1) {
-                    viablePreviousSibling = viablePreviousSibling.previousSibling;
-                }
-
-                // 4. Let node be the result of converting nodes into a node, given 
-                // nodes and context object’s node document. Rethrow any exceptions.
-                var node = _dom2.default.convertNodesIntoANode(nodes, _this.ownerDocument);
-
-                // 5. If viablePreviousSibling is null, set it to parent’s first child, 
-                // and to viablePreviousSibling’s next sibling otherwise.
-                if (viablePreviousSibling === null) {
-                    viablePreviousSibling = parent.firstChild;
-                } else {
-                    viablePreviousSibling = viablePreviousSibling.nextSibling;
-                }
-
-                // 6. Pre-insert node into parent before viablePreviousSibling. 
-                // Rethrow any exceptions.
-                _dom2.default.preInsert(node, parent, viablePreviousSibling);
-            });
-        },
-
-
-        // TODO: tests
-        after: function after() {
-            var _this2 = this;
-
-            for (var _len2 = arguments.length, nodes = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-                nodes[_key2] = arguments[_key2];
-            }
-
-            return _customElements2.default.executeCEReactions(function () {
-                // https://dom.spec.whatwg.org/#dom-childnode-after
-                // The after(nodes) method, when invoked, must run these steps:
-
-                // 1. Let parent be context object’s parent.
-                var parent = _this2.parentNode;
-
-                // 2. If parent is null, terminate these steps.
-                if (!parent) {
-                    return;
-                }
-
-                // 3. Let viableNextSibling be context object’s first following 
-                // sibling not in nodes, and null otherwise.
-                var viableNextSibling = _this2.nextSibling;
-                while (viableNextSibling && nodes.indexOf(viableNextSibling) !== -1) {
-                    viableNextSibling = viableNextSibling.nextSibling;
-                }
-
-                // 4. Let node be the result of converting nodes into a node, given 
-                // nodes and context object’s node document. Rethrow any exceptions.
-                var node = _dom2.default.convertNodesIntoANode(nodes, _this2.ownerDocument);
-
-                // 5. Pre-insert node into parent before viableNextSibling. Rethrow 
-                // any exceptions.
-                _dom2.default.preInsert(node, parent, viableNextSibling);
-            });
-        },
-
-
-        // TODO: tests
-        replaceWith: function replaceWith() {
-            var _this3 = this;
-
-            for (var _len3 = arguments.length, nodes = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
-                nodes[_key3] = arguments[_key3];
-            }
-
-            return _customElements2.default.executeCEReactions(function () {
-                // https://dom.spec.whatwg.org/#dom-childnode-replacewith
-                // The replaceWith(nodes) method, when invoked, must run these steps:
-
-                // 1. Let parent be context object’s parent.
-                var parent = _this3.parentNode;
-
-                // 2. If parent is null, terminate these steps.
-                if (!parent) {
-                    return;
-                }
-
-                // 3. Let viableNextSibling be context object’s first following 
-                // sibling not in nodes, and null otherwise.
-                var viableNextSibling = _this3.nextSibling;
-                while (viableNextSibling && nodes.indexOf(viableNextSibling) !== -1) {
-                    viableNextSibling = viableNextSibling.nextSibling;
-                }
-
-                // 4. Let node be the result of converting nodes into a node, given 
-                // nodes and context object’s node document. Rethrow any exceptions.
-                var node = _dom2.default.convertNodesIntoANode(nodes, _this3.ownerDocument);
-
-                // 5. If context object’s parent is parent, replace the context object 
-                // with node within parent. Rethrow any exceptions.
-                if (_this3.parentNode == parent) {
-                    _dom2.default.replace(_this3, node, parent);
-                }
-                // 6. Otherwise, pre-insert node into parent before viableNextSibling. 
-                // Rethrow any exceptions.
-                else {
-                        _dom2.default.preInsert(node, parent, viableNextSibling);
-                    }
-            });
-        },
-
-
-        // TODO: tests
-        remove: function remove() {
-            var _this4 = this;
-
-            return _customElements2.default.executeCEReactions(function () {
-                // https://dom.spec.whatwg.org/#dom-childnode-remove
-                // The remove() method, when invoked, must run these steps:
-
-                // 1. If context object’s parent is null, terminate these steps.
-                var parent = _this4.parentNode;
-
-                if (!parent) {
-                    return;
-                }
-
-                // 2. Remove the context object from context object’s parent.
-                _dom2.default.remove(_this4, parent);
-            });
-        }
-    };
-};
-
 var _dom = require('../dom.js');
 
 var _dom2 = _interopRequireDefault(_dom);
@@ -5124,6 +4955,160 @@ var _customElements = require('../custom-elements.js');
 var _customElements2 = _interopRequireDefault(_customElements);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+// https://dom.spec.whatwg.org/#interface-childnode
+
+exports.default = {
+
+    // TODO: tests
+    before: function before() {
+        var _this = this;
+
+        for (var _len = arguments.length, nodes = Array(_len), _key = 0; _key < _len; _key++) {
+            nodes[_key] = arguments[_key];
+        }
+
+        return _customElements2.default.executeCEReactions(function () {
+            // https://dom.spec.whatwg.org/#dom-childnode-before
+            // The before(nodes) method, when invoked, must run these steps:
+
+            // 1. Let parent be context object’s parent.
+            var parent = _this.parentNode;
+
+            // 2. If parent is null, terminate these steps.
+            if (!parent) {
+                return;
+            }
+
+            // 3. Let viablePreviousSibling be context object’s first preceding 
+            // sibling not in nodes, and null otherwise.
+            var viablePreviousSibling = _this.previousSibling;
+            while (viablePreviousSibling && nodes.indexOf(viablePreviousSibling) !== -1) {
+                viablePreviousSibling = viablePreviousSibling.previousSibling;
+            }
+
+            // 4. Let node be the result of converting nodes into a node, given 
+            // nodes and context object’s node document. Rethrow any exceptions.
+            var node = _dom2.default.convertNodesIntoANode(nodes, _this.ownerDocument);
+
+            // 5. If viablePreviousSibling is null, set it to parent’s first child, 
+            // and to viablePreviousSibling’s next sibling otherwise.
+            if (viablePreviousSibling === null) {
+                viablePreviousSibling = parent.firstChild;
+            } else {
+                viablePreviousSibling = viablePreviousSibling.nextSibling;
+            }
+
+            // 6. Pre-insert node into parent before viablePreviousSibling. 
+            // Rethrow any exceptions.
+            _dom2.default.preInsert(node, parent, viablePreviousSibling);
+        });
+    },
+
+
+    // TODO: tests
+    after: function after() {
+        var _this2 = this;
+
+        for (var _len2 = arguments.length, nodes = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+            nodes[_key2] = arguments[_key2];
+        }
+
+        return _customElements2.default.executeCEReactions(function () {
+            // https://dom.spec.whatwg.org/#dom-childnode-after
+            // The after(nodes) method, when invoked, must run these steps:
+
+            // 1. Let parent be context object’s parent.
+            var parent = _this2.parentNode;
+
+            // 2. If parent is null, terminate these steps.
+            if (!parent) {
+                return;
+            }
+
+            // 3. Let viableNextSibling be context object’s first following 
+            // sibling not in nodes, and null otherwise.
+            var viableNextSibling = _this2.nextSibling;
+            while (viableNextSibling && nodes.indexOf(viableNextSibling) !== -1) {
+                viableNextSibling = viableNextSibling.nextSibling;
+            }
+
+            // 4. Let node be the result of converting nodes into a node, given 
+            // nodes and context object’s node document. Rethrow any exceptions.
+            var node = _dom2.default.convertNodesIntoANode(nodes, _this2.ownerDocument);
+
+            // 5. Pre-insert node into parent before viableNextSibling. Rethrow 
+            // any exceptions.
+            _dom2.default.preInsert(node, parent, viableNextSibling);
+        });
+    },
+
+
+    // TODO: tests
+    replaceWith: function replaceWith() {
+        var _this3 = this;
+
+        for (var _len3 = arguments.length, nodes = Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
+            nodes[_key3] = arguments[_key3];
+        }
+
+        return _customElements2.default.executeCEReactions(function () {
+            // https://dom.spec.whatwg.org/#dom-childnode-replacewith
+            // The replaceWith(nodes) method, when invoked, must run these steps:
+
+            // 1. Let parent be context object’s parent.
+            var parent = _this3.parentNode;
+
+            // 2. If parent is null, terminate these steps.
+            if (!parent) {
+                return;
+            }
+
+            // 3. Let viableNextSibling be context object’s first following 
+            // sibling not in nodes, and null otherwise.
+            var viableNextSibling = _this3.nextSibling;
+            while (viableNextSibling && nodes.indexOf(viableNextSibling) !== -1) {
+                viableNextSibling = viableNextSibling.nextSibling;
+            }
+
+            // 4. Let node be the result of converting nodes into a node, given 
+            // nodes and context object’s node document. Rethrow any exceptions.
+            var node = _dom2.default.convertNodesIntoANode(nodes, _this3.ownerDocument);
+
+            // 5. If context object’s parent is parent, replace the context object 
+            // with node within parent. Rethrow any exceptions.
+            if (_this3.parentNode == parent) {
+                _dom2.default.replace(_this3, node, parent);
+            }
+            // 6. Otherwise, pre-insert node into parent before viableNextSibling. 
+            // Rethrow any exceptions.
+            else {
+                    _dom2.default.preInsert(node, parent, viableNextSibling);
+                }
+        });
+    },
+
+
+    // TODO: tests
+    remove: function remove() {
+        var _this4 = this;
+
+        return _customElements2.default.executeCEReactions(function () {
+            // https://dom.spec.whatwg.org/#dom-childnode-remove
+            // The remove() method, when invoked, must run these steps:
+
+            // 1. If context object’s parent is null, terminate these steps.
+            var parent = _this4.parentNode;
+
+            if (!parent) {
+                return;
+            }
+
+            // 2. Remove the context object from context object’s parent.
+            _dom2.default.remove(_this4, parent);
+        });
+    }
+};
 
 },{"../custom-elements.js":1,"../dom.js":2}],22:[function(require,module,exports){
 'use strict';
@@ -5236,34 +5221,31 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
-exports.default = function (base) {
-
-    return {
-        getElementById: function getElementById(id) {
-            // https://dom.spec.whatwg.org/#dom-nonelementparentnode-getelementbyid
-
-            if (id === '' || /\s/.test(id)) {
-                return null;
-            }
-
-            var firstChild = this.firstChild;
-
-            if (!firstChild) {
-                return null;
-            }
-
-            return _dom2.default.treeOrderRecursiveSelectFirst(firstChild, function (node) {
-                return node.id === id;
-            });
-        }
-    };
-};
-
 var _dom = require('../dom.js');
 
 var _dom2 = _interopRequireDefault(_dom);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+exports.default = {
+    getElementById: function getElementById(id) {
+        // https://dom.spec.whatwg.org/#dom-nonelementparentnode-getelementbyid
+
+        if (id === '' || /\s/.test(id)) {
+            return null;
+        }
+
+        var firstChild = this.firstChild;
+
+        if (!firstChild) {
+            return null;
+        }
+
+        return _dom2.default.treeOrderRecursiveSelectFirst(firstChild, function (node) {
+            return node.id === id;
+        });
+    }
+}; // https://dom.spec.whatwg.org/#interface-nonelementparentnode
 
 },{"../dom.js":2}],25:[function(require,module,exports){
 'use strict';
@@ -5271,175 +5253,6 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-
-exports.default = function (base) {
-
-    return {
-
-        get children() {
-            var childNodes = void 0;
-
-            var shadowState = _utils2.default.getShadowState(this);
-            if (shadowState) {
-                childNodes = shadowState.childNodes;
-            }
-
-            if (!childNodes) {
-                childNodes = this.childNodes;
-            }
-
-            var childNodesLength = childNodes.length;
-            var elements = new Array(childNodesLength);
-            var pushed = 0;
-            for (var i = 0; i < childNodesLength; i++) {
-                var node = childNodes[i];
-                if (node.nodeType == Node.ELEMENT_NODE) {
-                    elements[pushed++] = node;
-                }
-            }
-            elements.length = pushed;
-
-            return elements;
-        },
-
-        get firstElementChild() {
-            var shadowState = _utils2.default.getShadowState(this);
-            if (shadowState) {
-                var childNodes = shadowState.childNodes;
-                if (childNodes) {
-                    for (var i = 0; i < childNodes.length; i++) {
-                        var node = childNodes[i];
-                        if (node.nodeType == Node.ELEMENT_NODE) {
-                            return node;
-                        }
-                    }
-                    return null;
-                }
-            }
-            elementWalker.currentNode = this;
-            return elementWalker.firstChild();
-        },
-
-        get lastElementChild() {
-            var shadowState = _utils2.default.getShadowState(this);
-            if (shadowState) {
-                var childNodes = shadowState.childNodes;
-                if (childNodes) {
-                    for (var i = childNodes.length - 1; i >= 0; i--) {
-                        var node = childNodes[i];
-                        if (node.nodeType == Node.ELEMENT_NODE) {
-                            return node;
-                        }
-                    }
-                    return null;
-                }
-            }
-            elementWalker.currentNode = this;
-            return elementWalker.lastChild();
-        },
-
-        get childElementCount() {
-            var childNodes = void 0;
-
-            var shadowState = _utils2.default.getShadowState(this);
-            if (shadowState) {
-                childNodes = shadowState.childNodes;
-            }
-
-            if (!childNodes) {
-                childNodes = this.childNodes;
-            }
-
-            var count = 0;
-
-            for (var i = 0; i < childNodes.length; i++) {
-                var node = childNodes[i];
-                if (node.nodeType == Node.ELEMENT_NODE) {
-                    count++;
-                }
-            }
-
-            return count;
-        },
-
-        // TODO: tests
-        prepend: function prepend() {
-            var _this = this;
-
-            for (var _len = arguments.length, nodes = Array(_len), _key = 0; _key < _len; _key++) {
-                nodes[_key] = arguments[_key];
-            }
-
-            return _customElements2.default.executeCEReactions(function () {
-                // https://dom.spec.whatwg.org/#dom-parentnode-prepend
-                // The prepend(nodes) method, when invoked, must run these steps:
-
-                // 1. Let node be the result of converting nodes into a node given 
-                // nodes and context object’s node document. Rethrow any exceptions.
-                var node = _dom2.default.convertNodesIntoANode(nodes, _this.ownerDocument || _this);
-
-                // 2. Pre-insert node into context object before the context object’s 
-                // first child. Rethrow any exceptions.
-                _dom2.default.preInsert(node, _this, _this.firstChild);
-            });
-        },
-
-
-        // TODO: tests
-        append: function append() {
-            var _this2 = this;
-
-            for (var _len2 = arguments.length, nodes = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
-                nodes[_key2] = arguments[_key2];
-            }
-
-            return _customElements2.default.executeCEReactions(function () {
-                // https://dom.spec.whatwg.org/#dom-parentnode-append
-                // The append(nodes) method, when invoked, must run these steps:
-
-                // 1. Let node be the result of converting nodes into a node given 
-                // nodes and context object’s node document. Rethrow any exceptions.
-                var node = _dom2.default.convertNodesIntoANode(nodes, _this2.ownerDocument || _this2);
-
-                // 2. Append node to context object. Rethrow any exceptions.
-                _dom2.default.append(node, _this2);
-            });
-        },
-
-
-        // TODO: tests
-        querySelector: function querySelector(selectors) {
-            var firstChild = this.firstChild;
-
-            if (!firstChild) {
-                return null;
-            }
-
-            return _dom2.default.treeOrderRecursiveSelectFirst(firstChild, function (node) {
-                return node.nodeType === Node.ELEMENT_NODE && node.matches(selectors);
-            });
-        },
-
-
-        // TODO: tests
-        querySelectorAll: function querySelectorAll(selectors) {
-            // https://dom.spec.whatwg.org/#scope-match-a-selectors-string
-            var results = [];
-
-            var firstChild = this.firstChild;
-
-            if (!firstChild) {
-                return results;
-            }
-
-            _dom2.default.treeOrderRecursiveSelectAll(firstChild, results, function (node) {
-                return node.nodeType === Node.ELEMENT_NODE && node.matches(selectors);
-            });
-
-            return results;
-        }
-    };
-};
 
 var _dom = require('../dom.js');
 
@@ -5457,33 +5270,178 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 
 var elementWalker = document.createTreeWalker(document, NodeFilter.SHOW_ELEMENT, null, false); // https://dom.spec.whatwg.org/#interface-parentnode
 
+exports.default = {
+
+    get children() {
+        var childNodes = void 0;
+
+        var shadowState = _utils2.default.getShadowState(this);
+        if (shadowState) {
+            childNodes = shadowState.childNodes;
+        }
+
+        if (!childNodes) {
+            childNodes = this.childNodes;
+        }
+
+        var childNodesLength = childNodes.length;
+        var elements = new Array(childNodesLength);
+        var pushed = 0;
+        for (var i = 0; i < childNodesLength; i++) {
+            var node = childNodes[i];
+            if (node.nodeType == Node.ELEMENT_NODE) {
+                elements[pushed++] = node;
+            }
+        }
+        elements.length = pushed;
+
+        return elements;
+    },
+
+    get firstElementChild() {
+        var shadowState = _utils2.default.getShadowState(this);
+        if (shadowState) {
+            var childNodes = shadowState.childNodes;
+            if (childNodes) {
+                for (var i = 0; i < childNodes.length; i++) {
+                    var node = childNodes[i];
+                    if (node.nodeType == Node.ELEMENT_NODE) {
+                        return node;
+                    }
+                }
+                return null;
+            }
+        }
+        elementWalker.currentNode = this;
+        return elementWalker.firstChild();
+    },
+
+    get lastElementChild() {
+        var shadowState = _utils2.default.getShadowState(this);
+        if (shadowState) {
+            var childNodes = shadowState.childNodes;
+            if (childNodes) {
+                for (var i = childNodes.length - 1; i >= 0; i--) {
+                    var node = childNodes[i];
+                    if (node.nodeType == Node.ELEMENT_NODE) {
+                        return node;
+                    }
+                }
+                return null;
+            }
+        }
+        elementWalker.currentNode = this;
+        return elementWalker.lastChild();
+    },
+
+    get childElementCount() {
+        var childNodes = void 0;
+
+        var shadowState = _utils2.default.getShadowState(this);
+        if (shadowState) {
+            childNodes = shadowState.childNodes;
+        }
+
+        if (!childNodes) {
+            childNodes = this.childNodes;
+        }
+
+        var count = 0;
+
+        for (var i = 0; i < childNodes.length; i++) {
+            var node = childNodes[i];
+            if (node.nodeType == Node.ELEMENT_NODE) {
+                count++;
+            }
+        }
+
+        return count;
+    },
+
+    // TODO: tests
+    prepend: function prepend() {
+        var _this = this;
+
+        for (var _len = arguments.length, nodes = Array(_len), _key = 0; _key < _len; _key++) {
+            nodes[_key] = arguments[_key];
+        }
+
+        return _customElements2.default.executeCEReactions(function () {
+            // https://dom.spec.whatwg.org/#dom-parentnode-prepend
+            // The prepend(nodes) method, when invoked, must run these steps:
+
+            // 1. Let node be the result of converting nodes into a node given 
+            // nodes and context object’s node document. Rethrow any exceptions.
+            var node = _dom2.default.convertNodesIntoANode(nodes, _this.ownerDocument || _this);
+
+            // 2. Pre-insert node into context object before the context object’s 
+            // first child. Rethrow any exceptions.
+            _dom2.default.preInsert(node, _this, _this.firstChild);
+        });
+    },
+
+
+    // TODO: tests
+    append: function append() {
+        var _this2 = this;
+
+        for (var _len2 = arguments.length, nodes = Array(_len2), _key2 = 0; _key2 < _len2; _key2++) {
+            nodes[_key2] = arguments[_key2];
+        }
+
+        return _customElements2.default.executeCEReactions(function () {
+            // https://dom.spec.whatwg.org/#dom-parentnode-append
+            // The append(nodes) method, when invoked, must run these steps:
+
+            // 1. Let node be the result of converting nodes into a node given 
+            // nodes and context object’s node document. Rethrow any exceptions.
+            var node = _dom2.default.convertNodesIntoANode(nodes, _this2.ownerDocument || _this2);
+
+            // 2. Append node to context object. Rethrow any exceptions.
+            _dom2.default.append(node, _this2);
+        });
+    },
+
+
+    // TODO: tests
+    querySelector: function querySelector(selectors) {
+        var firstChild = this.firstChild;
+
+        if (!firstChild) {
+            return null;
+        }
+
+        return _dom2.default.treeOrderRecursiveSelectFirst(firstChild, function (node) {
+            return node.nodeType === Node.ELEMENT_NODE && node.matches(selectors);
+        });
+    },
+
+
+    // TODO: tests
+    querySelectorAll: function querySelectorAll(selectors) {
+        // https://dom.spec.whatwg.org/#scope-match-a-selectors-string
+        var results = [];
+
+        var firstChild = this.firstChild;
+
+        if (!firstChild) {
+            return results;
+        }
+
+        _dom2.default.treeOrderRecursiveSelectAll(firstChild, results, function (node) {
+            return node.nodeType === Node.ELEMENT_NODE && node.matches(selectors);
+        });
+
+        return results;
+    }
+};
+
 },{"../custom-elements.js":1,"../dom.js":2,"../utils.js":30}],26:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
-
-exports.default = function (base) {
-
-    return {
-
-        get assignedSlot() {
-            // spec implementation is to run 'find a slot'
-            // this uses an alternative (see https://github.com/whatwg/dom/issues/369)
-            var shadowState = _utils2.default.getShadowState(this);
-            if (shadowState) {
-                var slot = shadowState.assignedSlot;
-                if (slot && _dom2.default.closedShadowHidden(slot, this)) {
-                    return null;
-                }
-                return slot;
-            }
-            return null;
-        }
-
-    };
-};
 
 var _dom = require('../dom.js');
 
@@ -5494,6 +5452,26 @@ var _utils = require('../utils.js');
 var _utils2 = _interopRequireDefault(_utils);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+// https://dom.spec.whatwg.org/#mixin-slotable
+
+exports.default = {
+
+    get assignedSlot() {
+        // spec implementation is to run 'find a slot'
+        // this uses an alternative (see https://github.com/whatwg/dom/issues/369)
+        var shadowState = _utils2.default.getShadowState(this);
+        if (shadowState) {
+            var slot = shadowState.assignedSlot;
+            if (slot && _dom2.default.closedShadowHidden(slot, this)) {
+                return null;
+            }
+            return slot;
+        }
+        return null;
+    }
+
+};
 
 },{"../dom.js":2,"../utils.js":30}],27:[function(require,module,exports){
 'use strict';
@@ -6555,9 +6533,9 @@ function install() {
     _utils2.default.extend(Text, _Text2.default);
 
     // ChildNode mixin
-    _utils2.default.extend(DocumentType, (0, _ChildNode2.default)(DocumentType));
-    _utils2.default.extend(Element, (0, _ChildNode2.default)(Element));
-    _utils2.default.extend(CharacterData, (0, _ChildNode2.default)(CharacterData));
+    _utils2.default.extend(DocumentType, _ChildNode2.default);
+    _utils2.default.extend(Element, _ChildNode2.default);
+    _utils2.default.extend(CharacterData, _ChildNode2.default);
 
     // DocumentOrShadowRoot mixin
     _utils2.default.extend(Document, _DocumentOrShadowRoot2.default);
@@ -6568,22 +6546,22 @@ function install() {
     _utils2.default.extend(CharacterData, _NonDocumentTypeChildNode2.default);
 
     // NonElementParentNode mixin
-    _utils2.default.extend(Document, (0, _NonElementParentNode2.default)(Document));
-    _utils2.default.extend(DocumentFragment, (0, _NonElementParentNode2.default)(DocumentFragment));
+    _utils2.default.extend(Document, _NonElementParentNode2.default);
+    _utils2.default.extend(DocumentFragment, _NonElementParentNode2.default);
 
     // ParentNode mixin
-    _utils2.default.extend(Document, (0, _ParentNode2.default)(Document));
-    _utils2.default.extend(DocumentFragment, (0, _ParentNode2.default)(DocumentFragment));
-    _utils2.default.extend(_ShadowRoot2.default, (0, _ParentNode2.default)(_ShadowRoot2.default));
+    _utils2.default.extend(Document, _ParentNode2.default);
+    _utils2.default.extend(DocumentFragment, _ParentNode2.default);
+    _utils2.default.extend(_ShadowRoot2.default, _ParentNode2.default);
     if (_utils2.default.brokenAccessors) {
-        _utils2.default.extend(HTMLElement, (0, _ParentNode2.default)(HTMLElement));
+        _utils2.default.extend(HTMLElement, _ParentNode2.default);
     } else {
-        _utils2.default.extend(Element, (0, _ParentNode2.default)(Element));
+        _utils2.default.extend(Element, _ParentNode2.default);
     }
 
     // Slotable mixin
-    _utils2.default.extend(Element, (0, _Slotable2.default)(Element));
-    _utils2.default.extend(Text, (0, _Slotable2.default)(Text));
+    _utils2.default.extend(Element, _Slotable2.default);
+    _utils2.default.extend(Text, _Slotable2.default);
 }
 
 },{"./dom.js":2,"./interfaces/Attr.js":3,"./interfaces/CustomEvent.js":4,"./interfaces/DOMTokenList.js":5,"./interfaces/Document.js":6,"./interfaces/Element.js":7,"./interfaces/Event.js":8,"./interfaces/EventTarget.js":9,"./interfaces/HTMLSlotElement.js":10,"./interfaces/HTMLTableElement.js":11,"./interfaces/HTMLTableRowElement.js":12,"./interfaces/HTMLTableSectionElement.js":13,"./interfaces/MutationObserver.js":14,"./interfaces/NamedNodeMap.js":15,"./interfaces/Node.js":16,"./interfaces/ShadowRoot.js":17,"./interfaces/Text.js":18,"./mixins/ChildNode.js":21,"./mixins/DocumentOrShadowRoot.js":22,"./mixins/NonDocumentTypeChildNode.js":23,"./mixins/NonElementParentNode.js":24,"./mixins/ParentNode.js":25,"./mixins/Slotable.js":26,"./reflect.js":28,"./utils.js":30}],30:[function(require,module,exports){

@@ -1,14 +1,13 @@
 import $utils from './utils.js';
 import $mo from './mutation-observers.js';
 
-// TODO: Remove this circular dependency by introducing hooks:
-// - inserting steps
-// - removing steps
-// - adopting steps
-// - cloning steps
-import $ce from './custom-elements.js';
-
 export default {
+
+    registerInsertingSteps,
+    registerRemovingSteps,
+    registerAdoptingSteps,
+    registerCloningSteps,
+    registerAttributeChangeSteps,
 
     forEachShadowIncludingInclusiveDescendant,
     treeOrderRecursiveSelectAll,
@@ -58,6 +57,32 @@ export default {
 
 };
 
+const insertingSteps = [];
+const removingSteps = [];
+const adoptingSteps = [];
+const cloningSteps = [];
+const attributeChangeSteps = [];
+
+function registerInsertingSteps(steps) {
+    insertingSteps.push(steps);
+}
+
+function registerRemovingSteps(steps) {
+    removingSteps.push(steps);
+}
+
+function registerAdoptingSteps(steps) {
+    adoptingSteps.push(steps);
+}
+
+function registerCloningSteps(steps) {
+    cloningSteps.push(steps);
+}
+
+function registerAttributeChangeSteps(steps) {
+    attributeChangeSteps.push(steps);
+}
+
 const elementRemoveAttributeNSDescriptor = $utils.descriptor(Element, 'removeAttributeNS');
 const elementSetAttributeDescriptor = $utils.descriptor(Element, 'setAttribute');
 const elementSetAttributeNSDescriptor = $utils.descriptor(Element, 'setAttributeNS');
@@ -93,21 +118,6 @@ function forEachInclusiveDescendant(node, callback) {
     const childNodes = node.childNodes;
     for (let i = 0; i < childNodes.length; i++) {
         forEachInclusiveDescendant(childNodes[i], callback);
-    }
-}
-
-function forEachShadowIncludingDescendant(node, action) {
-    let shadowState = null;
-    let shadowRoot = null;
-    if ((shadowState = $utils.getShadowState(node)) && (shadowRoot = shadowState.shadowRoot)) {
-        action(shadowRoot);
-        forEachShadowIncludingDescendant(shadowRoot, action);
-    }
-    const childNodes = node.childNodes;
-    for (let i = 0; i < childNodes.length; i++) {
-        const childNode = childNodes[i];
-        action(childNode);
-        forEachShadowIncludingDescendant(childNode, action);
     }
 }
 
@@ -403,8 +413,8 @@ function clone(node, document, cloneChildren) {
     // 4. Set copy’s node document and document to copy, if copy is a document, 
     // and set copy’s node document to document otherwise.
     const copy = nodeCloneNodeDescriptor.value.call(node, false);
-    if ($ce.isInstalled) {
-        $ce.tryToUpgradeElement(copy);
+    for (let i = 0; i < cloningSteps.length; i++) {
+        cloningSteps[i](copy);
     }
 
     // 5. Run any cloning steps defined for node in other applicable 
@@ -443,10 +453,10 @@ function adopt(node, document) {
     }
 
     // 3. If document is not the same as oldDocument, run these substeps:
-    if (document != oldDocument && $ce.isInstalled()) {
+    if (document != oldDocument) {
         forEachShadowIncludingInclusiveDescendant(node, function (inclusiveDescendant) {
-            if ($ce.isCustom(inclusiveDescendant)) {
-                $ce.enqueueAdoptedReaction(inclusiveDescendant, [oldDocument, document]);
+            for (let i = 0; i < adoptingSteps.length; i++) {
+                adoptingSteps[i](inclusiveDescendant, oldDocument, document);
             }
         });
     }
@@ -495,10 +505,6 @@ function shadowIncludingDescendant(nodeA, nodeB) {
     return false;
 }
 
-function shadowIncludingInclusiveDescendant(nodeA, nodeB) {
-    return nodeA === nodeB || shadowIncludingDescendant(nodeA, nodeB);
-}
-
 function shadowIncludingAncestor(nodeA, nodeB) {
     return shadowIncludingDescendant(nodeB, nodeA);
 }
@@ -545,7 +551,7 @@ function retarget(nodeA, nodeB) {
 
 // https://dom.spec.whatwg.org/#interface-element
 
-function updateSlotName(element, localName, oldValue, value, nameSpace) {
+registerAttributeChangeSteps(function updateSlotName(element, localName, oldValue, value, nameSpace) {
     // https://dom.spec.whatwg.org/#slot-name
     if (isSlot(element)) {
         if (localName === ATTR_NAME && nameSpace == null) {
@@ -570,9 +576,9 @@ function updateSlotName(element, localName, oldValue, value, nameSpace) {
             }
         }
     }
-}
+});
 
-function updateSlotableName(element, localName, oldValue, value, nameSpace) {
+registerAttributeChangeSteps(function updateSlotableName(element, localName, oldValue, value, nameSpace) {
     // https://dom.spec.whatwg.org/#slotable-name
     if (localName === TAG_SLOT && nameSpace == null) {
         if (value === oldValue) {
@@ -600,12 +606,7 @@ function updateSlotableName(element, localName, oldValue, value, nameSpace) {
         }
         assignSlotablesForATree(parentState.shadowRoot);
     }
-}
-
-function attributeChangeSteps(element, localName, oldValue, value, nameSpace) {
-    updateSlotName(element, localName, oldValue, value, nameSpace);
-    updateSlotableName(element, localName, oldValue, value, nameSpace);
-}
+});
 
 function changeAttribute(attribute, element, value) {
     // https://dom.spec.whatwg.org/#concept-element-attributes-change
@@ -619,18 +620,17 @@ function changeAttribute(attribute, element, value) {
     // SKIP
 
     // 2. If element is custom...
-    if ($ce.isInstalled() && $ce.isCustom(element)) {
-        const args = [name, oldValue, newValue, nameSpace];
-        $ce.enqueueAttributeChangedReaction(element, args);
-    }
+    // SKIP: refactored out into attribute change steps
 
     // 3. Run the attribute change steps...
-    attributeChangeSteps(element, name, oldValue, newValue, nameSpace);
+    for (let i = 0; i < attributeChangeSteps.length; i++) {
+        attributeChangeSteps[i](element, name, oldValue, newValue, nameSpace);
+    }
 
     // 4. Set attribute's value...
     if (nameSpace) {
         elementSetAttributeNSDescriptor.value.call(element, nameSpace, attribute.prefix + ':' + name, newValue);
-    } 
+    }
     else {
         elementSetAttributeDescriptor.value.call(element, name, newValue);
     }
@@ -648,13 +648,12 @@ function appendAttribute(attribute, element) {
     // SKIP
 
     // 2. If element is custom...
-    if ($ce.isInstalled() && $ce.isCustom(element)) {
-        const args = [name, oldValue, newValue, nameSpace];
-        $ce.enqueueAttributeChangedReaction(element, args);
-    }
+    // SKIP: refactored out into attribute change steps
 
     // 3. Run the attribute change steps...
-    attributeChangeSteps(element, name, oldValue, newValue, nameSpace);
+    for (let i = 0; i < attributeChangeSteps.length; i++) {
+        attributeChangeSteps[i](element, name, oldValue, newValue, nameSpace);
+    }
 
     // 4. Append the attribute to the element’s attribute list.
     // SKIP: handled by caller
@@ -675,13 +674,12 @@ function removeAttribute(attribute, element) {
     // SKIP
 
     // 2. If element is custom...
-    if ($ce.isInstalled() && $ce.isCustom(element)) {
-        const args = [name, oldValue, newValue, nameSpace];
-        $ce.enqueueAttributeChangedReaction(element, args);
-    }
+    // SKIP: refactored out into attribute change steps
 
     // 3. Run the attribute change steps...
-    attributeChangeSteps(element, name, oldValue, null, nameSpace);
+    for (let i = 0; i < attributeChangeSteps.length; i++) {
+        attributeChangeSteps[i](element, name, oldValue, newValue, nameSpace);
+    }
 
     // 4. Remove attribute from the element’s attribute list.
     elementRemoveAttributeNSDescriptor.value.call(element, nameSpace, name);
@@ -703,16 +701,15 @@ function replaceAttribute(oldAttr, newAttr, element) {
     // SKIP
 
     // 2. If element is custom...
-    if ($ce.isInstalled() && $ce.isCustom(element)) {
-        const args = [name, oldValue, newValue, nameSpace];
-        $ce.enqueueAttributeChangedReaction(element, args);
-    }
+    // SKIP: refactored out into attribute change steps
 
     // 3. Run the attribute change steps...
-    attributeChangeSteps(element, name, oldValue, newValue, nameSpace);
+    for (let i = 0; i < attributeChangeSteps.length; i++) {
+        attributeChangeSteps[i](element, name, oldValue, newValue, nameSpace);
+    }
 
     // 4. Replace oldAttr by newAttr in the element’s attribute list.
-    // This is handled by callers
+    // SKIP: handled by callers
 
     // 5. Set oldAttr’s element to null.
     // SKIP: native
@@ -838,7 +835,7 @@ function listOfElementsWithNamespaceAndLocalName(root, nameSpace, localName) {
     if (firstChild === null) {
         return results;
     }
-    
+
     if (nameSpace === '') {
         nameSpace = null;
     }
@@ -850,7 +847,7 @@ function listOfElementsWithNamespaceAndLocalName(root, nameSpace, localName) {
 
     if (nameSpace === '*') {
         treeOrderRecursiveSelectAll(firstChild, results, function (node) {
-            return node.nodeType === Node.ELEMENT_NODE 
+            return node.nodeType === Node.ELEMENT_NODE
                 && node.localName === localName;
         });
         return results;
@@ -858,14 +855,14 @@ function listOfElementsWithNamespaceAndLocalName(root, nameSpace, localName) {
 
     if (localName === '*') {
         treeOrderRecursiveSelectAll(firstChild, results, function (node) {
-            return node.nodeType === Node.ELEMENT_NODE 
+            return node.nodeType === Node.ELEMENT_NODE
                 && node.namespaceURI === nameSpace;
         });
         return results;
     }
 
     treeOrderRecursiveSelectAll(firstChild, results, function (node) {
-        return node.nodeType === Node.ELEMENT_NODE 
+        return node.nodeType === Node.ELEMENT_NODE
             && node.namespaceURI === nameSpace
             && node.localName === localName;
     });
@@ -1058,9 +1055,9 @@ function assignSlotableToSlot(slotable, slot, suppressSignaling) {
             const fallbackNodes = slotState.childNodes;
             const fallbackNodesCount = fallbackNodes.length;
             for (let i = 0; i < fallbackNodesCount; i++) {
-               const fallbackNode = fallbackNodes[i];
-               const fallbackNodeState = $utils.getShadowState(fallbackNode) || $utils.setShadowState(fallbackNode, {});
-               fallbackNodeState.parentNode = slot;
+                const fallbackNode = fallbackNodes[i];
+                const fallbackNodeState = $utils.getShadowState(fallbackNode) || $utils.setShadowState(fallbackNode, {});
+                fallbackNodeState.parentNode = slot;
             }
         }
         const fallbackNodes = slotState.childNodes;
@@ -1098,7 +1095,7 @@ function unassignSlotableFromSlot(slotable, slot, suppressSignaling) {
     if (!suppressSignaling) {
         $mo.signalASlotChange(slot);
     }
-    
+
     // rendering
     nodeRemoveChildDescriptor.value.call(slot, slotable);
     if (slotAssignedNodes.length === 0) {
@@ -1292,8 +1289,7 @@ function insert(node, parent, child, suppressObservers) {
 
         // 4. Run assign slotables for a tree with node’s tree and a set containing 
         // each inclusive descendant of node that is a slot.
-        if (isShadowRoot(parentTree))
-        {
+        if (isShadowRoot(parentTree)) {
             const inclusiveSlotDescendants = isSlot(node) ? [node] : [];
             treeOrderRecursiveSelectAll(node, inclusiveSlotDescendants, isSlot);
             if (inclusiveSlotDescendants.length) {
@@ -1301,28 +1297,17 @@ function insert(node, parent, child, suppressObservers) {
             }
         }
 
-        if (parentIsConnected && $ce.isInstalled()) {
-            // 5. For each shadow-including inclusive descendant inclusiveDescendant of node, 
-            // in shadow-including tree order, run these subsubsteps:
-            forEachShadowIncludingInclusiveDescendant(node, function (inclusiveDescendant) {
-                // 1. Run the insertion steps with inclusiveDescendant
-                // SKIP: other
+        // 5. For each shadow-including inclusive descendant inclusiveDescendant of node, 
+        // in shadow-including tree order, run these subsubsteps:
+        forEachShadowIncludingInclusiveDescendant(node, function (inclusiveDescendant) {
+            // 1. Run the insertion steps with inclusiveDescendant
+            for (let i = 0; i < insertingSteps.length; i++) {
+                insertingSteps[i](inclusiveDescendant);
+            }
 
-                // 2. If inclusiveDescendant is connected, then...
-                // PERF: moved this check out of the loop.
-
-                // 1. If inclusiveDescendant is custom, then enqueue a custom element 
-                // callback reaction with inclusiveDescendant, callback name 
-                // "connectedCallback", and an empty argument list.
-                if ($ce.isCustom(inclusiveDescendant)) {
-                    $ce.enqueueConnectedReaction(inclusiveDescendant, []);
-                }
-                // 2. Otherwise, try to upgrade inclusiveDescendant.
-                else {
-                    $ce.tryToUpgradeElement(inclusiveDescendant);
-                }
-            });
-        }
+            // 2. If inclusiveDescendant is connected, then...
+            // SKIP: refactored out into the inserting steps.
+        });
     }
 
     // 7. If suppress observers flag is unset, queue a mutation record of "childList" for parent 
@@ -1530,9 +1515,9 @@ function remove(node, parent, suppressObservers) {
         // SKIP: This is already taken care of by our algorithm in step 10.
 
         // 12. If node has an inclusive descendant that is a slot, then:
-            // 1. Run assign slotables for a tree with parent’s tree.
-            // 2. Run assign slotables for a tree with node’s tree and a 
-            // set containing each inclusive descendant of node that is a slot.
+        // 1. Run assign slotables for a tree with parent’s tree.
+        // 2. Run assign slotables for a tree with node’s tree and a 
+        // set containing each inclusive descendant of node that is a slot.
         const inclusiveSlotDescendants = isSlot(node) ? [node] : [];
         treeOrderRecursiveSelectAll(node, inclusiveSlotDescendants, isSlot);
         if (inclusiveSlotDescendants.length) {
@@ -1544,31 +1529,19 @@ function remove(node, parent, suppressObservers) {
     }
 
     // 13. Run the removing steps with node and parent.
-    // SKIP: other
-
-    if ($ce.isInstalled()) {
-        // 14. If node is custom, then enqueue a custom element callback reaction 
-        // with node, callback name "disconnectedCallback", and an empty argument list.
-        if ($ce.isCustom(node)) {
-            $ce.enqueueDisconnectedReaction(node, []);
+    forEachShadowIncludingInclusiveDescendant(node, function (inclusiveDescendant) {
+        for (let i = 0; i < removingSteps.length; i++) {
+            removingSteps[i](inclusiveDescendant, parent);
         }
+    });
 
-        // 15. For each shadow-including descendant descendant of node, in 
-        // shadow-including tree order, run these substeps:
-        forEachShadowIncludingDescendant(node, function (descendant) {
-            // 1. Run the removing steps with descendant.
-            // SKIP: other
-            // NOTE: this step is the only reason we don't just use 
-            // forEachShadowIncludingInclusiveDescendant here
+    // 14. If node is custom, then enqueue a custom element callback reaction 
+    // with node, callback name "disconnectedCallback", and an empty argument list.
+    // SKIP: refactored out into removing steps
 
-            // 2. If descendant is custom, then enqueue a custom element 
-            // callback reaction with descendant, callback name "disconnectedCallback", 
-            // and an empty argument list.
-            if ($ce.isCustom(descendant)) {
-                $ce.enqueueDisconnectedReaction(descendant, []);
-            }
-        });
-    }
+    // 15. For each shadow-including descendant descendant of node, in 
+    // shadow-including tree order, run these substeps:
+    // SKIP: refactored out into removing steps
 
     // 16. For each inclusive ancestor inclusiveAncestor of parent...
     let inclusiveAncestor = parent;

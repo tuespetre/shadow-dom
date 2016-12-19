@@ -88,9 +88,9 @@ function install() {
     $utils.extend(Text, $Text);
 
     // ChildNode mixin
-    $utils.extend(DocumentType, $ChildNode(DocumentType));
-    $utils.extend(Element, $ChildNode(Element));
-    $utils.extend(CharacterData, $ChildNode(CharacterData));
+    $utils.extend(DocumentType, $ChildNode);
+    $utils.extend(Element, $ChildNode);
+    $utils.extend(CharacterData, $ChildNode);
 
     // DocumentOrShadowRoot mixin
     $utils.extend(Document, $DocumentOrShadowRoot);
@@ -101,21 +101,21 @@ function install() {
     $utils.extend(CharacterData, $NonDocumentTypeChildNode);
 
     // NonElementParentNode mixin
-    $utils.extend(Document, $NonElementParentNode(Document));
-    $utils.extend(DocumentFragment, $NonElementParentNode(DocumentFragment));
+    $utils.extend(Document, $NonElementParentNode);
+    $utils.extend(DocumentFragment, $NonElementParentNode);
 
     // ParentNode mixin
-    $utils.extend(Document, $ParentNode(Document));
-    $utils.extend(DocumentFragment, $ParentNode(DocumentFragment));
-    $utils.extend($ShadowRoot, $ParentNode($ShadowRoot));
+    $utils.extend(Document, $ParentNode);
+    $utils.extend(DocumentFragment, $ParentNode);
+    $utils.extend($ShadowRoot, $ParentNode);
     if ($utils.brokenAccessors) {
-        $utils.extend(HTMLElement, $ParentNode(HTMLElement));
+        $utils.extend(HTMLElement, $ParentNode);
     }
     else {
-        $utils.extend(Element, $ParentNode(Element));
+        $utils.extend(Element, $ParentNode);
     }
 
     // Slotable mixin
-    $utils.extend(Element, $Slotable(Element));
-    $utils.extend(Text, $Slotable(Text));
+    $utils.extend(Element, $Slotable);
+    $utils.extend(Text, $Slotable);
 }

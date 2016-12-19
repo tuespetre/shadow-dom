@@ -36,13 +36,43 @@ export default {
     installTranspiledClassSupport,
     isCustom,
     tryToUpgradeElement,
-    enqueueConnectedReaction,
-    enqueueDisconnectedReaction,
-    enqueueAdoptedReaction,
-    enqueueAttributeChangedReaction,
     executeCEReactions,
     isValidCustomElementName,
 };
+
+$dom.registerInsertingSteps(function (node) {
+    if (node.isConnected) {
+        if (isCustom(node)) {
+            enqueueCallbackReaction(node, CE_CALLBACK_CONNECTED, []);
+        }
+        else {
+            tryToUpgradeElement(node);
+        }
+    }
+});
+
+$dom.registerRemovingSteps(function (node, parent) {
+    if (isCustom(node)) {
+        enqueueCallbackReaction(node, CE_CALLBACK_DISCONNECTED, []);
+    }
+});
+
+$dom.registerAdoptingSteps(function (node, oldDocument, newDocument) {
+    if (isCustom(node)) {
+        enqueueCallbackReaction(node, CE_CALLBACK_ADOPTED, [oldDocument, newDocument]);
+    }
+});
+
+$dom.registerCloningSteps(function (node) {
+    tryToUpgradeElement(node);
+});
+
+$dom.registerAttributeChangeSteps(function (element, localName, oldValue, newValue, nameSpace) {
+    if (isCustom(element)) {
+        const args = [localName, oldValue, newValue, nameSpace];
+        enqueueCallbackReaction(element, CE_CALLBACK_ATTRIBUTE_CHANGED, args);
+    }
+});
 
 // Installation/uninstallation
 
@@ -606,7 +636,7 @@ function upgradeElement(element, definition) {
     // https://html.spec.whatwg.org/multipage/scripting.html#concept-upgrade-an-element
     let elementState = getPrivateState(element);
     if (!elementState) {
-        elementState = setPrivateState(element, { 
+        elementState = setPrivateState(element, {
             reactionQueue: [],
             customElementDefinition: definition
         });
@@ -726,22 +756,6 @@ function enqueueCallbackReaction(element, callbackName, args) {
     }
     elementState.reactionQueue.push({ type: callbackReactionType, callback, args });
     enqueueElementOnAppropriateElementQueue(element);
-}
-
-function enqueueConnectedReaction(element, args) {
-    enqueueCallbackReaction(element, CE_CALLBACK_CONNECTED, args);
-}
-
-function enqueueDisconnectedReaction(element, args) {
-    enqueueCallbackReaction(element, CE_CALLBACK_DISCONNECTED, args);
-}
-
-function enqueueAdoptedReaction(element, args) {
-    enqueueCallbackReaction(element, CE_CALLBACK_ADOPTED, args);
-}
-
-function enqueueAttributeChangedReaction(element, args) {
-    enqueueCallbackReaction(element, CE_CALLBACK_ATTRIBUTE_CHANGED, args);
 }
 
 function enqueueUpgradeReaction(element, definition) {

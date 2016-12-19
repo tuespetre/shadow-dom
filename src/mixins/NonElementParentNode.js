@@ -2,28 +2,24 @@
 
 import $dom from '../dom.js';
 
-export default function (base) {
+export default {
 
-    return {
+    getElementById(id) {
+        // https://dom.spec.whatwg.org/#dom-nonelementparentnode-getelementbyid
 
-        getElementById(id) {
-            // https://dom.spec.whatwg.org/#dom-nonelementparentnode-getelementbyid
+        if (id === '' || /\s/.test(id)) {
+            return null;
+        }
 
-            if (id === '' || /\s/.test(id)) {
-                return null;
-            }
+        const firstChild = this.firstChild;
 
-            const firstChild = this.firstChild;
+        if (!firstChild) {
+            return null;
+        }
 
-            if (!firstChild) {
-                return null;
-            }
+        return $dom.treeOrderRecursiveSelectFirst(firstChild, function (node) {
+            return node.id === id;
+        });
+    },
 
-            return $dom.treeOrderRecursiveSelectFirst(firstChild, function (node) {
-                return node.id === id;
-            });
-        },
-
-    };
-
-}
+};
