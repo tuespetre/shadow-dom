@@ -1,5 +1,6 @@
 import ShadowDOM from './shadow-dom.js';
 import $ce from './custom-elements.js';
+import './style-scoping.js';
 
 let installShadowDom = false;
 let installCustomElements = false;

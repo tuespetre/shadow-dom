@@ -827,7 +827,7 @@ function setPrivateState(object, state) {
     return object._custom = state;
 }
 
-},{"./dom.js":2,"./interfaces/Attr.js":3,"./microtask.js":19,"./utils.js":28}],2:[function(require,module,exports){
+},{"./dom.js":2,"./interfaces/Attr.js":3,"./microtask.js":19,"./utils.js":29}],2:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2392,7 +2392,7 @@ function remove(node, parent, suppressObservers) {
     }
 }
 
-},{"./mutation-observers.js":26,"./utils.js":28}],3:[function(require,module,exports){
+},{"./mutation-observers.js":26,"./utils.js":29}],3:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2473,7 +2473,7 @@ function patchAttributeNodeIfNeeded(attribute) {
     }
 }
 
-},{"../custom-elements.js":1,"../dom.js":2,"../utils.js":28}],4:[function(require,module,exports){
+},{"../custom-elements.js":1,"../dom.js":2,"../utils.js":29}],4:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2512,7 +2512,7 @@ function $CustomEvent(type, init) {
 
 $CustomEvent.prototype = window.CustomEvent.prototype;
 
-},{"../utils.js":28}],5:[function(require,module,exports){
+},{"../utils.js":29}],5:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2618,7 +2618,7 @@ exports.default = {
     }
 };
 
-},{"../custom-elements.js":1,"../dom.js":2,"../mutation-observers.js":26,"../utils.js":28}],6:[function(require,module,exports){
+},{"../custom-elements.js":1,"../dom.js":2,"../mutation-observers.js":26,"../utils.js":29}],6:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -2993,7 +2993,7 @@ var htmlElementMixin = {
 
 };
 
-},{"../custom-elements.js":1,"../dom.js":2,"../interfaces/Attr.js":3,"../interfaces/ShadowRoot.js":16,"../utils.js":28}],7:[function(require,module,exports){
+},{"../custom-elements.js":1,"../dom.js":2,"../interfaces/Attr.js":3,"../interfaces/ShadowRoot.js":16,"../utils.js":29}],7:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3168,7 +3168,7 @@ var builtInComposedEvents = [
 // Touch Events
 'touchstart', 'touchend', 'touchmove', 'touchcancel'];
 
-},{"../dom.js":2,"../utils.js":28}],8:[function(require,module,exports){
+},{"../dom.js":2,"../utils.js":29}],8:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3705,7 +3705,7 @@ function wrapEventWithBrokenAccessors(event) {
     return wrapper;
 }
 
-},{"../dom.js":2,"../utils.js":28,"./Event.js":7}],9:[function(require,module,exports){
+},{"../dom.js":2,"../utils.js":29,"./Event.js":7}],9:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3768,7 +3768,7 @@ exports.default = {
     }
 };
 
-},{"../dom.js":2,"../utils.js":28}],10:[function(require,module,exports){
+},{"../dom.js":2,"../utils.js":29}],10:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3829,7 +3829,7 @@ exports.default = {
     }
 };
 
-},{"../dom.js":2,"../utils.js":28}],11:[function(require,module,exports){
+},{"../dom.js":2,"../utils.js":29}],11:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3857,7 +3857,7 @@ exports.default = {
     }
 }; // https://www.w3.org/TR/html5/single-page.html#the-tr-element
 
-},{"../utils.js":28}],12:[function(require,module,exports){
+},{"../utils.js":29}],12:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3882,7 +3882,7 @@ exports.default = {
     }
 }; // https://www.w3.org/TR/html5/single-page.html#the-tbody-element
 
-},{"../utils.js":28}],13:[function(require,module,exports){
+},{"../utils.js":29}],13:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -3923,7 +3923,7 @@ $MutationObserver.prototype = {
     }
 };
 
-},{"../dom.js":2,"../mutation-observers.js":26,"../utils.js":28}],14:[function(require,module,exports){
+},{"../dom.js":2,"../mutation-observers.js":26,"../utils.js":29}],14:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4006,7 +4006,7 @@ exports.default = {
     }
 };
 
-},{"../custom-elements.js":1,"../dom.js":2,"../interfaces/Attr.js":3,"../utils.js":28}],15:[function(require,module,exports){
+},{"../custom-elements.js":1,"../dom.js":2,"../interfaces/Attr.js":3,"../utils.js":29}],15:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4601,7 +4601,7 @@ function elementTextContent(element) {
     return result;
 }
 
-},{"../custom-elements.js":1,"../dom.js":2,"../utils.js":28}],16:[function(require,module,exports){
+},{"../custom-elements.js":1,"../dom.js":2,"../utils.js":29}],16:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4654,7 +4654,7 @@ exports.default = {
 }; // https://dom.spec.whatwg.org/#interface-shadowroot
 // https://www.w3.org/TR/shadow-dom/#the-shadowroot-interface
 
-},{"../custom-elements.js":1,"../dom.js":2,"../utils.js":28}],17:[function(require,module,exports){
+},{"../custom-elements.js":1,"../dom.js":2,"../utils.js":29}],17:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4696,7 +4696,7 @@ exports.default = {
     }
 };
 
-},{"../dom.js":2,"../utils.js":28}],18:[function(require,module,exports){
+},{"../dom.js":2,"../utils.js":29}],18:[function(require,module,exports){
 'use strict';
 
 var _shadowDom = require('./shadow-dom.js');
@@ -4706,6 +4706,8 @@ var _shadowDom2 = _interopRequireDefault(_shadowDom);
 var _customElements = require('./custom-elements.js');
 
 var _customElements2 = _interopRequireDefault(_customElements);
+
+require('./style-scoping.js');
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -4735,7 +4737,7 @@ if (installCustomElements) {
     _customElements2.default.installTranspiledClassSupport();
 }
 
-},{"./custom-elements.js":1,"./shadow-dom.js":27}],19:[function(require,module,exports){
+},{"./custom-elements.js":1,"./shadow-dom.js":27,"./style-scoping.js":28}],19:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -4981,7 +4983,7 @@ exports.default = {
 
 };
 
-},{"../dom.js":2,"../utils.js":28}],22:[function(require,module,exports){
+},{"../dom.js":2,"../utils.js":29}],22:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5042,7 +5044,7 @@ exports.default = {
 
 };
 
-},{"../utils.js":28}],23:[function(require,module,exports){
+},{"../utils.js":29}],23:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5264,7 +5266,7 @@ exports.default = {
     }
 };
 
-},{"../custom-elements.js":1,"../dom.js":2,"../utils.js":28}],25:[function(require,module,exports){
+},{"../custom-elements.js":1,"../dom.js":2,"../utils.js":29}],25:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5301,7 +5303,7 @@ exports.default = {
 
 };
 
-},{"../dom.js":2,"../utils.js":28}],26:[function(require,module,exports){
+},{"../dom.js":2,"../utils.js":29}],26:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5613,7 +5615,7 @@ function signalASlotChange(slot) {
     queueMutationObserverCompoundMicrotask();
 }
 
-},{"./microtask.js":19,"./utils.js":28}],27:[function(require,module,exports){
+},{"./microtask.js":19,"./utils.js":29}],27:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -5801,7 +5803,69 @@ function install() {
     _utils2.default.extend(Text, _Slotable2.default);
 }
 
-},{"./dom.js":2,"./interfaces/Attr.js":3,"./interfaces/CustomEvent.js":4,"./interfaces/Document.js":5,"./interfaces/Element.js":6,"./interfaces/Event.js":7,"./interfaces/EventTarget.js":8,"./interfaces/HTMLSlotElement.js":9,"./interfaces/HTMLTableElement.js":10,"./interfaces/HTMLTableRowElement.js":11,"./interfaces/HTMLTableSectionElement.js":12,"./interfaces/MutationObserver.js":13,"./interfaces/NamedNodeMap.js":14,"./interfaces/Node.js":15,"./interfaces/ShadowRoot.js":16,"./interfaces/Text.js":17,"./mixins/ChildNode.js":20,"./mixins/DocumentOrShadowRoot.js":21,"./mixins/NonDocumentTypeChildNode.js":22,"./mixins/NonElementParentNode.js":23,"./mixins/ParentNode.js":24,"./mixins/Slotable.js":25,"./utils.js":28}],28:[function(require,module,exports){
+},{"./dom.js":2,"./interfaces/Attr.js":3,"./interfaces/CustomEvent.js":4,"./interfaces/Document.js":5,"./interfaces/Element.js":6,"./interfaces/Event.js":7,"./interfaces/EventTarget.js":8,"./interfaces/HTMLSlotElement.js":9,"./interfaces/HTMLTableElement.js":10,"./interfaces/HTMLTableRowElement.js":11,"./interfaces/HTMLTableSectionElement.js":12,"./interfaces/MutationObserver.js":13,"./interfaces/NamedNodeMap.js":14,"./interfaces/Node.js":15,"./interfaces/ShadowRoot.js":16,"./interfaces/Text.js":17,"./mixins/ChildNode.js":20,"./mixins/DocumentOrShadowRoot.js":21,"./mixins/NonDocumentTypeChildNode.js":22,"./mixins/NonElementParentNode.js":23,"./mixins/ParentNode.js":24,"./mixins/Slotable.js":25,"./utils.js":29}],28:[function(require,module,exports){
+'use strict';
+
+var _customElements = require('./custom-elements.js');
+
+var _customElements2 = _interopRequireDefault(_customElements);
+
+var _dom = require('./dom.js');
+
+var _dom2 = _interopRequireDefault(_dom);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
+var nativeRemoveChild = Node.prototype.removeChild;
+var nativeAppendChild = Node.prototype.appendChild;
+var nativeCreateTextNode = Document.prototype.createTextNode;
+
+_dom2.default.registerInsertingSteps(function (node) {
+    // Is it even a stylesheet?
+    if (!(node instanceof HTMLStyleElement)) {
+        return;
+    }
+
+    // Is it even in a shadow root?
+    var root = _dom2.default.root(node);
+    if (!_dom2.default.isShadowRoot(root)) {
+        return;
+    }
+
+    // Is it even a valid custom element name or ANYTHING?
+    var host = root.host;
+    if (!_customElements2.default.isValidCustomElementName(host.localName)) {
+        return;
+    }
+
+    var text = node.textContent;
+
+    text = text.replace(/:host-context\((.*)\)/, function (match, selector) {
+        return selector + ' ' + host.localName;
+    });
+
+    text = text.replace(/:host\((.*)\)/, function (match, selector) {
+        return '' + host.localName + selector;
+    });
+
+    text = text.replace(/([A-Za-z0-9\.\-\_\[\]\(\)\'\"\=\:]+)?::slotted\((.*)\)/, function (match, preselector, selector) {
+        var slotSelector = preselector || 'slot';
+        console.log({ match: match, preselector: preselector, selector: selector });
+        return host.localName + ' ' + slotSelector + ' > ' + selector;
+    });
+
+    text = text.replace(/:host/, function () {
+        return host.localName;
+    });
+
+    var firstChild = void 0;
+    while (firstChild = node.firstChild) {
+        nativeRemoveChild.call(node, node.firstChild);
+    }
+    nativeAppendChild.call(node, nativeCreateTextNode.call(node.ownerDocument, text));
+});
+
+},{"./custom-elements.js":1,"./dom.js":2}],29:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
