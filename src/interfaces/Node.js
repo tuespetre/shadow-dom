@@ -239,7 +239,7 @@ const methodDescriptors = {
                     let contiguousTextNodes = new Array(childNodes.length);
                     let contiguousCount = 0;
                     let next = childNode;
-                    while (next = next.nextSibling && next.nodeType === Node.TEXT_NODE) {
+                    while ((next = next.nextSibling) && next.nodeType === Node.TEXT_NODE) {
                         data += next.data;
                         contiguousTextNodes[contiguousCount++] = next;
                     }

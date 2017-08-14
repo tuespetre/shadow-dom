@@ -4270,7 +4270,7 @@ var methodDescriptors = {
                     var contiguousTextNodes = new Array(childNodes.length);
                     var contiguousCount = 0;
                     var next = childNode;
-                    while (next = next.nextSibling && next.nodeType === Node.TEXT_NODE) {
+                    while ((next = next.nextSibling) && next.nodeType === Node.TEXT_NODE) {
                         data += next.data;
                         contiguousTextNodes[contiguousCount++] = next;
                     }
