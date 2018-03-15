@@ -82,6 +82,20 @@ suite('EventTarget', function () {
             parent.remove();
             assert.sameMembers(phases, [Event.prototype.CAPTURING_PHASE, Event.prototype.BUBBLING_PHASE]);
         });
+        
+        test('event handler addition during an event will not cause invocation during that event', function () {
+            var target = document.createElement('div');
+            var count = 0;
+            var handler = function (event) {
+                count++;
+            };
+            var adder = function (event) {
+                target.addEventListener('test', handler);
+            };
+            target.addEventListener('test', adder);
+            target.dispatchEvent(new Event('test'));
+            assert.equal(count, 0);
+        });
 
     });
 
@@ -139,6 +153,33 @@ suite('EventTarget', function () {
             target.dispatchEvent(new Event('test'));
             assert.equal(count, 3);
             document.body.removeChild(target);
+        });
+        
+        test('event handler removal during an event will stop the handler invocation', function () {
+            var target = document.createElement('div');
+            var count1 = 0;
+            var count2 = 0;
+            var count3 = 0;
+            var handler1 = function (event) {
+                count1++;
+            };
+            var handler2 = function (event) {
+                count2++;
+            };
+            var handler3 = function (event) {
+                count3++;
+            };
+            var remover = function (event) {
+                target.removeEventListener('test', handler1);
+            };
+            target.addEventListener('test', remover);
+            target.addEventListener('test', handler1);
+            target.addEventListener('test', handler2);
+            target.addEventListener('test', handler3);
+            target.dispatchEvent(new Event('test'));
+            assert.equal(count1, 0);
+            assert.equal(count2, 1);
+            assert.equal(count3, 1);
         });
 
     });

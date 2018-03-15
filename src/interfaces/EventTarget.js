@@ -239,8 +239,9 @@ EventListenerCollection.prototype = {
         const listeners = this.getListeners(target);
 
         for (let i = 0; i < listeners.length; i++) {
-            const other = listeners[i];
-            if (listener.callback === other.callback) {
+            const existing = listeners[i];
+            if (listener.callback === existing.callback) {
+                existing.removed = true;
                 listeners.splice(i, 1);
                 break;
             }
@@ -267,9 +268,13 @@ EventListenerCollection.prototype = {
             eventState.target = target;
             eventState.relatedTarget = relatedTarget;
 
-            for (let i = 0; i < listeners.length; i++) {
-                const listener = listeners[i];
-                const result = listener.callback.call(currentTarget, event);
+            const listenersCopy = listeners.slice(0, listeners.length);
+            for (let i = 0; i < listenersCopy.length; i++) {
+                const listener = listenersCopy[i];
+                if (!listener.removed) {
+                    // TODO: uhhh... was something supposed to be done with the result?
+                    const result = listener.callback.call(currentTarget, event);
+                }
                 if (listener.once) {
                     if (!remove) {
                         remove = [listener];
