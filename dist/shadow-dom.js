@@ -1034,10 +1034,15 @@ function parseHTMLFragment(markup, context) {
     var tag = context.tagName;
     var depth = 0;
     switch (tag) {
+        case 'TABLE':
+            markup = '<TABLE>' + markup + '</TABLE>';
+            depth = 1;
+            break;
+        case 'COLGROUP':
         case 'TBODY':
         case 'THEAD':
         case 'TFOOT':
-            markup = '<TABLE><TBODY>' + markup + '</TBODY></TABLE>';
+            markup = '<TABLE><' + tag + '>' + markup + '</' + tag + '></TABLE>';
             depth = 2;
             break;
         case 'TR':

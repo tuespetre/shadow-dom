@@ -30,52 +30,87 @@ suite('Element', function () {
 
         test('must be supplied init', function () {
             var div = document.createElement('div');
-            assert.throws(function () {
+            var err = void 0;
+            try {
                 div.attachShadow();
-            }, 'TypeError');
+            }
+            catch (e) {
+                err = e;
+            }
+            assert.equal('TypeError', err.toString());
         });
 
         test('must be supplied init with mode', function () {
             var div = document.createElement('div');
-            assert.throws(function () {
+            var err = void 0;
+            try {
                 div.attachShadow({});
-            }, 'TypeError');
+            }
+            catch (e) {
+                err = e;
+            }
+            assert.equal('TypeError', err.toString());
         });
 
         test('must be supplied init with valid mode', function () {
             var div = document.createElement('div');
-            assert.throws(function () {
+            var err = void 0;
+            try {
                 div.attachShadow({ mode: 'test' });
-            }, 'TypeError');
+            }
+            catch (e) {
+                err = e;
+            }
+            assert.equal('TypeError', err.toString());
         });
 
         test('can only be called for HTML elements', function () {
             var glyph = document.createElementNS('http://www.w3.org/2000/svg', 'glyph');
-            assert.throws(function () {
+            var err = void 0;
+            try {
                 glyph.attachShadow({ mode: 'open' });
-            }, 'NotSupportedError');
+            }
+            catch (e) {
+                err = e;
+            }
+            assert.equal('NotSupportedError', err.toString());
         });
 
         test('can only be called for whitelisted built-in elements', function () {
             var input = document.createElement('input');
-            assert.throws(function () {
+            var err = void 0;
+            try {
                 input.attachShadow({ mode: 'open' });
-            }, 'NotSupportedError');
+            }
+            catch (e) {
+                err = e;
+            }
+            assert.equal('NotSupportedError', err.toString());
         });
 
         test('can only be called for whitelisted hyphenated elements', function () {
             var fontFace = document.createElement('font-face');
-            assert.throws(function () {
+            var err = void 0;
+            try {
                 fontFace.attachShadow({ mode: 'open' });
-            }, 'NotSupportedError');
+            }
+            catch (e) {
+                err = e;
+            }
+            assert.equal('NotSupportedError', err.toString());
         });
 
         test('can only be called once per element', function () {
             var div = document.createElement('div');
             div.attachShadow({ mode: 'open' });
-            assert.throws(function () {
+            var err = void 0;
+            try {
                 div.attachShadow({ mode: 'open' });
-            }, 'InvalidStateError');
+            }
+            catch (e) {
+                err = e;
+            }
+            assert.equal('InvalidStateError', err.toString());
         });
 
         test('initializes the shadow root\'s host', function () {
@@ -131,7 +166,7 @@ suite('Element', function () {
 
         test('does not include shadow tree', function () {
             var div = document.createElement('div');
-            div.attachShadow({ mode: 'open'}).append(document.createTextNode('you always leave me out'));
+            div.attachShadow({ mode: 'open' }).append(document.createTextNode('you always leave me out'));
             div.append('well maybe if you didnt complain all the time');
             assert.equal(div.innerHTML, 'well maybe if you didnt complain all the time');
         });
@@ -150,21 +185,108 @@ suite('Element', function () {
 
         test('preserves shadow root and its contents', function () {
             var div = document.createElement('div');
-            div.attachShadow({ mode: 'open'}).append(document.createTextNode('uh, yeah it is'));
+            div.attachShadow({ mode: 'open' }).append(document.createTextNode('uh, yeah it is'));
             div.innerHTML = 'this div aint big enough for the two of us';
             assert.equal(div.shadowRoot.firstChild.data, 'uh, yeah it is');
         });
         
-        test('properly handles table elements', function () {
-            var table = document.createElement('table');
-            var tbody = table.createTBody();
-            tbody.innerHTML = '<tr><td>cell 1</td><td>cell 2</td></tr>';
-            assert.equal(tbody.firstChild.tagName, 'TR');
-            assert.equal(tbody.firstChild.firstChild.textContent, 'cell 1');
-            var div = document.createElement('div');
-            div.innerHTML = '<div><tr><td>cell 1</td><td>cell 2</td></tr></div>';
-            assert.equal(div.innerHTML, '<div>cell 1cell 2</div>');
+        test('properly handles <option> for <select>', function () {
+            var select = document.createElement('select');
+            select.innerHTML = '<option>text</option>';
+            assert.equal(select.innerHTML, '<option>text</option>');
         });
+        
+        test('properly handles <optgroup> for <select>', function () {
+            var select = document.createElement('select');
+            select.innerHTML = '<optgroup><option>text</option></optgroup>';
+            assert.equal(select.innerHTML, '<optgroup><option>text</option></optgroup>');
+        });
+        
+        test('properly handles <caption> for <table>', function () {
+            var table = document.createElement('table');
+            table.innerHTML = '<caption>caption text</caption>';
+            assert.equal(table.innerHTML, '<caption>caption text</caption>');
+        });
+        
+        test('properly handles <colgroup> for <table>', function () {
+            var table = document.createElement('table');
+            table.innerHTML = '<colgroup><col></colgroup>';
+            assert.equal(table.innerHTML, '<colgroup><col></colgroup>');
+        });
+        
+        test('properly handles <col> for <table>', function () {
+            var table = document.createElement('table');
+            table.innerHTML = '<col>';
+            assert.equal(table.innerHTML, '<colgroup><col></colgroup>');
+        });
+
+        test('properly handles <tr> for <table>', function () {
+            var table = document.createElement('table');
+            table.innerHTML = '<tr><td>cell 1</td><td>cell 2</td></tr>';
+            assert.equal(table.innerHTML, '<tbody><tr><td>cell 1</td><td>cell 2</td></tr></tbody>');
+        });
+
+        test('properly handles <th> for <table>', function () {
+            var table = document.createElement('table');
+            table.innerHTML = '<th>cell 1</th><th>cell 2</th>';
+            assert.equal(table.innerHTML, '<tbody><tr><th>cell 1</th><th>cell 2</th></tr></tbody>');
+        });
+
+        test('properly handles <td> for <table>', function () {
+            var table = document.createElement('table');
+            table.innerHTML = '<td>cell 1</td><td>cell 2</td>';
+            assert.equal(table.innerHTML, '<tbody><tr><td>cell 1</td><td>cell 2</td></tr></tbody>');
+        });
+        
+        test('properly handles <th> for <tr>', function () {
+            var row = document.createElement('tr');
+            row.innerHTML = '<th>cell 1</th><th>cell 2</th>';
+            assert.equal(row.innerHTML, '<th>cell 1</th><th>cell 2</th>');
+        });
+
+        test('properly handles <td> for <tr>', function () {
+            var row = document.createElement('tr');
+            row.innerHTML = '<td>cell 1</td><td>cell 2</td>';
+            assert.equal(row.innerHTML, '<td>cell 1</td><td>cell 2</td>');
+        });
+        
+        test('properly handles <col> for <colgroup>', function () {
+            var colgroup = document.createElement('colgroup');
+            colgroup.innerHTML = '<col>';
+            assert.equal(colgroup.innerHTML, '<col>');
+        });
+
+        var sections = ['thead', 'tbody', 'tfoot'];
+
+        for (var i = 0; i < sections.length; i++) {
+            
+            var tag = sections[i];
+
+            test('properly handles <' + tag + '> for <table>', function () {
+                var table = document.createElement('table');
+                table.innerHTML = '<' + tag + '><tr><td>cell 1</td><td>cell 2</td></tr></' + tag + '>';
+                assert.equal(table.innerHTML, '<' + tag + '><tr><td>cell 1</td><td>cell 2</td></tr></' + tag + '>');
+            });
+
+            test('properly handles <tr> for <' + tag + '>', function () {
+                var section = document.createElement(tag);
+                section.innerHTML = '<tr><td>cell 1</td><td>cell 2</td></tr>';
+                assert.equal(section.innerHTML, '<tr><td>cell 1</td><td>cell 2</td></tr>');
+            });
+
+            test('properly handles <th> for <' + tag + '>', function () {
+                var section = document.createElement(tag);
+                section.innerHTML = '<th>cell 1</th><th>cell 2</th>';
+                assert.equal(section.innerHTML, '<tr><th>cell 1</th><th>cell 2</th></tr>');
+            });
+
+            test('properly handles <td> for <' + tag + '>', function () {
+                var section = document.createElement(tag);
+                section.innerHTML = '<td>cell 1</td><td>cell 2</td>';
+                assert.equal(section.innerHTML, '<tr><td>cell 1</td><td>cell 2</td></tr>');
+            });
+
+        }
 
     });
 
