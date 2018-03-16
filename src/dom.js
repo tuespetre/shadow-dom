@@ -187,9 +187,25 @@ const parsingFragment = document.createDocumentFragment();
 function parseHTMLFragment(markup, context) {
     // The surrounding tag is required to preserve all of the original markup (comments, etc.)
     // and also account for behavior of things like table elements.
-    const tag = context.tagName;
-    let parsingResult = parser.parseFromString(`<${tag}>${markup}</${tag}>`, 'text/html').body;
-    if (tag !== 'BODY' && parsingResult.firstChild.tagName == tag.toUpperCase()) {
+    let tag = context.tagName;
+    let depth = 0;
+    switch (tag) {
+        case 'TBODY':
+        case 'THEAD':
+        case 'TFOOT':
+            markup = `<TABLE><TBODY>${markup}</TBODY></TABLE>`;
+            depth = 2;
+            break;
+        case 'TR':
+            markup = `<TABLE><TBODY><TR>${markup}</TR></TBODY></TABLE>`;
+            depth = 3;
+            break;
+        default:
+            markup = `<BODY>${markup}</BODY>`;
+            break;
+    }
+    let parsingResult = parser.parseFromString(markup, 'text/html').body;
+    for (let i = 0; i < depth && parsingResult.firstChild; i++) {
         parsingResult = parsingResult.firstChild;
     }
     let firstChild;

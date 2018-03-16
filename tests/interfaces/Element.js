@@ -157,10 +157,10 @@ suite('Element', function () {
         
         test('properly handles table elements', function () {
             var table = document.createElement('table');
-            table.innerHTML = '<tr><td>cell 1</td><td>cell 2</td></tr>';
-            assert.isTrue(table.firstChild instanceof HTMLTableSectionElement);
-            assert.isTrue(table.firstChild.firstChild instanceof HTMLTableRowElement);
-            assert.isTrue(table.firstChild.firstChild.firstChild.textContent == 'cell 1');
+            var tbody = table.createTBody();
+            tbody.innerHTML = '<tr><td>cell 1</td><td>cell 2</td></tr>';
+            assert.equal(tbody.firstChild.tagName, 'TR');
+            assert.equal(tbody.firstChild.firstChild.textContent, 'cell 1');
             var div = document.createElement('div');
             div.innerHTML = '<div><tr><td>cell 1</td><td>cell 2</td></tr></div>';
             assert.equal(div.innerHTML, '<div>cell 1cell 2</div>');
