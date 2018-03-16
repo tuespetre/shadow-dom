@@ -1029,8 +1029,13 @@ function isSlotable(node) {
 var parser = new DOMParser();
 var parsingFragment = document.createDocumentFragment();
 function parseHTMLFragment(markup, context) {
-    // The surrounding body tags are required to preserve all of the original markup (comments, etc.)
-    var parsingResult = parser.parseFromString('<body>' + markup + '</body>', 'text/html').body;
+    // The surrounding tag is required to preserve all of the original markup (comments, etc.)
+    // and also account for behavior of things like table elements.
+    var tag = context.tagName;
+    var parsingResult = parser.parseFromString('<' + tag + '>' + markup + '</' + tag + '>', 'text/html').body;
+    if (tag !== 'BODY' && parsingResult.firstChild.tagName == tag.toUpperCase()) {
+        parsingResult = parsingResult.firstChild;
+    }
     var firstChild = void 0;
     while (firstChild = parsingResult.firstChild) {
         nodeAppendChildDescriptor.value.call(parsingFragment, firstChild);

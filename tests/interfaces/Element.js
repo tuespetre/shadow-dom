@@ -154,6 +154,17 @@ suite('Element', function () {
             div.innerHTML = 'this div aint big enough for the two of us';
             assert.equal(div.shadowRoot.firstChild.data, 'uh, yeah it is');
         });
+        
+        test('properly handles table elements', function () {
+            var table = document.createElement('table');
+            table.innerHTML = '<tr><td>cell 1</td><td>cell 2</td></tr>';
+            assert.isTrue(table.firstChild instanceof HTMLTableSectionElement);
+            assert.isTrue(table.firstChild.firstChild instanceof HTMLTableRowElement);
+            assert.isTrue(table.firstChild.firstChild.firstChild.textContent == 'cell 1');
+            var div = document.createElement('div');
+            div.innerHTML = '<div><tr><td>cell 1</td><td>cell 2</td></tr></div>';
+            assert.equal(div.innerHTML, '<div>cell 1cell 2</div>');
+        });
 
     });
 
